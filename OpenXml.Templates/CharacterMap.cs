@@ -125,7 +125,6 @@ namespace OpenXml.Templates
                     m_textBuilder.Append(t.Text);
                 }
             }
-            m_elements.Add(ce);
         }
 
         public int GetIndex(Text text)
@@ -321,35 +320,96 @@ namespace OpenXml.Templates
             return addedText;
         }
 
-        internal void Delete(OpenXmlElement startText, OpenXmlElement endText)
+        internal IReadOnlyCollection<OpenXmlElement> CutBetween(OpenXmlElement startText, OpenXmlElement endText)
         {
-            var parents = new List<OpenXmlElement>();
-            AddParents(startText, parents);
-            AddParents(endText, parents);
+            var startParagraph = GetParentBelowRoot(startText);
+            var endParagraph = GetParentBelowRoot(endText);
+            var paragrapsToCopy = new List<OpenXmlElement>();
 
-            for (var i = Elements.IndexOf(endText); i >= Elements.IndexOf(startText); --i)
+            var paragraphs = Elements.Select(GetParentBelowRoot).Distinct().ToList();
+            // get range between startParagraph and endParagraph
+            var start = paragraphs.IndexOf(startParagraph);
+            var end = paragraphs.IndexOf(endParagraph);
+            var range = paragraphs.GetRange(start, end - start + 1);
+
+            foreach (var paragraph in range)
             {
-                var element = Elements[i];
-                if (parents.Contains(element))
+                var paragraphToCopy = paragraph;
+                if (paragraph == startParagraph || paragraph == endParagraph)
                 {
-                    // Do not remove parents.
-                    continue;
+                    paragraphToCopy = paragraph.CloneNode(false);
+                    var tobeCopiedToNewPara = new List<OpenXmlElement>();
+                    // remove all elements before startText and after endText
+                    foreach (var child in paragraph.ChildElements)
+                    {
+                        if(child.IsBefore(startText) || child.IsAfter(endText) || child == endText || endText.IsChildOf(child))
+                        {
+                            continue;
+                        }
+                        tobeCopiedToNewPara.Add(child);
+                    }
+                    foreach (var child in tobeCopiedToNewPara)
+                    {
+                        child.Remove();
+                        paragraphToCopy.AppendChild(child);
+                    }
                 }
-
-                element.Remove();
+                else
+                {
+                    paragraphToCopy.Remove();
+                }
+                paragrapsToCopy.Add(paragraphToCopy);
             }
-
             m_isDirty = true;
+            return paragrapsToCopy;
         }
 
-        private static void AddParents(OpenXmlElement element, List<OpenXmlElement> parents)
+        private OpenXmlElement GetParentBelowRoot(OpenXmlElement element)
         {
             var parent = element;
-            while (parent != null)
+            if (parent.Parent == null)
             {
-                parents.Add(parent);
+                throw new InvalidOperationException("Element has no parent");
+            }
+            while (parent.Parent != m_rootElement)
+            {
                 parent = parent.Parent;
             }
+            return parent;
+        }
+
+        /// <summary>
+        /// Inserts paragraphs after endTextElement
+        /// </summary>
+        /// <param name="endTextElement"></param>
+        /// <param name="paragraphs"></param>
+        /// <returns>Last inserted Paragraph</returns>
+        public OpenXmlElement InsertParagraphsAfterText(OpenXmlElement endTextElement, IEnumerable<OpenXmlElement> paragraphs)
+        {
+
+            // TODO: Handle different cases
+            // 1. endTextElement is the last text of a paragraph --> insert paragraphs after parent paragraph of endTextElement
+            // 2. endTextElement is in the middle of a paragraph --> split paragraph and insert paragraphs after parent paragraph of endTextElement
+
+            var lastInsertedElement = endTextElement;
+            // get run of endTextElement
+            var endRun = endTextElement.Ancestors<Run>().FirstOrDefault();
+            if (endRun == null)
+            {
+                throw new InvalidOperationException("EndTextElement is not in Run");
+            }
+            // get runs of paragraphs
+            var runs = paragraphs.SelectMany(x => x.Descendants<Run>()).ToList();
+            if (runs.Count > 0)
+            {
+                foreach (var run in runs)
+                {
+                    run.Remove();
+                    endRun.InsertAfterSelf(run);
+                    endRun = run;
+                }
+            }
+            return lastInsertedElement;
         }
     }
 }

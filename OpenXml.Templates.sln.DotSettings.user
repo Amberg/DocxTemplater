@@ -1,10 +1,4 @@
 ﻿<wpf:ResourceDictionary xml:space="preserve" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:s="clr-namespace:System;assembly=mscorlib" xmlns:ss="urn:shemas-jetbrains-com:settings-storage-xaml" xmlns:wpf="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
 	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=40c4df9e_002D012f_002D43cc_002Dbfb2_002D13481d09b155/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="Session" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
-  &lt;And&gt;&#xD;
-    &lt;TestAncestor&gt;&#xD;
-      &lt;TestId&gt;NUnit3x::4B1AECD5-E69C-4FCC-8C4A-79CBFAB39238::net8.0::OpenXml.Teplates.Test.DocxTemplateTest.ReplaceTextBoldIsPreserved&lt;/TestId&gt;&#xD;
-    &lt;/TestAncestor&gt;&#xD;
-    &lt;Project Location="C:\Work\OpenXml.Templates\OpenXml.Teplates.Test" Presentation="&amp;lt;OpenXml.Teplates.Test&amp;gt;" /&gt;&#xD;
-    &lt;Namespace&gt;OpenXml.Teplates.Test&lt;/Namespace&gt;&#xD;
-  &lt;/And&gt;&#xD;
+  &lt;Project Location="C:\Work\OpenXml.Templates\OpenXml.Teplates.Test" Presentation="&amp;lt;OpenXml.Teplates.Test&amp;gt;" /&gt;&#xD;
 &lt;/SessionState&gt;</s:String></wpf:ResourceDictionary>
