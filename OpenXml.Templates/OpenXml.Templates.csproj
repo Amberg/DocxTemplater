@@ -11,7 +11,7 @@
 
 	<ItemGroup>
 		<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
-			<_Parameter1>OpenXml.Teplates.Test</_Parameter1>
+			<_Parameter1>OpenXml.Templates.Test</_Parameter1>
 		</AssemblyAttribute>
 	</ItemGroup>
 

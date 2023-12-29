@@ -21,4 +21,10 @@
     <ProjectReference Include="..\OpenXml.Templates\OpenXml.Templates.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Resources\BillTemplate.docx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

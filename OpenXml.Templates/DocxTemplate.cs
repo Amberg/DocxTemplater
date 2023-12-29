@@ -7,29 +7,26 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 
 namespace OpenXml.Templates
 {
-    internal class DocxTemplate
+    internal class DocxTemplate : IDisposable
     {
-        private readonly MemoryStream m_memStream;
+        private readonly Stream m_stream;
         private readonly WordprocessingDocument m_wpDocument;
         private readonly CharacterMap m_bodyMap;
-        private readonly Dictionary<string, object> m_models;
+        private readonly ModelDictionary m_models;
 
-
-        private readonly Regex m_collectionRegex = new (@"\{\{([#/])([a-zA-Z0-9\.]+)\}\}", RegexOptions.Compiled);
-        private readonly Regex m_regex = new (@"\{\{(#)*([a-zA-Z0-9\.]+)\}(?::(\w+\(*\w*\)*))*\}", RegexOptions.Compiled);
-
+        private static readonly Regex m_collectionRegex = new (@"\{\{([#/])([a-zA-Z0-9\.]+)\}\}", RegexOptions.Compiled);
         public DocxTemplate(Stream docXStream)
         {
-
-            m_memStream = new MemoryStream();
-            docXStream.CopyTo(m_memStream);
-            m_memStream.Position = 0;
-            m_wpDocument = WordprocessingDocument.Open(m_memStream, true);
+            m_stream = new MemoryStream();
+            docXStream.CopyTo(m_stream);
+            m_stream.Position = 0;
+            m_wpDocument = WordprocessingDocument.Open(m_stream, true);
             m_bodyMap = new CharacterMap(m_wpDocument.MainDocumentPart.Document.Body);
-            m_models = new Dictionary<string, object>();
+            m_models = new ModelDictionary();
         }
 
         public void AddModel(string prefix, object model)
@@ -39,38 +36,76 @@ namespace OpenXml.Templates
 
         public Stream Process()
         {
-            ExpandLoops(m_bodyMap);
-            ReplaceVariables(m_bodyMap);
-
+            m_models.SetModelPrefix();
+            var loops = ExpandLoops(m_bodyMap);
+            m_bodyMap.ReplaceVariables(m_models);
+            Console.WriteLine("----------- After Loops --------");
+            Console.WriteLine(m_wpDocument.MainDocumentPart.Document.ToPrettyPrintXml());
+            foreach (var loop in loops)
+            {
+                loop.Expand(m_models, m_wpDocument.MainDocumentPart.Document.Body);
+            }
+            Cleanup(m_wpDocument.MainDocumentPart.Document.Body);
+            Console.WriteLine("----------- Completed --------");
+            Console.WriteLine(m_wpDocument.MainDocumentPart.Document.ToPrettyPrintXml());
             m_wpDocument.Save();
-            m_memStream.Position = 0;
-            return m_memStream;
+            m_stream.Position = 0;
+            return m_stream;
         }
 
-        private void ExpandLoops(CharacterMap characterMap)
+        private void Cleanup(OpenXmlCompositeElement element)
         {
-            var matches = ((IReadOnlyCollection<Match>)m_collectionRegex.Matches(characterMap.Text)).Select(m => new
+          InsertionPoint.RemoveAll(element);
+          foreach (var emptyParagraph in element.Descendants<Text>().Where(x => x.Text.StartsWith("{{#") || x.Text.StartsWith("{{/")).ToList())
+          {
+              emptyParagraph.RemoveWithEmptyParent();
+          }
+          ////foreach (var emptyParagraph in element.Descendants<Paragraph>().Where(x => x.Descendants().All(c => c is not Text)).ToList())
+          ////{
+          ////    emptyParagraph.RemoveWithEmptyParent();
+          ////}
+          ////foreach (var emptyParagraph in element.Descendants<TableRow>().Where(x => x.Descendants().All(c => c is not Text)).ToList())
+          ////{
+          ////    emptyParagraph.RemoveWithEmptyParent();
+          ////}
+          ////foreach (var emptyParagraph in element.Descendants<Run>().Where(x => x.Descendants().All(c => c is not Text)).ToList())
+          ////{
+          ////    emptyParagraph.RemoveWithEmptyParent();
+          ////}
+        }
+
+        private IReadOnlyCollection<LoopBlocks> ExpandLoops(CharacterMap characterMap)
+        {
+            var matches = ((IReadOnlyCollection<Match>)m_collectionRegex.Matches(characterMap.Text)).Select(m =>
             {
-                Prefix = m.Groups[1].Value,
-                VariableName = m.Groups[2].Value,
-                Text = (Text)m_bodyMap[m.Index].Element,
-                MatchText = m.Value
+                
+                var firstChar = characterMap[m.Index];
+                var lastChar = characterMap[m.Index + m.Length - 1];
+                var firstText = (Text)firstChar.Element;
+                var lastText = (Text)lastChar.Element;
+
+                firstText.MergeText(firstChar.Index, lastText, m.Length);
+
+                return new
+                {
+                    Textz = firstText,
+                    Prefix = m.Groups[1].Value,
+                    VariableName = m.Groups[2].Value,
+                    FirstCharacter = m_bodyMap[m.Index],
+                    LastCharacter = m_bodyMap[m.Index + m.Length - 1],
+                };
             }).ToList();
-            var collectionStack = new Stack<(string Name, Text startText, int count)>();
+
+
+            m_bodyMap.MarkAsDirty();
+
+            var collectionStack = new Stack<(string Name, Text startText, List<LoopBlocks> InnerBlocks)>();
+            collectionStack.Push(("Root", null, new List<LoopBlocks>()));
             foreach (var m in matches)
             {
                 if (m.Prefix == "#")
-                {
-                    var value = GetValue(m.VariableName);
-                    if (value is ICollection enumerable)
-                    {
-                        collectionStack.Push((m.VariableName, m.Text, enumerable.Count));
-                        m.Text.Text = m.Text.Text.Replace(m.MatchText, string.Empty);
-                    }
-                    else
-                    {
-                        throw new Exception($"Value of {m.VariableName} is not enumerable");
-                    }
+                { 
+                   collectionStack.Push((m.VariableName, m.Textz, new List<LoopBlocks>()));
                 }
                 else if (m.Prefix == "/")
                 {
@@ -79,90 +114,137 @@ namespace OpenXml.Templates
                     {
                         throw new Exception($"Collection {enumerationData.Name} is not closed");
                     }
-                    m.Text.Text = m.Text.Text.Replace(m.MatchText, string.Empty);
-                    // get all text between collection start and collection end
-                    var endText = m.Text;
-                    var nodeInsideLoop = m_bodyMap.CutBetween(enumerationData.startText, endText);
-                    OpenXmlElement startElement = enumerationData.startText;
-                    startElement.InsertBeforeSelf(new Text($"{{{{#{m.VariableName}}}}}"));
-                    for (int i = 0; i < enumerationData.count; i++)
-                    {
-                        startElement = m_bodyMap.InsertParagraphsAfterText(startElement, nodeInsideLoop.Select(x => x.CloneNode(true)));
-                    }
+                    var nodesInLoop = ExtractLoopContent(enumerationData.startText, m.Textz, out var leadingPart);
+                    m_bodyMap.MarkAsDirty();
+                    collectionStack.Peek().InnerBlocks.Add(new LoopBlocks(InsertionPoint.CreateForElement(leadingPart, enumerationData.Name), nodesInLoop, enumerationData.InnerBlocks, enumerationData.Name, this));
                 }
             }
+            var root = collectionStack.Pop();
+            return root.InnerBlocks;
         }
 
-        private void ReplaceVariables(CharacterMap characterMap)
+
+        internal IReadOnlyCollection<OpenXmlElement> ExtractLoopContent(OpenXmlElement startText, OpenXmlElement endText, out OpenXmlElement leadingPart)
         {
-            var textMatches = ((IReadOnlyCollection<Match>)m_regex.Matches(characterMap.Text)).Select(m => new
+            // TODO: handle start marker in same run;
+            var commonParent = startText.FindCommonParent(endText);
+            if (commonParent == null)
             {
-                Prefix = m.Groups[1].Value,
-                VariableName = m.Groups[2].Value,
-                Format = m.Groups[3].Value,
-                Text = (Text)m_bodyMap[m.Index].Element,
-                MatchText = m.Value
-            }).ToList();
-            foreach (var m in textMatches)
+                throw new Exception("Start and end text are not in the same tree");
+            }
+            var result = new List<OpenXmlElement>();
+
+
+            if (commonParent is TableRow)
             {
-                if (m.Prefix == "#")
+                var previousRow = commonParent.PreviousSibling();
+                if (previousRow == null)
                 {
-                    var value = GetValue(m.VariableName);
-                    if (value is IEnumerator)
-                    {
-                        m_models.Remove(m.VariableName);
-                        value = GetValue(m.VariableName);
-                    }
-                    if (value is IEnumerable enumerable)
-                    {
-                        var enumerator = enumerable.GetEnumerator();
-                        enumerator.MoveNext();
-                        m_models.Add(m.VariableName, enumerator);
-                        m.Text.Text = m.Text.Text.Replace(m.MatchText, string.Empty);
-                    }
-                    else
-                    {
-                        throw new Exception($"Value of {m.VariableName} is not enumerable");
-                    }
+                    commonParent.InsertBeforeSelf(new TableRow());
+                }
+                leadingPart = commonParent.PreviousSibling();
+                commonParent.Remove();
+                result.Add(commonParent);
+            }
+            else
+            {
+                // find childs of commmon parent that contains start and end text
+                var startChildOfCommonParent = commonParent.ChildElements.Single(c =>
+                    c == startText || c.Descendants<Text>().Any(d => d == startText));
+                var endChildOfCommonParent =
+                    commonParent.ChildElements.Single(c =>
+                        c == endText || c.Descendants<Text>().Any(d => d == endText));
+
+                var startSplit = startChildOfCommonParent.SplitAfterElement(startText);
+                leadingPart = startSplit.First();
+                if (startChildOfCommonParent == endChildOfCommonParent)
+                {
+                    result.AddRange(commonParent.ChildsBetween(startSplit.First(), endChildOfCommonParent).ToList());
                 }
                 else
                 {
-                    var value = GetValue(m.VariableName);
-                    if (value != null)
-                    {
-                        m.Text.Text = m.Text.Text.Replace(m.MatchText, value.ToString());
-                    }
+                    var endSplit = endChildOfCommonParent.SplitBeforeElement(endText);
+                    result.AddRange(commonParent.ChildsBetween(leadingPart, endSplit.Last()).ToList());
+                }
+
+                foreach (var element in result)
+                {
+                    element.Remove();
                 }
             }
+            return result;
         }
 
-        private object GetValue(string variableName)
+
+        public void Dispose()
         {
-            var parts = variableName.Split('.');
-            var path = parts[0];
-            object model = m_models[path];
-            for (int i = 1; i < parts.Length; i++)
+            m_stream?.Dispose();
+            m_wpDocument?.Dispose();
+        }
+
+        private class LoopBlocks
+        {
+            private readonly InsertionPoint m_leadingPart;
+            private readonly IReadOnlyCollection<OpenXmlElement> m_loopContent;
+            private readonly IEnumerable<LoopBlocks> m_childBlocks;
+            private readonly string m_name;
+            private readonly DocxTemplate m_doc;
+
+            public LoopBlocks(InsertionPoint insertionPoint, IReadOnlyCollection<OpenXmlElement> loopContent, IEnumerable<LoopBlocks> childBlocks, string name, DocxTemplate doc)
             {
-                path += $".{parts[i]}";
-                if (!m_models.TryGetValue(path, out var nextModell))
+                m_leadingPart = insertionPoint;
+                m_loopContent = loopContent;
+                m_childBlocks = childBlocks;
+                m_name = name;
+                m_doc = doc;
+            }
+
+            public void Expand(ModelDictionary models, OpenXmlElement parentNode)
+            {
+                var insertionMPoint = m_leadingPart;
+                var model = models.GetValue(m_name);
+                if(model is IEnumerable<object> enumerable)
                 {
-                    var property = model.GetType().GetProperty(parts[i]);
-                    if (property != null)
+                    int count = 0;
+                    foreach (var item in enumerable.Reverse())
                     {
-                        model = property.GetValue(model);
+                        count++;
+                        models.Remove(m_name);
+                        models.Add(m_name, item);
+                        
+                        var paragraphs = m_loopContent.Select(x =>
+                        {
+                            var cloned = (OpenXmlCompositeElement)x.CloneNode(true);
+                            var charMap = new CharacterMap(cloned);
+                            charMap.ReplaceVariables(models);
+                            return cloned;
+                        });
+
+
+                        // insert
+                        var element = insertionMPoint.GetElement(parentNode);
+                        if (element == null)
+                        {
+                            Console.WriteLine(parentNode.ToPrettyPrintXml());
+                            throw new Exception($"Insertion point {insertionMPoint.Id} not found");
+                        }
+                        element.InsertAfterSelf(paragraphs);
+
+                        Console.WriteLine("----------- After Loop --------");
+                        Console.WriteLine(m_doc.m_wpDocument.MainDocumentPart.Document.ToPrettyPrintXml());
+
+                        foreach (var child in m_childBlocks)
+                        {
+                            child.Expand(models, parentNode);
+                        }
                     }
+                    models.Remove(m_name);
                 }
                 else
                 {
-                    model = nextModell;
-                }
-                // if variable name is a collection, return enumerator otherwise use the current value of  the enumerator to get the next value
-                if(model is IEnumerator enumerator && i + 1 < parts.Length)
-                {
-                  model = enumerator.Current;
+                   throw new Exception($"Value of {m_name} is not enumerable");
                 }
             }
-            return model;
         }
     }
 }

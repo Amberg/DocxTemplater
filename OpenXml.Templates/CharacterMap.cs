@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace OpenXml.Templates
 {
@@ -23,6 +24,7 @@ namespace OpenXml.Templates
 
     internal class CharacterMap
     {
+        private static readonly Regex m_regex = new(@"\{\{([a-zA-Z0-9\.]+)\}(?::(\w+\(*\w*\)*))*\}", RegexOptions.Compiled);
         private readonly List<OpenXmlElement> m_elements = new();
         private readonly List<Character> m_map = new();
         private readonly StringBuilder m_textBuilder = new();
@@ -179,6 +181,33 @@ namespace OpenXml.Templates
             m_isDirty = dirty;
         }
 
+        internal void ReplaceVariables(ModelDictionary models)
+        {
+            var matches = ((IReadOnlyCollection<Match>)m_regex.Matches(Text)).Select(m => new
+            {
+                VariableName = m.Groups[1].Value,
+                Text = (Text)this[m.Index].Element,
+                MatchIndex = m.Index,
+                Length = m.Length,
+                Format = m.Groups[2].Value
+            }).ToList();
+            foreach (var m in matches)
+            {
+                var value = models.GetValue(m.VariableName);
+                ReplaceTextAtIndex(m.MatchIndex, m.Length, value?.ToString());
+            }
+        }
+
+        internal void ReplaceTextAtIndex(int startIndex, int length, string newValue)
+        {
+            var part = new MapPart
+            {
+                StartIndex = startIndex,
+                EndIndex = startIndex + length - 1
+            };
+            ReplaceText(part, newValue);
+        }
+
         private void ReplaceText(MapPart part, string newText)
         {
             var startText = this[part.StartIndex].Element as Text;
@@ -274,11 +303,9 @@ namespace OpenXml.Templates
                     // Do not remove parents.
                     continue;
                 }
-
                 if (element == startText)
                 {
                     startText.Space = SpaceProcessingModeValues.Preserve;
-
                     if (startText == endText)
                     {
                         string postScriptum = null;
@@ -320,96 +347,10 @@ namespace OpenXml.Templates
             return addedText;
         }
 
-        internal IReadOnlyCollection<OpenXmlElement> CutBetween(OpenXmlElement startText, OpenXmlElement endText)
+       
+        public void MarkAsDirty()
         {
-            var startParagraph = GetParentBelowRoot(startText);
-            var endParagraph = GetParentBelowRoot(endText);
-            var paragrapsToCopy = new List<OpenXmlElement>();
-
-            var paragraphs = Elements.Select(GetParentBelowRoot).Distinct().ToList();
-            // get range between startParagraph and endParagraph
-            var start = paragraphs.IndexOf(startParagraph);
-            var end = paragraphs.IndexOf(endParagraph);
-            var range = paragraphs.GetRange(start, end - start + 1);
-
-            foreach (var paragraph in range)
-            {
-                var paragraphToCopy = paragraph;
-                if (paragraph == startParagraph || paragraph == endParagraph)
-                {
-                    paragraphToCopy = paragraph.CloneNode(false);
-                    var tobeCopiedToNewPara = new List<OpenXmlElement>();
-                    // remove all elements before startText and after endText
-                    foreach (var child in paragraph.ChildElements)
-                    {
-                        if(child.IsBefore(startText) || child.IsAfter(endText) || child == endText || endText.IsChildOf(child))
-                        {
-                            continue;
-                        }
-                        tobeCopiedToNewPara.Add(child);
-                    }
-                    foreach (var child in tobeCopiedToNewPara)
-                    {
-                        child.Remove();
-                        paragraphToCopy.AppendChild(child);
-                    }
-                }
-                else
-                {
-                    paragraphToCopy.Remove();
-                }
-                paragrapsToCopy.Add(paragraphToCopy);
-            }
             m_isDirty = true;
-            return paragrapsToCopy;
-        }
-
-        private OpenXmlElement GetParentBelowRoot(OpenXmlElement element)
-        {
-            var parent = element;
-            if (parent.Parent == null)
-            {
-                throw new InvalidOperationException("Element has no parent");
-            }
-            while (parent.Parent != m_rootElement)
-            {
-                parent = parent.Parent;
-            }
-            return parent;
-        }
-
-        /// <summary>
-        /// Inserts paragraphs after endTextElement
-        /// </summary>
-        /// <param name="endTextElement"></param>
-        /// <param name="paragraphs"></param>
-        /// <returns>Last inserted Paragraph</returns>
-        public OpenXmlElement InsertParagraphsAfterText(OpenXmlElement endTextElement, IEnumerable<OpenXmlElement> paragraphs)
-        {
-
-            // TODO: Handle different cases
-            // 1. endTextElement is the last text of a paragraph --> insert paragraphs after parent paragraph of endTextElement
-            // 2. endTextElement is in the middle of a paragraph --> split paragraph and insert paragraphs after parent paragraph of endTextElement
-
-            var lastInsertedElement = endTextElement;
-            // get run of endTextElement
-            var endRun = endTextElement.Ancestors<Run>().FirstOrDefault();
-            if (endRun == null)
-            {
-                throw new InvalidOperationException("EndTextElement is not in Run");
-            }
-            // get runs of paragraphs
-            var runs = paragraphs.SelectMany(x => x.Descendants<Run>()).ToList();
-            if (runs.Count > 0)
-            {
-                foreach (var run in runs)
-                {
-                    run.Remove();
-                    endRun.InsertAfterSelf(run);
-                    endRun = run;
-                }
-            }
-            return lastInsertedElement;
         }
     }
 }
