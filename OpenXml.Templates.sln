@@ -5,7 +5,7 @@ VisualStudioVersion = 17.8.34316.72
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenXml.Templates", "OpenXml.Templates\OpenXml.Templates.csproj", "{13EB3757-1633-4B45-B30E-BC557460E8A9}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenXml.Templates.Test", "OpenXml.Teplates.Test\OpenXml.Templates.Test.csproj", "{4B1AECD5-E69C-4FCC-8C4A-79CBFAB39238}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenXml.Templates.Test", "OpenXml.Templates.Test\OpenXml.Templates.Test.csproj", "{33FBF817-9244-417E-83F6-85C04D300786}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,10 +17,10 @@ Global
 		{13EB3757-1633-4B45-B30E-BC557460E8A9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{13EB3757-1633-4B45-B30E-BC557460E8A9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{13EB3757-1633-4B45-B30E-BC557460E8A9}.Release|Any CPU.Build.0 = Release|Any CPU
-		{4B1AECD5-E69C-4FCC-8C4A-79CBFAB39238}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{4B1AECD5-E69C-4FCC-8C4A-79CBFAB39238}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{4B1AECD5-E69C-4FCC-8C4A-79CBFAB39238}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{4B1AECD5-E69C-4FCC-8C4A-79CBFAB39238}.Release|Any CPU.Build.0 = Release|Any CPU
+		{33FBF817-9244-417E-83F6-85C04D300786}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{33FBF817-9244-417E-83F6-85C04D300786}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{33FBF817-9244-417E-83F6-85C04D300786}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{33FBF817-9244-417E-83F6-85C04D300786}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
