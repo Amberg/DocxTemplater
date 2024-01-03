@@ -3,11 +3,12 @@ using DocumentFormat.OpenXml.Wordprocessing;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Xml.Linq;
 
 namespace OpenXml.Templates
 {
-    internal static class OpenXmlHelper
+    public static class OpenXmlHelper
     {
         public static bool IsChildOf(this OpenXmlElement element, OpenXmlElement parent)
         {
@@ -257,6 +258,41 @@ namespace OpenXml.Templates
             var xmldoc = XDocument.Parse("<root>"+element.InnerXml+"</root>");
             return xmldoc.ToString();
         }
+
+        public static string PrintTree(this OpenXmlElement element, StringBuilder sb = null, int indent = 0)
+        {
+            if (sb == null)
+            {
+                sb = new StringBuilder();
+            }
+            sb.AppendLine($"{new string(' ', indent)}parent ({element.Parent?.GetType()?.Name}){element.GetType().Name}({element.GetType().Namespace})");
+            var attributes = element.GetAttributes();
+            if (attributes.Any())
+            {
+                sb.AppendLine($"{new string(' ', indent + 2)}Attributes:");
+                foreach (var attribute in attributes)
+                {
+                    sb.AppendLine($"{new string(' ', indent + 4)}{attribute.LocalName} = {attribute.Value}");
+                }
+            }
+            foreach (var child in element.ChildElements)
+            {
+                child.PrintTree(sb, indent + 2);
+            }
+            return sb.ToString();
+        }
+
+
+        public static OpenXmlElement GetRoot(this OpenXmlElement element)
+        {
+            var current = element;
+            while (current.Parent != null)
+            {
+                current = current.Parent;
+            }
+            return current;
+        }
+
 
         public static void RemoveWithEmptyParent(this OpenXmlElement element)
         {

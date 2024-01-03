@@ -1,18 +1,16 @@
 ﻿using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
+using OpenXml.Templates.Formatter;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
-using System.Xml.Linq;
-using OpenXml.Templates.Formatter;
 
 namespace OpenXml.Templates
 {
-    internal class DocxTemplate : IDisposable
+    public class DocxTemplate : IDisposable
     {
         private readonly Stream m_stream;
         private readonly WordprocessingDocument m_wpDocument;
@@ -31,14 +29,27 @@ namespace OpenXml.Templates
             m_variableReplacer = new VariableReplacer(m_models);
         }
 
+        public void RegisterFormatter(IFormatter formatter)
+        {
+            m_variableReplacer.RegisterFormatter(formatter);
+        }
+
         public void AddModel(string prefix, object model)
         {
             m_models.Add(prefix, model);
         }
 
         public Stream Process()
-        {
+        { 
             m_models.SetModelPrefix();
+
+            ProcessNode(m_wpDocument.MainDocumentPart.HeaderParts.First().Header);
+
+            Console.WriteLine("----------- Header --------");
+            Console.WriteLine(m_wpDocument.MainDocumentPart.HeaderParts.First().Header.ToPrettyPrintXml());
+            Console.WriteLine("-----------  --------");
+            Console.WriteLine("-----------  --------");
+
             ProcessNode(m_wpDocument.MainDocumentPart.Document.Body);
             m_wpDocument.Save();
             m_stream.Position = 0;

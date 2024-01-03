@@ -1,11 +1,13 @@
-﻿using System;
+﻿using DocumentFormat.OpenXml.Packaging;
+using System;
+using DocumentFormat.OpenXml.Wordprocessing;
 
 namespace OpenXml.Templates.Formatter
 {
-    internal interface IFormatter
+    public interface IFormatter
     {
         public bool CanHandle(Type type, string prefix);
 
-        public string Format(object value, string prefix, string[] args);
+        void ApplyFormat(string modelPath, object value, string prefix, string[] args, Text target);
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Packaging;
 
 namespace OpenXml.Templates.Formatter
 {
@@ -22,10 +23,16 @@ namespace OpenXml.Templates.Formatter
             m_formatters.Add(new FormatPatternFormatter());
         }
 
+
+        public void RegisterFormatter(IFormatter formatter)
+        {
+            m_formatters.Add(formatter);
+        }
+
         /// <summary>
         /// the formatter string is the leading formatter prefix, e.g. "FORMAT" followed by the formatter arguments ae image(100,200)
         /// </summary>
-        public void ApplyFormatter(object value, string formatterAsString, Text target)
+        public void ApplyFormatter(string modelPath, object value, string formatterAsString, Text target)
         {
             if (value == null)
             {
@@ -46,7 +53,7 @@ namespace OpenXml.Templates.Formatter
                 {
                     if (formatter.CanHandle(value.GetType(), prefix))
                     {
-                        target.Text = formatter.Format(value, prefix, args);
+                        formatter.ApplyFormat(modelPath, value, prefix, args, target);
                         return;
                     }
                 }
@@ -69,7 +76,7 @@ namespace OpenXml.Templates.Formatter
                 var formatterAsString = variableMatch.Groups[2].Value;
 
                 var value = m_models.GetValue(variableName);
-                ApplyFormatter(value, formatterAsString, text);
+                ApplyFormatter(variableName, value, formatterAsString, text);
             }
         }
     }

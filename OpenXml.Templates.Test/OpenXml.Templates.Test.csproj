@@ -18,6 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\OpenXml.Templates.Images\OpenXml.Templates.Images.csproj" />
     <ProjectReference Include="..\OpenXml.Templates\OpenXml.Templates.csproj" />
   </ItemGroup>
 

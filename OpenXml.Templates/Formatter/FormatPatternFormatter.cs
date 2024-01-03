@@ -1,4 +1,6 @@
 ﻿using System;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Wordprocessing;
 
 namespace OpenXml.Templates.Formatter
 {
@@ -32,33 +34,35 @@ namespace OpenXml.Templates.Formatter
             return type == typeof(DateTime) && prefix.ToUpper() == "FORMAT";
         }
 
-        public string Format(object value, string prefix, string[] args)
+        public void ApplyFormat(string modelPath, object value, string prefix, string[] args, Text target)
         {
+            var text = value.ToString();
             if (args.Length != 1)
             {
                 throw new OpenXmlTemplateException($"DateTime formatter requires exactly one argument, e.g. FORMAT(dd.MM.yyyy)");
             }
-            if(value is DateTime dateTime)
+            
+            if (value is DateTime dateTime)
             {
-                return dateTime.ToString(args[0]);
+                text = dateTime.ToString(args[0]);
             }
-            if(value is decimal decimalValue)
+            else if (value is decimal decimalValue)
             {
-                return decimalValue.ToString(args[0]);
+                text = decimalValue.ToString(args[0]);
             }
-            if(value is int intValue)
+            else if (value is int intValue)
             {
-                return intValue.ToString(args[0]);
+                text = intValue.ToString(args[0]);
             }
-            if(value is float floatValue)
+            else if (value is float floatValue)
             {
-                return floatValue.ToString(args[0]);
+                text = floatValue.ToString(args[0]);
             }
-            if(value is double doubleValue)
+            else if (value is double doubleValue)
             {
-                return doubleValue.ToString(args[0]);
-            }
-            return value.ToString();
+                text = doubleValue.ToString(args[0]);
+            } 
+            target.Text = text;
         }
     }
 

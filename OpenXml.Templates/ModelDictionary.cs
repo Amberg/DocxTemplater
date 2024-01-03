@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 
 namespace OpenXml.Templates
@@ -48,7 +49,7 @@ namespace OpenXml.Templates
                     {
                         throw new OpenXmlTemplateException($"Model {path} not found");
                     }
-                    var property = model.GetType().GetProperty(parts[i]);
+                    var property = model.GetType().GetProperty(parts[i], BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.GetProperty | BindingFlags.Instance);
                     if (property != null)
                     {
                         model = property.GetValue(model);
