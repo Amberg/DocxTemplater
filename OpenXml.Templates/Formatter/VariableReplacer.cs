@@ -1,19 +1,25 @@
 ﻿using DocumentFormat.OpenXml.Wordprocessing;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
+using DocumentFormat.OpenXml;
 
 namespace OpenXml.Templates.Formatter
 {
-    internal class StringConverter
+    internal class VariableReplacer
     {
+        private readonly ModelDictionary m_models;
         private static readonly Regex FormatterRegex = new (@"(.+)(?:\((.*)?\))", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static readonly Regex m_variableRegex = new(@"\{\{([a-zA-Z0-9\.]+)\}(?::(\w+\(*\w*\)*))*\}", RegexOptions.Compiled);
+
 
         private readonly List<IFormatter> m_formatters;
 
-        public StringConverter()
+        public VariableReplacer(ModelDictionary models)
         {
+            m_models = models;
             m_formatters = new List<IFormatter>();
-            m_formatters.Add(new DateTimeFormatter());
+            m_formatters.Add(new FormatPatternFormatter());
         }
 
         /// <summary>
@@ -25,7 +31,7 @@ namespace OpenXml.Templates.Formatter
             {
                 target.Text = string.Empty;
             }
-            if (formatterAsString != null)
+            if (!string.IsNullOrWhiteSpace(formatterAsString))
             {
                 var matchResult = FormatterRegex.Match(formatterAsString);
                 if (!matchResult.Success)
@@ -47,6 +53,24 @@ namespace OpenXml.Templates.Formatter
             }
             target.Text = value.ToString();
 
+        }
+
+        public void ReplaceVariables(OpenXmlCompositeElement cloned)
+        {
+            foreach (var text in cloned.GetElementsWithMarker(ElementMarkers.Variable).OfType<Text>())
+            {
+               var variableMatch = m_variableRegex.Match(text.Text);
+                if (!variableMatch.Success)
+                {
+                    throw new OpenXmlTemplateException($"Invalid variable syntax '{text.Text}'");
+                }
+
+                var variableName = variableMatch.Groups[1].Value;
+                var formatterAsString = variableMatch.Groups[2].Value;
+
+                var value = m_models.GetValue(variableName);
+                ApplyFormatter(value, formatterAsString, text);
+            }
         }
     }
 }
