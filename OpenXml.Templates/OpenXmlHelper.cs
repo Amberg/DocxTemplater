@@ -1,10 +1,9 @@
-﻿using System;
-using System.Collections;
+﻿using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Wordprocessing;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Xml.Linq;
-using DocumentFormat.OpenXml;
-using DocumentFormat.OpenXml.Wordprocessing;
 
 namespace OpenXml.Templates
 {
@@ -180,25 +179,27 @@ namespace OpenXml.Templates
                 throw new ArgumentException("Text elements must have a common parent");
             }
 
-            if(length < first.Text.Length - startIndex)
-            {
-                throw new ArgumentOutOfRangeException(nameof(length));
-            }
-
             if(startIndex < 0 || startIndex >= first.Text.Length)
             {
                 throw new ArgumentOutOfRangeException(nameof(startIndex));
             }
- 
-
-            if (startIndex != 0)
+            var matchInSameElement = first == last;
+           
+            if (startIndex != 0) // leading text is not part of the match
             {
                 first = first.SplitAtIndex(startIndex);
             }
 
+            if(startIndex + length < first.Text.Length) // trailing text is not part of the match in the first element
+            {
+                first.SplitAtIndex(length);
+            }
 
-            first.Parent.SplitBeforeElement(first);
-            last.Parent.SplitAfterElement(last);
+            if(matchInSameElement)
+            {
+                return first;
+            }
+
             List<OpenXmlElement> toRemove = new List<OpenXmlElement>();
             bool found = false;
             foreach (var current in commonParent.Descendants<Text>())
@@ -213,6 +214,7 @@ namespace OpenXml.Templates
                     continue;
                 }
 
+                // trailing text is not part of the match int the last element
                 if(first.Text.Length + current.Text.Length > length)
                 {
                     var firstPart = current.Text.Substring(0, length - first.Text.Length);
@@ -244,9 +246,12 @@ namespace OpenXml.Templates
             var firstPart = element.Text.Substring(0, startIndexSecondPart);
             var secondPart = element.Text.Substring(startIndexSecondPart);
             element.Text = firstPart;
-            return element.InsertAfterSelf(new Text(secondPart));
+            var newElement = element.InsertAfterSelf(new Text(secondPart));
+            element.Space = SpaceProcessingModeValues.Preserve;
+            newElement.Space = SpaceProcessingModeValues.Preserve;
+            return newElement;
         }
-
+        
         public static string ToPrettyPrintXml(this OpenXmlElement element)
         {
             var xmldoc = XDocument.Parse("<root>"+element.InnerXml+"</root>");

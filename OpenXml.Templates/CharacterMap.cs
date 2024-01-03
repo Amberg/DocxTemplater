@@ -24,7 +24,6 @@ namespace OpenXml.Templates
 
     internal class CharacterMap
     {
-        private static readonly Regex m_regex = new(@"\{\{([a-zA-Z0-9\.]+)\}(?::(\w+\(*\w*\)*))*\}", RegexOptions.Compiled);
         private readonly List<OpenXmlElement> m_elements = new();
         private readonly List<Character> m_map = new();
         private readonly StringBuilder m_textBuilder = new();
@@ -180,24 +179,7 @@ namespace OpenXml.Templates
             }
             m_isDirty = dirty;
         }
-
-        internal void ReplaceVariables(ModelDictionary models)
-        {
-            var matches = ((IReadOnlyCollection<Match>)m_regex.Matches(Text)).Select(m => new
-            {
-                VariableName = m.Groups[1].Value,
-                Text = (Text)this[m.Index].Element,
-                MatchIndex = m.Index,
-                Length = m.Length,
-                Format = m.Groups[2].Value
-            }).ToList();
-            foreach (var m in matches)
-            {
-                var value = models.GetValue(m.VariableName);
-                ReplaceTextAtIndex(m.MatchIndex, m.Length, value?.ToString());
-            }
-        }
-
+        
         internal void ReplaceTextAtIndex(int startIndex, int length, string newValue)
         {
             var part = new MapPart

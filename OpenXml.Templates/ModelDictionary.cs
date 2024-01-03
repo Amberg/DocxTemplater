@@ -46,7 +46,7 @@ namespace OpenXml.Templates
                 {
                     if (model == null)
                     {
-                        throw new Exception($"Model {path} not found");
+                        throw new OpenXmlTemplateException($"Model {path} not found");
                     }
                     var property = model.GetType().GetProperty(parts[i]);
                     if (property != null)
@@ -55,11 +55,11 @@ namespace OpenXml.Templates
                     }
                     else if(model is ICollection)
                     {
-                        throw new Exception($"Property {parts[i]} on collection {path} not found - is collection start missing? '#{variableName}'");
+                        throw new OpenXmlTemplateException($"Property {parts[i]} on collection {path} not found - is collection start missing? '#{variableName}'");
                     }
                     else
                     {
-                        throw new Exception($"Property {parts[i]} not found in {path}");
+                        throw new OpenXmlTemplateException($"Property {parts[i]} not found in {path}");
                     }
                 }
                 else

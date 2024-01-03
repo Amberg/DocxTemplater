@@ -205,6 +205,11 @@ namespace OpenXml.Templates.Test
             });
 
             var result = docTemplate.Process();
+            result.Position = 0;
+            result.SaveAsFileAndOpenInWord();
+            result.Position = 0;
+
+
             var document = WordprocessingDocument.Open(result, false);
             var body = document.MainDocumentPart.Document.Body;
             var paragraphs = body.Descendants<Paragraph>().ToList();
