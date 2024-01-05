@@ -40,17 +40,22 @@ namespace OpenXml.Templates
         }
 
         public Stream Process()
-        { 
+        {
+            if (m_wpDocument.MainDocumentPart == null)
+            {
+                return m_stream;
+            }
+
             m_models.SetModelPrefix();
-
-            ProcessNode(m_wpDocument.MainDocumentPart.HeaderParts.First().Header);
-
-            Console.WriteLine("----------- Header --------");
-            Console.WriteLine(m_wpDocument.MainDocumentPart.HeaderParts.First().Header.ToPrettyPrintXml());
-            Console.WriteLine("-----------  --------");
-            Console.WriteLine("-----------  --------");
-
+            foreach (var header in m_wpDocument.MainDocumentPart.HeaderParts)
+            {
+                ProcessNode(header.Header);
+            }
             ProcessNode(m_wpDocument.MainDocumentPart.Document.Body);
+            foreach (var footer in m_wpDocument.MainDocumentPart.FooterParts)
+            {
+                ProcessNode(footer.Footer);
+            }
             m_wpDocument.Save();
             m_stream.Position = 0;
             return m_stream;
@@ -58,7 +63,6 @@ namespace OpenXml.Templates
 
         private void ProcessNode(OpenXmlCompositeElement content)
         {
-
 
 #if DEBUG
             Console.WriteLine("----------- Original --------");
@@ -73,7 +77,6 @@ namespace OpenXml.Templates
 #endif
 
             var loops = ExpandLoops(content);
-
             m_variableReplacer.ReplaceVariables(content);
 
 #if DEBUG

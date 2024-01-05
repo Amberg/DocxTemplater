@@ -34,7 +34,7 @@ namespace OpenXml.Templates.Images
             {
                 using var image = Image.Load(imageBytes);
                 var imagePartType = DetectPartTypeInfo(modelPath, image.Metadata);
-                var root = (Header)target.GetRoot();
+                var root = target.GetRoot();
                 string impagepartRelationShipId = null;
                 if (root is OpenXmlPartRootElement openXmlPartRootElement && openXmlPartRootElement.OpenXmlPart != null)
                 {
