@@ -204,19 +204,23 @@ namespace OpenXml.Templates.Test
                 Total = 1045.5m,
                 TotalPaid = 0m,
                 TotalOpen = 1045.5m,
-                TotalDownPayment = 0m
+                TotalDownPayment = 0m,
+                HtmlTest = "<br class=\"k-br\"><table class=\"k-table\"><thead><tr style=\"height:19.85pt;\">" +
+                           "<th colspan=\"2\" style=\"width:538px;border-width:1px;border-style:solid;border-color:#000000;background-color:#c1bfbf;vertical-align:middle;text-align:left;margin-left:60px;" +
+                           "\">Document / Notes - This is table was generated from HTML</th></tr></thead><tbody><tr style=\"height:19.85pt;\">" +
+                           "<td style=\"width: 538px;\" data-role=\"resizable\">Some Notes with special characters ä ö ü é and so on</td>" +
+                           "<td style=\"width:162px;text-align:left;vertical-align:top;\">29.11.2023</td></tr></tbody></table><p>&#xFEFF;</p>"
             });
 
             var result = docTemplate.Process();
             result.Position = 0;
-            ////result.SaveAsFileAndOpenInWord();
-            ////result.Position = 0;
-
+            result.SaveAsFileAndOpenInWord();
+            result.Position = 0;
 
             var document = WordprocessingDocument.Open(result, false);
             var body = document.MainDocumentPart.Document.Body;
             var paragraphs = body.Descendants<Paragraph>().ToList();
-            Assert.That(paragraphs.Count, Is.EqualTo(60));
+            Assert.That(paragraphs.Count, Is.EqualTo(63));
             // check some replacements
             Assert.That(body.InnerText.Contains("John Doe"), Is.EqualTo(true));
             Assert.That(body.InnerText.Contains("Main Street 42"), Is.EqualTo(true));

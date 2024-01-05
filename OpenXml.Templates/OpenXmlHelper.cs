@@ -293,6 +293,21 @@ namespace OpenXml.Templates
             return current;
         }
 
+        public static T GetFirstAncestor<T>(this OpenXmlElement element)
+        where T : OpenXmlElement
+        {
+            var current = element.Parent;
+            while (current != null)
+            {
+                if (current is T t)
+                {
+                    return t;
+                }
+                current = current.Parent;
+            }
+            return null;
+        }
+
 
         public static void RemoveWithEmptyParent(this OpenXmlElement element)
         {

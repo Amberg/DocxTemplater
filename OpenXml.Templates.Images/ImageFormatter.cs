@@ -14,14 +14,12 @@ namespace OpenXml.Templates.Images
         public bool CanHandle(Type type, string prefix)
         {
             var prefixUpper = prefix.ToUpper();
-            if (prefixUpper == "IMAGE" || prefixUpper == "IMG")
+            if (prefixUpper != "IMAGE" && prefixUpper != "IMG")
             {
-                if (type == typeof(byte[]))
-                {
-                    return true;
-                }
+                return false;
             }
-            return false;
+
+            return type == typeof(byte[]);
         }
 
         public void ApplyFormat(string modelPath, object value, string prefix, string[] args, Text target)
@@ -69,11 +67,6 @@ namespace OpenXml.Templates.Images
             {
                 throw new OpenXmlTemplateException("Could not detect image format", e);
             }
-        }
-
-        private int PixelToEmu(int pixel)
-        {
-            return (int)(pixel * 914400 / 96);
         }
 
         private PartTypeInfo DetectPartTypeInfo(string modelPath, ImageMetadata imageMetadata)

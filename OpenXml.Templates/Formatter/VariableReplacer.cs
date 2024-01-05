@@ -21,6 +21,7 @@ namespace OpenXml.Templates.Formatter
             m_models = models;
             m_formatters = new List<IFormatter>();
             m_formatters.Add(new FormatPatternFormatter());
+            m_formatters.Add(new HtmlFormatter());
         }
 
 
