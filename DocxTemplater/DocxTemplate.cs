@@ -1,14 +1,14 @@
-﻿using DocumentFormat.OpenXml;
-using DocumentFormat.OpenXml.Packaging;
-using DocumentFormat.OpenXml.Wordprocessing;
-using OpenXml.Templates.Formatter;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Wordprocessing;
+using DocxTemplater.Formatter;
 
-namespace OpenXml.Templates
+namespace DocxTemplater
 {
     public sealed class DocxTemplate : IDisposable
     {

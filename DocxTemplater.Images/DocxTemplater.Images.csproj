@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFrameworks>net6.0;net7.0;net8.0</TargetFrameworks>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
   </PropertyGroup>
 
   <ItemGroup>
@@ -9,7 +10,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\OpenXml.Templates\OpenXml.Templates.csproj" />
+    <ProjectReference Include="..\DocxTemplater\DocxTemplater.csproj" />
   </ItemGroup>
 
 </Project>

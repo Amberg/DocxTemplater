@@ -1,12 +1,12 @@
-﻿using DocumentFormat.OpenXml.Wordprocessing;
-using System;
-using DocumentFormat.OpenXml;
-using DocumentFormat.OpenXml.Packaging;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Text;
+using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Wordprocessing;
 
-namespace OpenXml.Templates.Formatter
+namespace DocxTemplater.Formatter
 {
     internal class HtmlFormatter : IFormatter
     {

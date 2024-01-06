@@ -2,7 +2,7 @@
 using System.Linq;
 using DocumentFormat.OpenXml;
 
-namespace OpenXml.Templates
+namespace DocxTemplater
 {
     internal static class ElementMarkers
     {

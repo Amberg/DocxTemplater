@@ -2,7 +2,7 @@
 using System.Diagnostics;
 #endif
 
-namespace OpenXml.Templates.Test
+namespace DocxTemplater.Test
 {
     internal static class TestHelper
     {

@@ -22,10 +22,11 @@
     <PackageReference Include="coverlet.collector" Version="6.0.0" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\OpenXml.Templates.Images\OpenXml.Templates.Images.csproj" />
-    <ProjectReference Include="..\OpenXml.Templates\OpenXml.Templates.csproj" />
-  </ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\DocxTemplater.Images\DocxTemplater.Images.csproj" />
+	  <ProjectReference Include="..\DocxTemplater\DocxTemplater.csproj" />
+	</ItemGroup>
 
   <ItemGroup>
     <None Update="Resources\BillTemplate.docx">

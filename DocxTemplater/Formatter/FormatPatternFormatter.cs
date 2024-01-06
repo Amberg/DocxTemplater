@@ -1,7 +1,7 @@
 ﻿using System;
 using DocumentFormat.OpenXml.Wordprocessing;
 
-namespace OpenXml.Templates.Formatter
+namespace DocxTemplater.Formatter
 {
     internal class FormatPatternFormatter : IFormatter
     {

@@ -1,13 +1,13 @@
-﻿using DocumentFormat.OpenXml;
+﻿using System;
+using System.Linq;
+using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
-using OpenXml.Templates.Formatter;
+using DocxTemplater.Formatter;
 using SixLabors.ImageSharp;
-using System;
-using System.Linq;
 using SixLabors.ImageSharp.Metadata;
 
-namespace OpenXml.Templates.Images
+namespace DocxTemplater.Images
 {
     public class ImageFormatter : IFormatter
     {

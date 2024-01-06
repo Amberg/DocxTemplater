@@ -1,8 +1,8 @@
-﻿using DocumentFormat.OpenXml;
-using System;
+﻿using System;
 using System.Linq;
+using DocumentFormat.OpenXml;
 
-namespace OpenXml.Templates
+namespace DocxTemplater
 {
     internal class InsertionPoint
     {

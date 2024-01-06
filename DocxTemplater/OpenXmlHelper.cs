@@ -1,12 +1,12 @@
-﻿using DocumentFormat.OpenXml;
-using DocumentFormat.OpenXml.Wordprocessing;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Xml.Linq;
+using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Wordprocessing;
 
-namespace OpenXml.Templates
+namespace DocxTemplater
 {
     public static class OpenXmlHelper
     {

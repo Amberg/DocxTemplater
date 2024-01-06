@@ -1,9 +1,9 @@
-﻿using DocumentFormat.OpenXml;
-using DocumentFormat.OpenXml.Wordprocessing;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Text;
+using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Wordprocessing;
 
-namespace OpenXml.Templates
+namespace DocxTemplater
 {
     internal record Character
     {

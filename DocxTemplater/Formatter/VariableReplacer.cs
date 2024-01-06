@@ -1,10 +1,10 @@
-﻿using DocumentFormat.OpenXml.Wordprocessing;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Wordprocessing;
 
-namespace OpenXml.Templates.Formatter
+namespace DocxTemplater.Formatter
 {
     internal class VariableReplacer
     {

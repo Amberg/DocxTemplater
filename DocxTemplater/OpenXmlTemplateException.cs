@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace OpenXml.Templates
+namespace DocxTemplater
 {
     [Serializable]
     public class OpenXmlTemplateException : Exception

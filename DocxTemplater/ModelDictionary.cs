@@ -22,12 +22,13 @@ using System.Collections;
 After:
 using System.Collections;
 */
+
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
-namespace OpenXml.Templates
+namespace DocxTemplater
 {
     internal class ModelDictionary
     {

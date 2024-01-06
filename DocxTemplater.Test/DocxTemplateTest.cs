@@ -1,14 +1,14 @@
 ﻿using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
-using OpenXml.Templates.Images;
+using DocxTemplater.Images;
 using Bold = DocumentFormat.OpenXml.Wordprocessing.Bold;
 using Paragraph = DocumentFormat.OpenXml.Wordprocessing.Paragraph;
 using Run = DocumentFormat.OpenXml.Wordprocessing.Run;
 using RunProperties = DocumentFormat.OpenXml.Wordprocessing.RunProperties;
 using Text = DocumentFormat.OpenXml.Wordprocessing.Text;
 
-namespace OpenXml.Templates.Test
+namespace DocxTemplater.Test
 {
     internal class DocxTemplateTest
     {

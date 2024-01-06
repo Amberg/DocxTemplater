@@ -1,6 +1,6 @@
-﻿using OpenXml.Templates.Images;
+﻿using DocxTemplater.Images;
 
-namespace OpenXml.Templates.Test
+namespace DocxTemplater.Test
 {
     internal class ImageFormatterTest
     {

@@ -1,7 +1,6 @@
-﻿using DocumentFormat.OpenXml;
-using DocumentFormat.OpenXml.Wordprocessing;
+﻿using DocumentFormat.OpenXml.Wordprocessing;
 
-namespace OpenXml.Templates.Test
+namespace DocxTemplater.Test
 {
     internal class OpenXmlHelperTest
     {
