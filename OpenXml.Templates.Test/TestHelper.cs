@@ -1,4 +1,6 @@
-﻿using System.Diagnostics;
+﻿#if DEBUG
+using System.Diagnostics;
+#endif
 
 namespace OpenXml.Templates.Test
 {
@@ -6,10 +8,7 @@ namespace OpenXml.Templates.Test
     {
         public static void SaveAsFileAndOpenInWord(this Stream stream)
         {
-#if !DEBUG
-return;
-#endif
-
+#if DEBUG
             stream.Position = 0;
             var fileName = Path.ChangeExtension(Path.GetTempFileName(), "docx");
             using (var fileStream = File.OpenWrite(fileName))
@@ -24,6 +23,7 @@ return;
             };
             using var proc = Process.Start(psi);
             proc?.WaitForExit();
+#endif
         }
     }
 }
