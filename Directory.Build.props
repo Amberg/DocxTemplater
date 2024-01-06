@@ -1,0 +1,44 @@
+<Project>
+	<PropertyGroup Condition="'$(Configuration)' == 'Debug' ">
+		<WarningsNotAsErrors>CS1030</WarningsNotAsErrors>
+	</PropertyGroup>
+
+	<!--Code Analysis-->
+	<PropertyGroup>
+		<AnalysisLevelDocumentation>latest-minimum</AnalysisLevelDocumentation>
+		<AnalysisLevelGlobalization>latest-minimum</AnalysisLevelGlobalization>
+		<AnalysisLevelInteroperability>latest-minimum</AnalysisLevelInteroperability>
+
+		<AnalysisLevelDesign>latest-recommended</AnalysisLevelDesign>
+		<AnalysisLevelMaintainability>latest-recommended</AnalysisLevelMaintainability>
+		<AnalysisLevelNaming>latest-recommended</AnalysisLevelNaming>
+		<AnalysisLevelPerformance>latest-recommended</AnalysisLevelPerformance>
+		<AnalysisLevelSingleFile>latest-recommended</AnalysisLevelSingleFile>
+		<AnalysisLevelReliability>latest-recommended</AnalysisLevelReliability>
+		<AnalysisLevelSecurity>latest-recommended</AnalysisLevelSecurity>
+		<AnalysisLevelUsage>latest-recommended</AnalysisLevelUsage>
+		<AnalysisLevelStyle>latest-recommended</AnalysisLevelStyle>
+		<!--Enforce analyzers during build-->
+		<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)' != 'Debug' ">
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+		<!--<CodeAnalysisTreatWarningsAsErrors>true</CodeAnalysisTreatWarningsAsErrors>
+		Used TreatWarningsAsErrors instead due a bug - https://github.com/dotnet/roslyn-analyzers/issues/6281
+		-->
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)' == 'Debug' ">
+		<TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+		<!--<CodeAnalysisTreatWarningsAsErrors>false</CodeAnalysisTreatWarningsAsErrors>
+		Used TreatWarningsAsErrors instead due a bug - https://github.com/dotnet/roslyn-analyzers/issues/6281
+		-->
+	</PropertyGroup>
+
+	<!-- Workaround for https://github.com/dotnet/roslyn/issues/41640 -->
+	<PropertyGroup>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<NoWarn>$(NoWarn);CS1591;CS1573</NoWarn>
+	</PropertyGroup>
+
+</Project>

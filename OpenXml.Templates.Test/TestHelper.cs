@@ -6,6 +6,10 @@ namespace OpenXml.Templates.Test
     {
         public static void SaveAsFileAndOpenInWord(this Stream stream)
         {
+#if !DEBUG
+return;
+#endif
+
             stream.Position = 0;
             var fileName = Path.ChangeExtension(Path.GetTempFileName(), "docx");
             using (var fileStream = File.OpenWrite(fileName))
@@ -13,11 +17,13 @@ namespace OpenXml.Templates.Test
                 stream.CopyTo(fileStream);
             }
 
-            ProcessStartInfo psi = new ProcessStartInfo();
-            psi.FileName = fileName;
-            psi.UseShellExecute = true;
+            ProcessStartInfo psi = new()
+            {
+                FileName = fileName,
+                UseShellExecute = true
+            };
             using var proc = Process.Start(psi);
-            proc.WaitForExit();
+            proc?.WaitForExit();
         }
     }
 }

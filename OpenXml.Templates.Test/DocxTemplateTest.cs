@@ -32,7 +32,7 @@ namespace OpenXml.Templates.Test
             Assert.IsNotNull(result);
             result.Position = 0;
 
-            var document = WordprocessingDocument.Open((Stream) result, false);
+            var document = WordprocessingDocument.Open((Stream)result, false);
             var body = document.MainDocumentPart.Document.Body;
             // check that bold is preserved
             Assert.That(body.Descendants<Bold>().First().Val, Is.EqualTo(OnOffValue.FromBoolean(true)));
@@ -68,9 +68,10 @@ namespace OpenXml.Templates.Test
             memStream.Position = 0;
             var docTemplate = new DocxTemplate(memStream);
             docTemplate.AddModel("ds",
-                new {
-                        PropertyInRoot = "RootValue", 
-                        Items = new[]
+                new
+                {
+                    PropertyInRoot = "RootValue",
+                    Items = new[]
                         {
                             new {Name = " Item1 ", Value = " Value1 ", InnerCollection = new[]
                             {

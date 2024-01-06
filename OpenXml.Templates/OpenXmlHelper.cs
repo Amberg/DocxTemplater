@@ -12,14 +12,9 @@ namespace OpenXml.Templates
     {
         public static bool IsChildOf(this OpenXmlElement element, OpenXmlElement parent)
         {
-            if (element == null)
-            {
-                throw new ArgumentNullException(nameof(element));
-            }
-            if (parent == null)
-            {
-                throw new ArgumentNullException(nameof(parent));
-            }
+            ArgumentNullException.ThrowIfNull(element, nameof(element));
+            ArgumentNullException.ThrowIfNull(element);
+            ArgumentNullException.ThrowIfNull(parent);
             var current = element.Parent;
             while (current != null)
             {
@@ -35,14 +30,8 @@ namespace OpenXml.Templates
 
         public static OpenXmlElement FindCommonParent(this OpenXmlElement element, OpenXmlElement otherElement)
         {
-            if (element == null)
-            {
-                throw new ArgumentNullException(nameof(element));
-            }
-            if (otherElement == null)
-            {
-                throw new ArgumentNullException(nameof(otherElement));
-            }
+            ArgumentNullException.ThrowIfNull(element);
+            ArgumentNullException.ThrowIfNull(otherElement);
             var current = element.Parent;
             while (current != null)
             {
@@ -61,7 +50,7 @@ namespace OpenXml.Templates
         /// </summary>
         public static IReadOnlyCollection<OpenXmlElement> SplitAfterElement(this OpenXmlElement elementToSplit, OpenXmlElement element)
         {
-          return elementToSplit.SplitAtElement(element, false);
+            return elementToSplit.SplitAtElement(element, false);
         }
 
         public static IReadOnlyCollection<OpenXmlElement> SplitBeforeElement(this OpenXmlElement elementToSplit, OpenXmlElement element)
@@ -72,11 +61,7 @@ namespace OpenXml.Templates
         private static IReadOnlyCollection<OpenXmlElement> SplitAtElement(this OpenXmlElement elementToSplit, OpenXmlElement element, bool beforeElement)
         {
             var result = new List<OpenXmlElement>() { elementToSplit };
-            var parent = element.Parent;
-            if (parent == null)
-            {
-                throw new ArgumentException("cannot split a root node without parent");
-            }
+            var parent = element.Parent ?? throw new ArgumentException("cannot split a root node without parent");
             var childs = beforeElement ? parent.ChildsBefore(element).ToList() : parent.ChildsAfter(element).ToList();
             if (childs.Count > 0)
             {
@@ -84,9 +69,13 @@ namespace OpenXml.Templates
                 if (parent.Parent != null)
                 {
                     if (beforeElement)
+                    {
                         parent.InsertBeforeSelf(clonedParent);
+                    }
                     else
+                    {
                         parent.InsertAfterSelf(clonedParent);
+                    }
                 }
                 foreach (var child in childs)
                 {
@@ -95,9 +84,13 @@ namespace OpenXml.Templates
                 }
 
                 if (beforeElement)
+                {
                     result.Insert(0, clonedParent);
+                }
                 else
+                {
                     result.Add(clonedParent);
+                }
             }
             if (elementToSplit == parent)
             {
@@ -174,34 +167,29 @@ namespace OpenXml.Templates
 
         public static Text MergeText(this Text first, int startIndex, Text last, int length)
         {
-            var commonParent = first.FindCommonParent(last);
-            if (commonParent == null)
-            {
-                throw new ArgumentException("Text elements must have a common parent");
-            }
-
-            if(startIndex < 0 || startIndex >= first.Text.Length)
+            var commonParent = first.FindCommonParent(last) ?? throw new ArgumentException("Text elements must have a common parent");
+            if (startIndex < 0 || startIndex >= first.Text.Length)
             {
                 throw new ArgumentOutOfRangeException(nameof(startIndex));
             }
             var matchInSameElement = first == last;
-           
+
             if (startIndex != 0) // leading text is not part of the match
             {
                 first = first.SplitAtIndex(startIndex);
             }
 
-            if(startIndex + length < first.Text.Length) // trailing text is not part of the match in the first element
+            if (startIndex + length < first.Text.Length) // trailing text is not part of the match in the first element
             {
                 first.SplitAtIndex(length);
             }
 
-            if(matchInSameElement)
+            if (matchInSameElement)
             {
                 return first;
             }
 
-            List<OpenXmlElement> toRemove = new List<OpenXmlElement>();
+            List<OpenXmlElement> toRemove = new();
             bool found = false;
             foreach (var current in commonParent.Descendants<Text>())
             {
@@ -216,10 +204,10 @@ namespace OpenXml.Templates
                 }
 
                 // trailing text is not part of the match int the last element
-                if(first.Text.Length + current.Text.Length > length)
+                if (first.Text.Length + current.Text.Length > length)
                 {
-                    var firstPart = current.Text.Substring(0, length - first.Text.Length);
-                    var secondPart = current.Text.Substring(length - first.Text.Length);
+                    var firstPart = current.Text[..(length - first.Text.Length)];
+                    var secondPart = current.Text[(length - first.Text.Length)..];
                     first.Text += firstPart;
                     current.Text = secondPart;
                     break;
@@ -244,27 +232,24 @@ namespace OpenXml.Templates
             {
                 throw new ArgumentOutOfRangeException(nameof(startIndexSecondPart));
             }
-            var firstPart = element.Text.Substring(0, startIndexSecondPart);
-            var secondPart = element.Text.Substring(startIndexSecondPart);
+            var firstPart = element.Text[..startIndexSecondPart];
+            var secondPart = element.Text[startIndexSecondPart..];
             element.Text = firstPart;
             var newElement = element.InsertAfterSelf(new Text(secondPart));
             element.Space = SpaceProcessingModeValues.Preserve;
             newElement.Space = SpaceProcessingModeValues.Preserve;
             return newElement;
         }
-        
+
         public static string ToPrettyPrintXml(this OpenXmlElement element)
         {
-            var xmldoc = XDocument.Parse("<root>"+element.InnerXml+"</root>");
+            var xmldoc = XDocument.Parse("<root>" + element.InnerXml + "</root>");
             return xmldoc.ToString();
         }
 
         public static string PrintTree(this OpenXmlElement element, StringBuilder sb = null, int indent = 0)
         {
-            if (sb == null)
-            {
-                sb = new StringBuilder();
-            }
+            sb ??= new StringBuilder();
             sb.AppendLine($"{new string(' ', indent)}parent ({element.Parent?.GetType()?.Name}){element.GetType().Name}({element.GetType().Namespace})");
             var attributes = element.GetAttributes();
             if (attributes.Any())

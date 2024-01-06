@@ -1,7 +1,5 @@
 ﻿using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Wordprocessing;
-using System.Text;
-using DocumentFormat.OpenXml.Packaging;
 
 namespace OpenXml.Templates.Test
 {
@@ -35,7 +33,7 @@ namespace OpenXml.Templates.Test
         {
             var paragraph = new Paragraph(
                 new Run(new Text("Leading")),
-                new Run( new Text("StartSplit")),
+                new Run(new Text("StartSplit")),
                 new Run(new Text("SplitContent")),
                 new Run(new Text("FirstAfterSplit"), new Text("Trail")));
             var body = new Document(new Body(paragraph));
@@ -190,7 +188,7 @@ namespace OpenXml.Templates.Test
             var paragraph = new Paragraph(xml);
             var parts = paragraph.ChildElements.First<Run>().SplitAfterElement(paragraph.Descendants<Text>().First());
             Assert.That(parts.Count, Is.EqualTo(2));
-            CollectionAssert.AreEqual(parts.Select(x => x.InnerText), new[]{"Text1", "Text2"});
+            CollectionAssert.AreEqual(parts.Select(x => x.InnerText), new[] { "Text1", "Text2" });
 
             var runs = paragraph.Descendants<Run>().ToList();
             Assert.That(runs.Count, Is.EqualTo(2));
@@ -211,7 +209,7 @@ namespace OpenXml.Templates.Test
             var paragraph = new Paragraph(xml);
             var parts = paragraph.ChildElements.First<Run>().SplitAfterElement(paragraph.Descendants<Text>().First());
             Assert.That(parts.Count, Is.EqualTo(1));
-            CollectionAssert.AreEqual(parts.Select(x => x.InnerText), new[] { "Text1"});
+            CollectionAssert.AreEqual(parts.Select(x => x.InnerText), new[] { "Text1" });
 
             var runs = paragraph.Descendants<Run>().ToList();
             Assert.That(runs.Count, Is.EqualTo(1));
@@ -232,7 +230,7 @@ namespace OpenXml.Templates.Test
                     </w:p>";
             var paragraph = new Paragraph(xml);
             var lastText = paragraph.Descendants<Text>().Last();
-            var parts =  paragraph.SplitBeforeElement(lastText);
+            var parts = paragraph.SplitBeforeElement(lastText);
             Assert.That(parts.Count, Is.EqualTo(2));
             Assert.That(parts.ElementAt(0).InnerText, Is.EqualTo("{{ds.Items.Value}}"));
             Assert.That(parts.ElementAt(1).InnerText, Is.EqualTo(string.Empty));

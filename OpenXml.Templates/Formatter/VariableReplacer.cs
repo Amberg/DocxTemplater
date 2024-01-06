@@ -3,14 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using DocumentFormat.OpenXml;
-using DocumentFormat.OpenXml.Packaging;
 
 namespace OpenXml.Templates.Formatter
 {
     internal class VariableReplacer
     {
         private readonly ModelDictionary m_models;
-        private static readonly Regex FormatterRegex = new (@"(.+)(?:\((.*)?\))", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static readonly Regex FormatterRegex = new(@"(.+)(?:\((.*)?\))", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         private static readonly Regex m_variableRegex = new(@"\{\{([a-zA-Z0-9\.]+)\}(?::(\w+\(*\w*\)*))*\}", RegexOptions.Compiled);
 
 
@@ -67,7 +66,7 @@ namespace OpenXml.Templates.Formatter
         {
             foreach (var text in cloned.GetElementsWithMarker(ElementMarkers.Variable).OfType<Text>())
             {
-               var variableMatch = m_variableRegex.Match(text.Text);
+                var variableMatch = m_variableRegex.Match(text.Text);
                 if (!variableMatch.Success)
                 {
                     throw new OpenXmlTemplateException($"Invalid variable syntax '{text.Text}'");

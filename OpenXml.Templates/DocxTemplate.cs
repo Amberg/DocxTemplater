@@ -10,13 +10,13 @@ using System.Text.RegularExpressions;
 
 namespace OpenXml.Templates
 {
-    public class DocxTemplate : IDisposable
+    public sealed class DocxTemplate : IDisposable
     {
         private readonly Stream m_stream;
         private readonly WordprocessingDocument m_wpDocument;
         private readonly ModelDictionary m_models;
 
-        private static readonly Regex patternRegex = new (@"\{\{([#/])?([a-zA-Z0-9\.]+)\}(?::(\w+\(*\w*\)*))?\}", RegexOptions.Compiled);
+        private static readonly Regex patternRegex = new(@"\{\{([#/])?([a-zA-Z0-9\.]+)\}(?::(\w+\(*\w*\)*))?\}", RegexOptions.Compiled);
         private readonly VariableReplacer m_variableReplacer;
 
         public DocxTemplate(Stream docXStream)
@@ -69,7 +69,7 @@ namespace OpenXml.Templates
             Console.WriteLine(m_wpDocument.MainDocumentPart.Document.ToPrettyPrintXml());
 #endif
 
-            IsolateAndMergeTextTemplateMarkers(content);
+            DocxTemplate.IsolateAndMergeTextTemplateMarkers(content);
 
 #if DEBUG
             Console.WriteLine("----------- Isolate Texts --------");
@@ -87,14 +87,14 @@ namespace OpenXml.Templates
             {
                 loop.Expand(m_models, m_wpDocument.MainDocumentPart.Document.Body);
             }
-            Cleanup(m_wpDocument.MainDocumentPart.Document.Body);
+            DocxTemplate.Cleanup(m_wpDocument.MainDocumentPart.Document.Body);
 #if DEBUG
             Console.WriteLine("----------- Completed --------");
             Console.WriteLine(m_wpDocument.MainDocumentPart.Document.ToPrettyPrintXml());
 #endif
         }
 
-        private void IsolateAndMergeTextTemplateMarkers(OpenXmlCompositeElement content)
+        private static void IsolateAndMergeTextTemplateMarkers(OpenXmlCompositeElement content)
         {
             var charMap = new CharacterMap(content);
             foreach (Match m in patternRegex.Matches(charMap.Text))
@@ -121,21 +121,21 @@ namespace OpenXml.Templates
             }
         }
 
-        private void Cleanup(OpenXmlCompositeElement element)
+        private static void Cleanup(OpenXmlCompositeElement element)
         {
-          InsertionPoint.RemoveAll(element);
-          foreach (var emptyParagraph in element.Descendants<Text>().Where(x => x.IsMarked()).ToList())
-          {
-              var value = emptyParagraph.GetMarker();
-              if (value == ElementMarkers.BeginLoop || value == ElementMarkers.EndLoop)
-              {
-                  emptyParagraph.RemoveWithEmptyParent();
-              }
-              else
-              {
-                  emptyParagraph.RemoveAttribute("mrk", null);
-              }
-          }
+            InsertionPoint.RemoveAll(element);
+            foreach (var emptyParagraph in element.Descendants<Text>().Where(x => x.IsMarked()).ToList())
+            {
+                var value = emptyParagraph.GetMarker();
+                if (value is ElementMarkers.BeginLoop or ElementMarkers.EndLoop)
+                {
+                    emptyParagraph.RemoveWithEmptyParent();
+                }
+                else
+                {
+                    emptyParagraph.RemoveAttribute("mrk", null);
+                }
+            }
         }
 
         private IReadOnlyCollection<LoopBlock> ExpandLoops(OpenXmlCompositeElement element)
@@ -158,13 +158,13 @@ namespace OpenXml.Templates
                     var matches = patternRegex.Matches(text.Text);
                     var variableName = matches[0].Groups[2].Value;
                     var enumerationData = collectionStack.Pop();
-                    if (enumerationData.Name != variableName) 
+                    if (enumerationData.Name != variableName)
                     {
                         throw new OpenXmlTemplateException($"Collection {enumerationData.Name} is not closed");
                     }
-                    var nodesInLoop = ExtractLoopContent(enumerationData.startText, text, out var leadingPart);
+                    var nodesInLoop = DocxTemplate.ExtractLoopContent(enumerationData.startText, text, out var leadingPart);
                     m_models.Remove(enumerationData.Name);
-                    collectionStack.Peek().InnerBlocks.Add(new LoopBlock(InsertionPoint.CreateForElement(leadingPart, enumerationData.Name), nodesInLoop, enumerationData.InnerBlocks, enumerationData.Name,this, m_variableReplacer));
+                    collectionStack.Peek().InnerBlocks.Add(new LoopBlock(InsertionPoint.CreateForElement(leadingPart, enumerationData.Name), nodesInLoop, enumerationData.InnerBlocks, enumerationData.Name, m_variableReplacer));
                 }
             }
             var root = collectionStack.Pop();
@@ -172,13 +172,9 @@ namespace OpenXml.Templates
         }
 
 
-        internal IReadOnlyCollection<OpenXmlElement> ExtractLoopContent(OpenXmlElement startText, OpenXmlElement endText, out OpenXmlElement leadingPart)
+        internal static IReadOnlyCollection<OpenXmlElement> ExtractLoopContent(OpenXmlElement startText, OpenXmlElement endText, out OpenXmlElement leadingPart)
         {
-            var commonParent = startText.FindCommonParent(endText);
-            if (commonParent == null)
-            {
-                throw new OpenXmlTemplateException("Start and end text are not in the same tree");
-            }
+            var commonParent = startText.FindCommonParent(endText) ?? throw new OpenXmlTemplateException("Start and end text are not in the same tree");
             var result = new List<OpenXmlElement>();
             if (commonParent is TableRow)
             {
@@ -233,16 +229,14 @@ namespace OpenXml.Templates
             private readonly IReadOnlyCollection<OpenXmlElement> m_loopContent;
             private readonly IEnumerable<LoopBlock> m_childBlocks;
             private readonly string m_name;
-            private readonly DocxTemplate m_doc;
             private readonly VariableReplacer m_variableReplacer;
 
-            public LoopBlock(InsertionPoint insertionPoint, IReadOnlyCollection<OpenXmlElement> loopContent, IEnumerable<LoopBlock> childBlocks, string name, DocxTemplate doc, VariableReplacer variableReplacer)
+            public LoopBlock(InsertionPoint insertionPoint, IReadOnlyCollection<OpenXmlElement> loopContent, IEnumerable<LoopBlock> childBlocks, string name, VariableReplacer variableReplacer)
             {
                 m_leadingPart = insertionPoint;
                 m_loopContent = loopContent;
                 m_childBlocks = childBlocks;
                 m_name = name;
-                m_doc = doc;
                 m_variableReplacer = variableReplacer;
             }
 
@@ -250,7 +244,7 @@ namespace OpenXml.Templates
             {
                 var insertionMPoint = m_leadingPart;
                 var model = models.GetValue(m_name);
-                if(model is IEnumerable<object> enumerable)
+                if (model is IEnumerable<object> enumerable)
                 {
                     int count = 0;
                     foreach (var item in enumerable.Reverse())
@@ -258,7 +252,7 @@ namespace OpenXml.Templates
                         count++;
                         models.Remove(m_name);
                         models.Add(m_name, item);
-                        
+
                         var paragraphs = m_loopContent.Select(x =>
                         {
                             var cloned = (OpenXmlCompositeElement)x.CloneNode(true);
@@ -275,11 +269,6 @@ namespace OpenXml.Templates
                             throw new OpenXmlTemplateException($"Insertion point {insertionMPoint.Id} not found");
                         }
                         element.InsertAfterSelf(paragraphs);
-#if DEBUG
-                        Console.WriteLine("----------- After Loop --------");
-                        Console.WriteLine(m_doc.m_wpDocument.MainDocumentPart.Document.ToPrettyPrintXml());
-#endif
-
                         foreach (var child in m_childBlocks)
                         {
                             child.Expand(models, parentNode);
@@ -289,7 +278,7 @@ namespace OpenXml.Templates
                 }
                 else
                 {
-                   throw new OpenXmlTemplateException($"Value of {m_name} is not enumerable");
+                    throw new OpenXmlTemplateException($"Value of {m_name} is not enumerable");
                 }
             }
         }

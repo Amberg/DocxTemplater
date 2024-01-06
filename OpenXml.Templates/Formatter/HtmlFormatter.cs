@@ -12,16 +12,16 @@ namespace OpenXml.Templates.Formatter
     {
         public bool CanHandle(Type type, string prefix)
         {
-            return type == typeof(string) && prefix.ToUpper() == "HTML";
+            return type == typeof(string) && prefix.Equals("HTML", StringComparison.CurrentCultureIgnoreCase);
         }
 
         public void ApplyFormat(string modelPath, object value, string prefix, string[] args, Text target)
         {
-            if(value is not string html)
+            if (value is not string html)
             {
                 return;
             }
-            if(string.IsNullOrWhiteSpace(html))
+            if (string.IsNullOrWhiteSpace(html))
             {
                 return;
             }
@@ -32,26 +32,28 @@ namespace OpenXml.Templates.Formatter
             {
                 if (openXmlPartRootElement.OpenXmlPart is HeaderPart headerPart)
                 {
-                    alternativeFormatImportPartId = CreateAlternativeFormatImportPart(headerPart, html);
+                    alternativeFormatImportPartId = HtmlFormatter.CreateAlternativeFormatImportPart(headerPart, html);
                 }
                 if (openXmlPartRootElement.OpenXmlPart is FooterPart footerPart)
                 {
-                    alternativeFormatImportPartId = CreateAlternativeFormatImportPart(footerPart, html);
+                    alternativeFormatImportPartId = HtmlFormatter.CreateAlternativeFormatImportPart(footerPart, html);
                 }
                 if (openXmlPartRootElement.OpenXmlPart is MainDocumentPart mainDocumentPart)
                 {
-                    alternativeFormatImportPartId = CreateAlternativeFormatImportPart(mainDocumentPart, html);
+                    alternativeFormatImportPartId = HtmlFormatter.CreateAlternativeFormatImportPart(mainDocumentPart, html);
                 }
             }
             if (alternativeFormatImportPartId == null)
             {
                 throw new OpenXmlTemplateException("Could not find a valid image part");
             }
-            AltChunk altChunk = new AltChunk();
-            altChunk.Id = alternativeFormatImportPartId;
+            AltChunk altChunk = new()
+            {
+                Id = alternativeFormatImportPartId
+            };
 
             var ancestorParagraph = target.GetFirstAncestor<Paragraph>();
-            if(ancestorParagraph != null)
+            if (ancestorParagraph != null)
             {
                 var firstPart = ancestorParagraph.SplitAfterElement(target).First();
                 firstPart.InsertAfterSelf(altChunk);
@@ -63,7 +65,7 @@ namespace OpenXml.Templates.Formatter
             target.RemoveWithEmptyParent();
         }
 
-        private string CreateAlternativeFormatImportPart<T>(T parent, string html)
+        private static string CreateAlternativeFormatImportPart<T>(T parent, string html)
             where T : OpenXmlPartContainer, ISupportedRelationship<AlternativeFormatImportPart>
         {
             var alternativeFormatImportPart = parent.AddAlternativeFormatImportPart(AlternativeFormatImportPartType.Html);

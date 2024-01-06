@@ -44,18 +44,6 @@ namespace OpenXml.Templates
             }
         }
 
-        private List<OpenXmlElement> Elements
-        {
-            get
-            {
-                if (m_isDirty)
-                {
-                    Recreate();
-                }
-                return m_elements;
-            }
-        }
-
         public CharacterMap(OpenXmlCompositeElement ce)
         {
             m_rootElement = ce;
@@ -87,7 +75,7 @@ namespace OpenXml.Templates
                     m_elements.Add(child);
                 }
 
-                if (child is Paragraph || child is Break)
+                if (child is Paragraph or Break)
                 {
                     m_map.Add(new Character
                     {
@@ -116,7 +104,7 @@ namespace OpenXml.Templates
                 }
             }
         }
-        
+
         public void MarkAsDirty()
         {
             m_isDirty = true;

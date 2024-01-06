@@ -1,9 +1,31 @@
-﻿using System;
+﻿
+/* Unmerged change from project 'OpenXml.Templates(net6.0)'
+Before:
+using System;
+using System.Collections;
+After:
+using System.Collections;
+*/
+
+/* Unmerged change from project 'OpenXml.Templates(net7.0)'
+Before:
+using System;
+using System.Collections;
+After:
+using System.Collections;
+*/
+
+/* Unmerged change from project 'OpenXml.Templates(net8.0)'
+Before:
+using System;
+using System.Collections;
+After:
+using System.Collections;
+*/
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 
 namespace OpenXml.Templates
 {
@@ -54,7 +76,7 @@ namespace OpenXml.Templates
                     {
                         model = property.GetValue(model);
                     }
-                    else if(model is ICollection)
+                    else if (model is ICollection)
                     {
                         throw new OpenXmlTemplateException($"Property {parts[i]} on collection {path} not found - is collection start missing? '#{variableName}'");
                     }

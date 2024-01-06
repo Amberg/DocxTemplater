@@ -13,10 +13,10 @@ namespace OpenXml.Templates
         {
             Id = id;
         }
-        
+
         public static InsertionPoint CreateForElement(OpenXmlElement element, string id)
         {
-            id = id ?? Guid.NewGuid().ToString("N");
+            id ??= Guid.NewGuid().ToString("N");
             var insertionPoint = new InsertionPoint(id);
             element.SetAttribute(new OpenXmlAttribute(null, InsertionPointAttributeName, null, insertionPoint.Id));
             return insertionPoint;

@@ -13,7 +13,7 @@ namespace OpenXml.Templates.Test
             using var fileStream = File.OpenRead("Resources/ImageFormatterTest.docx");
             var docTemplate = new DocxTemplate(fileStream);
             docTemplate.RegisterFormatter(new ImageFormatter());
-            docTemplate.AddModel("ds", new {MyLogo = imageBytes});
+            docTemplate.AddModel("ds", new { MyLogo = imageBytes });
 
             var result = docTemplate.Process();
             result.SaveAsFileAndOpenInWord();

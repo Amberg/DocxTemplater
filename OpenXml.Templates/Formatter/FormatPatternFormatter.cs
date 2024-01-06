@@ -1,5 +1,4 @@
 ﻿using System;
-using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 
 namespace OpenXml.Templates.Formatter
@@ -8,30 +7,30 @@ namespace OpenXml.Templates.Formatter
     {
         public bool CanHandle(Type type, string prefix)
         {
-            if(prefix.ToUpper() == "FORMAT")
+            if (prefix.Equals("FORMAT", StringComparison.CurrentCultureIgnoreCase))
             {
-               if(type == typeof(DateTime))
-               {
+                if (type == typeof(DateTime))
+                {
                     return true;
-               }
-               if(type == typeof(decimal))
-               {
+                }
+                if (type == typeof(decimal))
+                {
                     return true;
-               }
-               if(type == typeof(int))
-               {
+                }
+                if (type == typeof(int))
+                {
                     return true;
-               }
-               if(type == typeof(float))
-               {
+                }
+                if (type == typeof(float))
+                {
                     return true;
-               }
-               if(type == typeof(double)) 
-               {
-                   return true;
-               }
+                }
+                if (type == typeof(double))
+                {
+                    return true;
+                }
             }
-            return type == typeof(DateTime) && prefix.ToUpper() == "FORMAT";
+            return type == typeof(DateTime) && prefix.Equals("FORMAT", StringComparison.CurrentCultureIgnoreCase);
         }
 
         public void ApplyFormat(string modelPath, object value, string prefix, string[] args, Text target)
@@ -41,7 +40,7 @@ namespace OpenXml.Templates.Formatter
             {
                 throw new OpenXmlTemplateException($"DateTime formatter requires exactly one argument, e.g. FORMAT(dd.MM.yyyy)");
             }
-            
+
             if (value is DateTime dateTime)
             {
                 text = dateTime.ToString(args[0]);
@@ -61,7 +60,7 @@ namespace OpenXml.Templates.Formatter
             else if (value is double doubleValue)
             {
                 text = doubleValue.ToString(args[0]);
-            } 
+            }
             target.Text = text;
         }
     }

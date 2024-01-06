@@ -1,5 +1,4 @@
-﻿using DocumentFormat.OpenXml.Packaging;
-using System;
+﻿using System;
 using DocumentFormat.OpenXml.Wordprocessing;
 
 namespace OpenXml.Templates.Formatter
