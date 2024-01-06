@@ -14,10 +14,9 @@ namespace DocxTemplater
             Id = id;
         }
 
-        public static InsertionPoint CreateForElement(OpenXmlElement element, string id)
+        public static InsertionPoint CreateForElement(OpenXmlElement element)
         {
-            id ??= Guid.NewGuid().ToString("N");
-            var insertionPoint = new InsertionPoint(id);
+            var insertionPoint = new InsertionPoint(Guid.NewGuid().ToString("N"));
             element.SetAttribute(new OpenXmlAttribute(null, InsertionPointAttributeName, null, insertionPoint.Id));
             return insertionPoint;
         }

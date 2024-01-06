@@ -15,9 +15,9 @@ namespace DocxTemplater.Formatter
             return type == typeof(string) && prefix.Equals("HTML", StringComparison.CurrentCultureIgnoreCase);
         }
 
-        public void ApplyFormat(string modelPath, object value, string prefix, string[] args, Text target)
+        public void ApplyFormat(FormatterContext context, Text target)
         {
-            if (value is not string html)
+            if (context.Value is not string html)
             {
                 return;
             }

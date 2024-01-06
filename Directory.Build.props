@@ -41,4 +41,12 @@
 		<NoWarn>$(NoWarn);CS1591;CS1573</NoWarn>
 	</PropertyGroup>
 
+	<ItemGroup>
+		<None Include="../readme.md" Pack="true" PackagePath="\"/>
+	</ItemGroup>
+
+	<PropertyGroup>
+		<PackageReadmeFile>readme.md</PackageReadmeFile>
+	</PropertyGroup>
+
 </Project>

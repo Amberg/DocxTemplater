@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Xml.Linq;
 using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Drawing.Wordprocessing;
+using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 
 namespace DocxTemplater
@@ -60,6 +62,10 @@ namespace DocxTemplater
 
         private static IReadOnlyCollection<OpenXmlElement> SplitAtElement(this OpenXmlElement elementToSplit, OpenXmlElement element, bool beforeElement)
         {
+            if (elementToSplit == element)
+            {
+                return new List<OpenXmlElement>() { elementToSplit };
+            }
             var result = new List<OpenXmlElement>() { elementToSplit };
             var parent = element.Parent ?? throw new ArgumentException("cannot split a root node without parent");
             var childs = beforeElement ? parent.ChildsBefore(element).ToList() : parent.ChildsAfter(element).ToList();
@@ -173,13 +179,12 @@ namespace DocxTemplater
                 throw new ArgumentOutOfRangeException(nameof(startIndex));
             }
             var matchInSameElement = first == last;
-
+            var firstTextLength = first.Text.Length;
             if (startIndex != 0) // leading text is not part of the match
             {
                 first = first.SplitAtIndex(startIndex);
             }
-
-            if (startIndex + length < first.Text.Length) // trailing text is not part of the match in the first element
+            if (startIndex + length < firstTextLength) // trailing text part of the match in the first element
             {
                 first.SplitAtIndex(length);
             }
@@ -305,6 +310,18 @@ namespace DocxTemplater
                     parent.RemoveWithEmptyParent();
                 }
             }
+        }
+
+        public static uint GetMaxDocPropertyId(this OpenXmlPart doc)
+        {
+            if (doc.RootElement == null)
+            {
+                return 0;
+            }
+            return doc
+                .RootElement
+                .Descendants<DocProperties>()
+                .Max(x => (uint?)x.Id) ?? 0;
         }
     }
 }

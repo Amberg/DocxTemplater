@@ -1,18 +1,14 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Text.RegularExpressions;
-using DocumentFormat.OpenXml;
+﻿using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Wordprocessing;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
 
 namespace DocxTemplater.Formatter
 {
     internal class VariableReplacer
     {
         private readonly ModelDictionary m_models;
-        private static readonly Regex FormatterRegex = new(@"(.+)(?:\((.*)?\))", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-        private static readonly Regex m_variableRegex = new(@"\{\{([a-zA-Z0-9\.]+)\}(?::(\w+\(*\w*\)*))*\}", RegexOptions.Compiled);
-
-
         private readonly List<IFormatter> m_formatters;
 
         public VariableReplacer(ModelDictionary models)
@@ -21,6 +17,7 @@ namespace DocxTemplater.Formatter
             m_formatters = new List<IFormatter>();
             m_formatters.Add(new FormatPatternFormatter());
             m_formatters.Add(new HtmlFormatter());
+            m_formatters.Add(new CaseFormatter());
         }
 
 
@@ -32,51 +29,37 @@ namespace DocxTemplater.Formatter
         /// <summary>
         /// the formatter string is the leading formatter prefix, e.g. "FORMAT" followed by the formatter arguments ae image(100,200)
         /// </summary>
-        public void ApplyFormatter(string modelPath, object value, string formatterAsString, Text target)
+        public void ApplyFormatter(PatternMatch patternMatch, object value, Text target)
         {
             if (value == null)
             {
                 target.Text = string.Empty;
+                return;
             }
-            if (!string.IsNullOrWhiteSpace(formatterAsString))
+            if (!string.IsNullOrWhiteSpace(patternMatch.Formatter))
             {
-                var matchResult = FormatterRegex.Match(formatterAsString);
-                if (!matchResult.Success)
-                {
-                    throw new OpenXmlTemplateException($"Unknown formatter '{formatterAsString}'");
-                }
-
-                var prefix = matchResult.Groups[1].Value;
-                var args = matchResult.Groups[2].Value.Split(',');
-
                 foreach (var formatter in m_formatters)
                 {
-                    if (formatter.CanHandle(value.GetType(), prefix))
+                    if (formatter.CanHandle(value.GetType(), patternMatch.Formatter))
                     {
-                        formatter.ApplyFormat(modelPath, value, prefix, args, target);
+                        var context = new FormatterContext(patternMatch.Variable, patternMatch.Formatter, patternMatch.Arguments, value, CultureInfo.CurrentUICulture);
+                        formatter.ApplyFormat(context, target);
                         return;
                     }
                 }
             }
-            target.Text = value.ToString();
+            target.Text = value.ToString() ?? string.Empty;
 
         }
 
-        public void ReplaceVariables(OpenXmlCompositeElement cloned)
+        public void ReplaceVariables(OpenXmlElement cloned)
         {
-            foreach (var text in cloned.GetElementsWithMarker(ElementMarkers.Variable).OfType<Text>())
+            var variables = cloned.GetElementsWithMarker(PatternType.Variable).OfType<Text>().ToList();
+            foreach (var text in variables)
             {
-                var variableMatch = m_variableRegex.Match(text.Text);
-                if (!variableMatch.Success)
-                {
-                    throw new OpenXmlTemplateException($"Invalid variable syntax '{text.Text}'");
-                }
-
-                var variableName = variableMatch.Groups[1].Value;
-                var formatterAsString = variableMatch.Groups[2].Value;
-
-                var value = m_models.GetValue(variableName);
-                ApplyFormatter(variableName, value, formatterAsString, text);
+                var variableMatch = PatternMatcher.FindSyntaxPatterns(text.Text).FirstOrDefault() ?? throw new OpenXmlTemplateException($"Invalid variable syntax '{text.Text}'");
+                var value = m_models.GetValue(variableMatch.Variable);
+                ApplyFormatter(variableMatch, value, text);
             }
         }
     }

@@ -7,61 +7,27 @@ namespace DocxTemplater.Formatter
     {
         public bool CanHandle(Type type, string prefix)
         {
-            if (prefix.Equals("FORMAT", StringComparison.CurrentCultureIgnoreCase))
+            if (prefix.Equals("FORMAT", StringComparison.CurrentCultureIgnoreCase) || prefix.Equals("F", StringComparison.CurrentCultureIgnoreCase))
             {
-                if (type == typeof(DateTime))
-                {
-                    return true;
-                }
-                if (type == typeof(decimal))
-                {
-                    return true;
-                }
-                if (type == typeof(int))
-                {
-                    return true;
-                }
-                if (type == typeof(float))
-                {
-                    return true;
-                }
-                if (type == typeof(double))
-                {
-                    return true;
-                }
+                return type.IsAssignableTo(typeof(IFormattable));
             }
-            return type == typeof(DateTime) && prefix.Equals("FORMAT", StringComparison.CurrentCultureIgnoreCase);
+            return false;
         }
 
-        public void ApplyFormat(string modelPath, object value, string prefix, string[] args, Text target)
+        public void ApplyFormat(FormatterContext context, Text target)
         {
-            var text = value.ToString();
-            if (args.Length != 1)
+            if (context.Args.Length != 1)
             {
                 throw new OpenXmlTemplateException($"DateTime formatter requires exactly one argument, e.g. FORMAT(dd.MM.yyyy)");
             }
-
-            if (value is DateTime dateTime)
+            if (context.Value is IFormattable formattable)
             {
-                text = dateTime.ToString(args[0]);
+                target.Text = formattable.ToString(context.Args[0], null);
             }
-            else if (value is decimal decimalValue)
+            else
             {
-                text = decimalValue.ToString(args[0]);
+                throw new OpenXmlTemplateException($"Formatter {context.Formatter} can only be applied to IFormattable objects - property {context.Placeholder}");
             }
-            else if (value is int intValue)
-            {
-                text = intValue.ToString(args[0]);
-            }
-            else if (value is float floatValue)
-            {
-                text = floatValue.ToString(args[0]);
-            }
-            else if (value is double doubleValue)
-            {
-                text = doubleValue.ToString(args[0]);
-            }
-            target.Text = text;
         }
     }
 

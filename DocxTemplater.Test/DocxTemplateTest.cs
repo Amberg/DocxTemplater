@@ -27,8 +27,9 @@ namespace DocxTemplater.Test
             wpDocument.Save();
             memStream.Position = 0;
             var docTemplate = new DocxTemplate(memStream);
-            docTemplate.AddModel("Property1", "Replaced");
+            docTemplate.BindModel("Property1", "Replaced");
             var result = docTemplate.Process();
+            docTemplate.Validate();
             Assert.IsNotNull(result);
             result.Position = 0;
 
@@ -49,49 +50,58 @@ namespace DocxTemplater.Test
             MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
             mainPart.Document = new Document(new Body(
                 new Paragraph(
-                    new Run(new Text("{{PropertyInRoot}}")),
+                    new Run(new Text("{{PropertyInRoot}}")), // --> same as ds.PropertyInRoot
+                    new Run(new Text("{{NullTest}}")),
+                    new Run(new Text("{{NullTest}:TOUPPER()}")),
                     new Run(new Text("This Value:")),
                     new Run(new Text("{{#ds.Items}}"), new Text("For each run {{ds.Items.Name}}"))
                 ),
             new Paragraph(
                     new Run(new Text("{{ds.Items.Value}}")),
                     new Run(new Text("{{#ds.Items.InnerCollection}}")),
-                        new Run(new Text("{{ds.Items.Value}}")),
-                        new Run(new Text("{{ds.Items.InnerCollection.Name}}")),
-                        new Run(new Text("{{ds.Items.InnerCollection.InnerValue}}")),
+                    new Run(new Text("{{Items.Value}}")), // --> same as ds.Items.Value
+                    new Run(new Text("{{ds.Items.InnerCollection.Name}}")),
+                    new Run(new Text("{{Items.InnerCollection.InnerValue}}")), // --> same as ds.Items.InnerCollection.InnerValue
+                    new Run(new Text("{{ds.Items.InnerCollection.NumericValue > 0 }}I'm only here if NumericValue is greater than 0 - {{ds.Items.InnerCollection.InnerValue}:toupper()}{{else}}I'm here if if this is not the case{{/}}")),
                     new Run(new Text("{{/ds.Items.InnerCollection}}")),
-                    new Run(new Text("{{/ds.Items}}")),
-                    new Run(new Text("will be replaced"))
+                    new Run(new Text("{{/Items}}")), // --> same as ds.Items.InnerCollection
+                    new Run(new Text("will be replaced {{company.Name}}"))
                 )
             ));
             wpDocument.Save();
             memStream.Position = 0;
             var docTemplate = new DocxTemplate(memStream);
-            docTemplate.AddModel("ds",
+            docTemplate.BindModel("ds",
                 new
                 {
                     PropertyInRoot = "RootValue",
+                    NullTest = (string)null,
                     Items = new[]
                         {
                             new {Name = " Item1 ", Value = " Value1 ", InnerCollection = new[]
                             {
-                                new {Name = " InnerItem1 ", InnerValue = " InnerValue1 "}
+                                new {Name = " InnerItem1 ", InnerValue = " InnerValue1 ", NumericValue = 0}
                             }},
                             new {Name = " Item2 ", Value = " Value2 ", InnerCollection = new[]
                             {
-                                new {Name = " InnerItem2 ", InnerValue = " InnerValue2 "},
-                                new {Name = " InnerItem2a ", InnerValue = " InnerValue2b "}
+                                new {Name = " InnerItem2 ", InnerValue = " InnerValue2 ", NumericValue = 0},
+                                new {Name = " InnerItem2a ", InnerValue = " InnerValue2b ", NumericValue = 1}
                             }},
                         }
                 });
+            docTemplate.BindModel("company", new { Name = "X" });
             var result = docTemplate.Process();
+            docTemplate.Validate();
             Assert.IsNotNull(result);
             result.Position = 0;
 
             var document = WordprocessingDocument.Open(result, false);
             var body = document.MainDocumentPart.Document.Body;
             //check values have been replaced
-            Assert.That(body.InnerText, Is.EqualTo("RootValueThis Value:For each run  Item1  Value1  Value1  InnerItem1  InnerValue1 For each run  Item2  Value2  Value2  InnerItem2  InnerValue2  Value2  InnerItem2a  InnerValue2b will be replaced"));
+            Assert.That(body.InnerText, Is.EqualTo("RootValueThis Value:For each run  Item1  Value1  Value1  InnerItem1  InnerValue1 " +
+                                                   "I'm here if if this is not the caseFor each run  Item2  Value2  Value2  InnerItem2  " +
+                                                   "InnerValue2 I'm here if if this is not the case Value2  InnerItem2a  InnerValue2b " +
+                                                   "I'm only here if NumericValue is greater than 0 -  INNERVALUE2B will be replaced X"));
         }
 
         [Test]
@@ -141,7 +151,7 @@ namespace DocxTemplater.Test
             wpDocument.Save();
             memStream.Position = 0;
             var docTemplate = new DocxTemplate(memStream);
-            docTemplate.AddModel("ds",
+            docTemplate.BindModel("ds",
                 new
                 {
                     Items = new[]
@@ -151,6 +161,7 @@ namespace DocxTemplater.Test
                     }
                 });
             var result = docTemplate.Process();
+            docTemplate.Validate();
             Assert.IsNotNull(result);
             result.Position = 0;
             //  result.SaveAsFileAndOpenInWord();
@@ -172,7 +183,7 @@ namespace DocxTemplater.Test
             using var fileStream = File.OpenRead("Resources/BillTemplate.docx");
             var docTemplate = new DocxTemplate(fileStream);
             docTemplate.RegisterFormatter(new ImageFormatter());
-            docTemplate.AddModel("ds", new
+            docTemplate.BindModel("ds", new
             {
                 Company = new
                 {
@@ -214,6 +225,7 @@ namespace DocxTemplater.Test
             });
 
             var result = docTemplate.Process();
+            docTemplate.Validate();
             result.Position = 0;
             result.SaveAsFileAndOpenInWord();
             result.Position = 0;
@@ -221,7 +233,7 @@ namespace DocxTemplater.Test
             var document = WordprocessingDocument.Open(result, false);
             var body = document.MainDocumentPart.Document.Body;
             var paragraphs = body.Descendants<Paragraph>().ToList();
-            Assert.That(paragraphs.Count, Is.EqualTo(63));
+            Assert.That(paragraphs.Count, Is.EqualTo(61));
             // check some replacements
             Assert.That(body.InnerText.Contains("John Doe"), Is.EqualTo(true));
             Assert.That(body.InnerText.Contains("Main Street 42"), Is.EqualTo(true));
@@ -232,6 +244,134 @@ namespace DocxTemplater.Test
             Assert.That(table.InnerText.Contains("Rechnung für was"), Is.EqualTo(true));
             Assert.That(table.InnerText.Contains("R1045"), Is.EqualTo(true));
             Assert.That(table.InnerText.Contains("Bill 2"), Is.EqualTo(true));
+        }
+
+        [Test]
+        public void ProcessBillTemplate2()
+        {
+            var imageBytes = File.ReadAllBytes("Resources/testImage.jpg");
+            using var fileStream = File.OpenRead("Resources/BillTemplate2.docx");
+            var docTemplate = new DocxTemplate(fileStream);
+            docTemplate.RegisterFormatter(new ImageFormatter());
+
+            var model = CrateBillTemplate2Model();
+            docTemplate.BindModel("ds", model);
+            docTemplate.BindModel("company", new { Logo = imageBytes });
+
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            result.Position = 0;
+            result.SaveAsFileAndOpenInWord();
+        }
+
+        private static DriveStudentOverviewReportingModel CrateBillTemplate2Model()
+        {
+            DriveStudentOverviewReportingModel model = new()
+            {
+                NotBilledLessons = new List<NotBilledLessonReportModel>()
+            };
+            model.NotBilledLessons.Add(new NotBilledLessonReportModel()
+            {
+                EducationName = "Test",
+                Count = 1,
+                Price = 100,
+                TotalPrice = 100
+            });
+            model.NotBilledLessons.Add(new NotBilledLessonReportModel()
+            {
+                EducationName = "Test2",
+                Count = 2,
+                Price = 200,
+                TotalPrice = 400
+            });
+            model.Educations = new List<EducationReportModel>();
+            model.Educations.Add(new EducationReportModel()
+            {
+                Name = "Test",
+                Lessons = new List<LessonReportModel>(),
+                TotalLessons = 10,
+                OpenLessons = 5,
+                PaidLessons = 5,
+                NotBilledLessons = 2
+            });
+            model.Educations[0].Lessons.Add(new LessonReportModel()
+            {
+                Date = DateTime.Now,
+                Count = 1,
+                BillName = "Test",
+                IsOpen = true
+            });
+            model.Educations[0].Lessons.Add(new LessonReportModel()
+            {
+                Date = DateTime.Now,
+                Count = 1,
+                BillName = "Test",
+                IsOpen = false
+            });
+            model.Educations[0].Lessons.Add(new LessonReportModel()
+            {
+                Date = DateTime.Now,
+                Count = 1,
+                BillName = "Test",
+                IsOpen = false
+            });
+            return model;
+        }
+
+        private class DriveStudentOverviewReportingModel
+        {
+            public List<NotBilledLessonReportModel> NotBilledLessons { get; set; }
+
+            public List<EducationReportModel> Educations { get; set; }
+        }
+
+        private class EducationReportModel
+        {
+            public string Name { get; set; }
+
+            public List<LessonReportModel> Lessons { get; set; }
+
+            public int TotalLessons { get; set; }
+
+            public int OpenLessons { get; set; }
+
+            public int PaidLessons { get; set; }
+
+            public int NotBilledLessons { get; set; }
+        }
+
+        private class LessonReportModel
+        {
+            public DateTime Date { get; set; }
+
+            public double Count { get; set; }
+
+            public string BillName { get; set; }
+
+            public bool IsOpen
+            {
+                get;
+                set;
+            }
+        }
+
+        private class NotBilledLessonReportModel
+        {
+            public string EducationName { get; set; }
+
+            public int Count { get; set; }
+
+            public decimal Price
+            {
+                get;
+                set;
+            }
+
+            public decimal TotalPrice
+            {
+                get;
+                set;
+            }
         }
     }
 
