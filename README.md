@@ -129,7 +129,7 @@ The formatter name is always case insensitive
 
 ### FormatPatterns
 
-Any type that implements ```IFormattable``` can be formatted with the net formatter strings
+Any type that implements ```IFormattable``` can be formatted with the standard format strings for this type
 
 **See:**
 [Standard date and time format strings](https://learn.microsoft.com/en-us/dotnet/standard/base-types/standard-date-and-time-format-strings)
