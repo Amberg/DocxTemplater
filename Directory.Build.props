@@ -22,6 +22,12 @@
 		<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
 	</PropertyGroup>
 
+	<PropertyGroup>
+		<PackageId>NuGet.Workflow</PackageId>
+		<RepositoryType>git</RepositoryType>
+		<RepositoryUrl>https://github.com/Amberg/DocxTemplater</RepositoryUrl>
+	</PropertyGroup>
+
 	<PropertyGroup Condition="'$(Configuration)' != 'Debug' ">
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 		<!--<CodeAnalysisTreatWarningsAsErrors>true</CodeAnalysisTreatWarningsAsErrors>

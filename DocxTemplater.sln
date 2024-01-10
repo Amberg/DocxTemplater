@@ -6,8 +6,10 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{0CD7C229-E003-4372-BCB5-8C6C83096A37}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
+		.github\workflows\ci.yml = .github\workflows\ci.yml
 		Directory.Build.props = Directory.Build.props
 		GitVersion.yml = GitVersion.yml
+		.github\workflows\release.yml = .github\workflows\release.yml
 		Todo.txt = Todo.txt
 	EndProjectSection
 EndProject
