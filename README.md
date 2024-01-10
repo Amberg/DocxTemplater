@@ -14,7 +14,7 @@ It supports placeholder **replacement** and **loops** and **images**_
 
 ## Quickstart
 
-Create a dRootValueThis Value:For each run  Item1  Value1  Value1  InnerItem1  InnerValue1 I'm here if if this is not the caseFor each run  Item2  Value2  Value2  InnerItem2  InnerValue2 I'm here if if this is not the case Value2  InnerItem2a  InnerValue2b I'm only here if NumericValue is greater than 0 -  INNERVALUE2B will be replaced Xocx template with placeholder syntax
+Create a ocx template with placeholder syntax
 
 ```
 This Text: {{ds.Title}} - will be replaced
