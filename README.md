@@ -14,12 +14,12 @@ It supports placeholder **replacement** and **loops** and **images**_
 
 ## Quickstart
 
-Create a ocx template with placeholder syntax
+Create a docx template with placeholder syntax
 
 ```
 This Text: {{ds.Title}} - will be replaced
 ```
-To open the template, add a model and store the result to a file
+Open the template, add a model and store the result to a file
 ```c#
 ver template = DocxTemplate.Open("template.docx")
 template.AddModel("ds", new {Title = "Some Text"})
