@@ -132,7 +132,7 @@ Any type that implements ```IFormattable``` can be formatted with the net format
 
 ---
 
-**_NOTE:_** for the Image formatter the nuget package *DocxTemplater.Images* is required text
+**_NOTE:_** for the Image formatter the nuget package *DocxTemplater.Images* is required
 
 ---
 
