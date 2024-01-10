@@ -32,7 +32,7 @@ This Text: Some Text - will be replaced
 ```
 ### Install DocxTemplater via NuGet
 
-If you want to include ClosedXML in your project, you can [install it directly from NuGet](https://www.nuget.org/packages/DocxTemplater)
+If you want to include DocxTemplater in your project, you can [install it directly from NuGet](https://www.nuget.org/packages/DocxTemplater)
 
 To install DocxTemplater, run the following command in the Package Manager Console
 
