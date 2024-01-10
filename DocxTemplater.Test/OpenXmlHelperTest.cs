@@ -268,8 +268,20 @@ namespace DocxTemplater.Test
             Assert.That(texts[2].Text, Is.EqualTo("Text1Text2Text3Text4"));
             Assert.That(texts[3].Text, Is.EqualTo("##NotPart"));
             Assert.That(texts[4].Text, Is.EqualTo("Not Merged after"));
+        }
 
-
+        [Test]
+        public void MergeTextMiddle()
+        {
+            var xml = @"<w:p xmlns:w=""http://schemas.openxmlformats.org/wordprocessingml/2006/main"">
+                        <w:r>
+                        <w:t>LeadingMiddleEnd</w:t> 
+                        </w:r>             
+                    </w:p>";
+            var paragraph = new Paragraph(xml);
+            var firstText = paragraph.Descendants<Text>().Single(x => x.Text == "LeadingMiddleEnd");
+            firstText.MergeText(7, firstText, 6);
+            CollectionAssert.AreEqual(new[] { "Leading", "Middle", "End" }, paragraph.Descendants<Text>().Select(x => x.Text));
         }
     }
 }

@@ -6,15 +6,11 @@ namespace DocxTemplater
 {
     internal static class ElementMarkers
     {
-        public const string BeginLoop = "s";
-        public const string EndLoop = "e";
-        public const string Variable = "v";
-
         public const string MarkerAttribute = "mrk";
 
-        public static void Mark(this OpenXmlElement element, string value)
+        public static void Mark(this OpenXmlElement element, PatternType value)
         {
-            element.SetAttribute(new OpenXmlAttribute(null, MarkerAttribute, null, value));
+            element.SetAttribute(new OpenXmlAttribute(null, MarkerAttribute, null, value.ToString()));
         }
 
         public static void RemoveAttribute(this OpenXmlElement element, string name)
@@ -27,19 +23,30 @@ namespace DocxTemplater
             return element.ExtendedAttributes.Any(a => a.LocalName == MarkerAttribute);
         }
 
-        public static bool HasMarker(this OpenXmlElement element, string marker)
+        public static bool HasMarker(this OpenXmlElement element, PatternType marker)
         {
-            return element.ExtendedAttributes.Any(a => a.LocalName == MarkerAttribute && a.Value == marker);
+            return element.ExtendedAttributes.Any(a => a.LocalName == MarkerAttribute && a.Value == marker.ToString());
         }
 
-        public static string GetMarker(this OpenXmlElement element)
+        public static PatternType GetMarker(this OpenXmlElement element)
         {
-            return element.ExtendedAttributes.FirstOrDefault(a => a.LocalName == MarkerAttribute).Value;
+            var attribute = element.ExtendedAttributes.FirstOrDefault(a => a.LocalName == MarkerAttribute);
+            return (PatternType)System.Enum.Parse(typeof(PatternType), attribute.Value);
         }
 
-        public static IEnumerable<OpenXmlElement> GetElementsWithMarker(this OpenXmlElement root, string marker)
+        public static IEnumerable<OpenXmlElement> GetElementsWithMarker(this OpenXmlElement root, PatternType marker)
         {
-            return root.Descendants<OpenXmlElement>().Where(x => x.HasMarker(marker));
+            if (root.HasMarker(marker))
+            {
+                yield return root;
+            }
+            foreach (var element in root.Descendants())
+            {
+                if (element.HasMarker(marker))
+                {
+                    yield return element;
+                }
+            }
         }
     }
 }
