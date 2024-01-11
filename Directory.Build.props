@@ -21,7 +21,18 @@
 		<!--Enforce analyzers during build-->
 		<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
 	</PropertyGroup>
-	
+
+
+	<PropertyGroup>
+		<PackageId>$(MSBuildProjectName)</PackageId>
+		<RepositoryType>git</RepositoryType>
+		<Authors>Amberg</Authors>
+		<Company>Orphis AG</Company>
+		<PackageDescription>Bind data models to you word templates</PackageDescription>
+		<RepositoryUrl>https://github.com/Amberg/DocxTemplater</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+	</PropertyGroup>
+
 	<PropertyGroup Condition="'$(Configuration)' != 'Debug' ">
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 		<!--<CodeAnalysisTreatWarningsAsErrors>true</CodeAnalysisTreatWarningsAsErrors>

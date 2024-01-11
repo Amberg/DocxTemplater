@@ -12,11 +12,6 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
   </ItemGroup>
-	<PropertyGroup>
-		<PackageId>DocxTemplater</PackageId>
-		<RepositoryType>git</RepositoryType>
-		<RepositoryUrl>https://github.com/Amberg/DocxTemplater</RepositoryUrl>
-	</PropertyGroup>
   <ItemGroup>
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
       <_Parameter1>DocxTemplater.Test</_Parameter1>
