@@ -4,6 +4,8 @@ _DocxTemplater is a library to generate docx documents from a docx template.
 The template can be **bound to multiple datasources** and be edited by non-programmers.
 It supports placeholder **replacement** and **loops** and **images**_
 
+[![CI-Build](https://github.com/Amberg/DocxTemplater/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Amberg/DocxTemplater/actions/workflows/ci.yml)
+
 **Features:**
 * Variable Replacement
 * Loops - Bind to collections
