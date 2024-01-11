@@ -1,30 +1,37 @@
-# https://acraven.medium.com/a-nuget-package-workflow-using-github-actions-7da8c6557863
+name: Release
 on:
-  push:
-    tags:
-    - "v[0-9]+.[0-9]+.[0-9]+"
+  release:
+    types: [published]
+
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    env:
+      BUILD_CONFIG: 'Release'
+      SOLUTION: 'DocxTemplater.sln'
+
     steps:
-    - name: Checkout
-      uses: actions/checkout@v2
-    - name: Verify commit exists in origin/main
-      run: |
-        git fetch --no-tags --prune --depth=1 origin +refs/heads/*:refs/remotes/origin/*
-        git branch --remote --contains | grep origin/main
-    - name: Set VERSION variable from tag
-      run: echo "VERSION=${GITHUB_REF/refs\/tags\/v/}" >> $GITHUB_ENV
+    - uses: actions/checkout@v4 #Fetch all history for all tags and branches
+      with:
+        fetch-depth: 0
+
+    - name: Setup NuGet
+      uses: NuGet/setup-nuget@v1.2.0
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 6.x 7.x 8.x
+
+    - name: Restore dependencies
+      run: nuget restore $SOLUTION
+
     - name: Build
-      run: dotnet build --configuration Release /p:Version=${VERSION}
-    - name: Test
-      run: dotnet test --configuration Release /p:Version=${VERSION} --no-build
-    - name: Pack
-      run: dotnet pack --configuration Release /p:Version=${VERSION} --no-build --output .
-    - name: Push
-      run: dotnet nuget push DocxTemplater.${VERSION}.nupkg --source https://nuget.pkg.github.com/Amberg/index.json --api-key ${GITHUB_TOKEN}
-    - name: PushImages
-      run: dotnet nuget push DocxTemplater.Images.${VERSION}.nupkg --source https://nuget.pkg.github.com/Amberg/index.json --api-key ${GITHUB_TOKEN}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: dotnet build $SOLUTION --configuration $BUILD_CONFIG --no-restore
+
+    - name: Run tests
+      run: dotnet test -c $BUILD_CONFIG --no-restore --no-build --verbosity normal
+
+    - name: Publish
+      if: startsWith(github.ref, 'refs/heads/tags')
+      run: nuget push **\*.nupkg -Source 'https://api.nuget.org/v3/index.json' -ApiKey ${{secrets.NUGET_API_KEY}}

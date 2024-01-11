@@ -29,7 +29,7 @@ namespace DocxTemplater.Images
             {
                 return;
             }
-            if(imageBytes.Length == 0)
+            if (imageBytes.Length == 0)
             {
                 target.Text = string.Empty;
                 return;

@@ -1,13 +1,13 @@
 name: CI
 
 on:
-    workflow_dispatch:
     push:
       branches:
       - main
     pull_request:
       branches:
       - main
+    workflow_dispatch:
 
 jobs:
   build:
@@ -26,17 +26,16 @@ jobs:
     - name: Setup NuGet
       uses: NuGet/setup-nuget@v1.2.0
 
-    - name: Restore dependencies
-      run: nuget restore $SOLUTION
-
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 6.x 7.x 8.x
-        cache: true
+
+    - name: Restore dependencies
+      run: nuget restore $SOLUTION
 
     - name: Build
       run: dotnet build $SOLUTION --configuration $BUILD_CONFIG --no-restore
 
     - name: Run tests
-      run: dotnet test /p:Configuration=$env:BUILD_CONFIG --no-restore --no-build --verbosity normal
+      run: dotnet test -c $BUILD_CONFIG --no-restore --no-build --verbosity normal
