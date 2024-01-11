@@ -31,6 +31,7 @@
 		<PackageDescription>Bind data models to you word templates</PackageDescription>
 		<RepositoryUrl>https://github.com/Amberg/DocxTemplater</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)' != 'Debug' ">
