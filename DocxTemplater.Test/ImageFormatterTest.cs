@@ -22,7 +22,7 @@ namespace DocxTemplater.Test
             using var fileStream = File.OpenRead("Resources/ImageFormatterTest.docx");
             var docTemplate = new DocxTemplate(fileStream);
             docTemplate.RegisterFormatter(new ImageFormatter());
-            docTemplate.BindModel("ds", new { MyLogo = imageBytes });
+            docTemplate.BindModel("ds", new { MyLogo = imageBytes, EmptyArray = Array.Empty<byte>(), NullValue = (byte[])null });
 
             var result = docTemplate.Process();
             docTemplate.Validate();

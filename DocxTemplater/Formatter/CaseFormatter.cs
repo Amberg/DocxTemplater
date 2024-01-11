@@ -20,11 +20,11 @@ namespace DocxTemplater.Formatter
             {
                 if (context.Formatter.Equals("toupper", StringComparison.InvariantCultureIgnoreCase))
                 {
-                    target.Text = str.ToUpper();
+                    target.Text = str.ToUpper(context.Culture);
                 }
                 else if (context.Formatter.Equals("tolower", StringComparison.InvariantCultureIgnoreCase))
                 {
-                    target.Text = str.ToLower();
+                    target.Text = str.ToLower(context.Culture);
                 }
             }
             else

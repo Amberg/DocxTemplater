@@ -17,9 +17,6 @@ namespace DocxTemplater.Test
 
             var splitedParts = paragraph.SplitAfterElement(element);
 
-            Console.WriteLine("---- after split --");
-            Console.WriteLine(body.ToPrettyPrintXml());
-
             Assert.That(splitedParts.Count, Is.EqualTo(2));
             Assert.True(splitedParts.All(x => x is Paragraph));
             Assert.That(splitedParts.ElementAt(0).Descendants<Text>().Count(), Is.EqualTo(2));
@@ -43,9 +40,6 @@ namespace DocxTemplater.Test
 
             var splitedParts = paragraph.SplitAfterElement(element);
 
-            Console.WriteLine("---- after split --");
-            Console.WriteLine(body.ToPrettyPrintXml());
-
             Assert.That(splitedParts.Count, Is.EqualTo(2));
             Assert.True(splitedParts.All(x => x is Paragraph));
             Assert.That(splitedParts.ElementAt(0).Descendants<Text>().Count(), Is.EqualTo(2));
@@ -67,10 +61,6 @@ namespace DocxTemplater.Test
             var innerTextBefore = body.InnerText;
 
             var splitedParts = run.SplitAfterElement(element);
-
-            Console.WriteLine("---- after split --");
-            Console.WriteLine(body.ToPrettyPrintXml());
-
             Assert.That(splitedParts.Count, Is.EqualTo(2));
             Assert.True(splitedParts.All(x => x is Run));
             Assert.That(splitedParts.ElementAt(0).Descendants<Text>().Count(), Is.EqualTo(2));
@@ -90,9 +80,6 @@ namespace DocxTemplater.Test
             var innerTextBefore = body.InnerText;
 
             var splitedParts = paragraph.SplitBeforeElement(element);
-
-            Console.WriteLine("---- after split --");
-            Console.WriteLine(body.ToPrettyPrintXml());
 
             Assert.That(splitedParts.Count, Is.EqualTo(2));
             Assert.True(splitedParts.All(x => x is Paragraph));
@@ -114,9 +101,6 @@ namespace DocxTemplater.Test
             var innerTextBefore = body.InnerText;
 
             var splitedParts = run.SplitBeforeElement(element);
-
-            Console.WriteLine("---- after split --");
-            Console.WriteLine(body.ToPrettyPrintXml());
 
             Assert.That(splitedParts.Count, Is.EqualTo(2));
             Assert.True(splitedParts.All(x => x is Run));
@@ -140,9 +124,6 @@ namespace DocxTemplater.Test
 
             var splitedParts = run.SplitAfterElement(element);
 
-            Console.WriteLine("---- after split --");
-            Console.WriteLine(body.ToPrettyPrintXml());
-
             Assert.That(splitedParts.Count, Is.EqualTo(1));
             Assert.True(splitedParts.All(x => x is Run));
             Assert.That(splitedParts.ElementAt(0).Descendants<Text>().Count(), Is.EqualTo(5));
@@ -163,9 +144,6 @@ namespace DocxTemplater.Test
             var innerTextBefore = body.InnerText;
 
             var splitedParts = run.SplitBeforeElement(element);
-
-            Console.WriteLine("---- after split --");
-            Console.WriteLine(body.ToPrettyPrintXml());
 
             Assert.That(splitedParts.Count, Is.EqualTo(1));
             Assert.True(splitedParts.All(x => x is Run));

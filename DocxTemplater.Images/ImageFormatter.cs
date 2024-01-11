@@ -25,12 +25,15 @@ namespace DocxTemplater.Images
         {
             // TODO: handle oter ppi values than default 96
             // see https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.wordprocessing.pixelsperinch?view=openxml-2.8.1#remarks
-
             if (context.Value is not byte[] imageBytes)
             {
                 return;
             }
-
+            if (imageBytes.Length == 0)
+            {
+                target.Text = string.Empty;
+                return;
+            }
             try
             {
                 using var image = Image.Load(imageBytes);
@@ -61,8 +64,7 @@ namespace DocxTemplater.Images
                 }
 
                 // case 1. Image ist the only child element of a <wps:wsp> (TextBox)
-                if (TryHandleImageInWordprocessingShape(target, impagepartRelationShipId, image,
-                        context.Args.FirstOrDefault(), maxPropertyId))
+                if (TryHandleImageInWordprocessingShape(target, impagepartRelationShipId, image, context.Args.FirstOrDefault() ?? string.Empty, maxPropertyId))
                 {
                     return;
                 }

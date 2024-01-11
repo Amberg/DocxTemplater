@@ -6,10 +6,8 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{0CD7C229-E003-4372-BCB5-8C6C83096A37}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
-		.github\workflows\ci.yml = .github\workflows\ci.yml
 		Directory.Build.props = Directory.Build.props
 		GitVersion.yml = GitVersion.yml
-		.github\workflows\release.yml = .github\workflows\release.yml
 		Todo.txt = Todo.txt
 	EndProjectSection
 EndProject
@@ -18,6 +16,12 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DocxTemplater.Images", "DocxTemplater.Images\DocxTemplater.Images.csproj", "{315FB1E7-A136-4380-AF01-45B4929DE1C8}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DocxTemplater.Test", "DocxTemplater.Test\DocxTemplater.Test.csproj", "{C1F7FAB0-0807-4208-9BD8-E7E5BF6B5986}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{63F28020-AE87-4C41-9020-A4236A324EEC}"
+	ProjectSection(SolutionItems) = preProject
+		.github\workflows\ci.yml = .github\workflows\ci.yml
+		.github\workflows\release.yml = .github\workflows\release.yml
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -40,6 +44,9 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{63F28020-AE87-4C41-9020-A4236A324EEC} = {0CD7C229-E003-4372-BCB5-8C6C83096A37}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {87BDC60D-731C-4676-AEBA-FECF871AE24A}

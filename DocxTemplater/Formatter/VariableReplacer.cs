@@ -1,7 +1,7 @@
-﻿using DocumentFormat.OpenXml;
+﻿using System;
+using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Wordprocessing;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 
 namespace DocxTemplater.Formatter
@@ -9,11 +9,13 @@ namespace DocxTemplater.Formatter
     internal class VariableReplacer
     {
         private readonly ModelDictionary m_models;
+        private readonly ProcessSettings m_processSettings;
         private readonly List<IFormatter> m_formatters;
 
-        public VariableReplacer(ModelDictionary models)
+        public VariableReplacer(ModelDictionary models, ProcessSettings processSettings)
         {
             m_models = models;
+            m_processSettings = processSettings;
             m_formatters = new List<IFormatter>();
             m_formatters.Add(new FormatPatternFormatter());
             m_formatters.Add(new HtmlFormatter());
@@ -42,11 +44,16 @@ namespace DocxTemplater.Formatter
                 {
                     if (formatter.CanHandle(value.GetType(), patternMatch.Formatter))
                     {
-                        var context = new FormatterContext(patternMatch.Variable, patternMatch.Formatter, patternMatch.Arguments, value, CultureInfo.CurrentUICulture);
+                        var context = new FormatterContext(patternMatch.Variable, patternMatch.Formatter, patternMatch.Arguments, value, m_processSettings.Culture);
                         formatter.ApplyFormat(context, target);
                         return;
                     }
                 }
+            }
+            if (value is IFormattable formattable)
+            {
+                target.Text = formattable.ToString(null, m_processSettings.Culture);
+                return;
             }
             target.Text = value.ToString() ?? string.Empty;
 

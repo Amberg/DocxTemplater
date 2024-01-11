@@ -1,3 +1,5 @@
+name: CI
+
 on:
     push:
       branches:
@@ -5,14 +7,35 @@ on:
     pull_request:
       branches:
       - main
+    workflow_dispatch:
+
 jobs:
-    build:
-      runs-on: ubuntu-latest
-      timeout-minutes: 15
-      steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Build
-        run: dotnet build --configuration Release
-      - name: Test
-        run: dotnet test --configuration Release --no-build
+  build:
+
+    env:
+      BUILD_CONFIG: 'Release'
+      SOLUTION: 'DocxTemplater.sln'
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4 #Fetch all history for all tags and branches
+      with:
+        fetch-depth: 0
+
+    - name: Setup NuGet
+      uses: NuGet/setup-nuget@v1.2.0
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 6.x 7.x 8.x
+
+    - name: Restore dependencies
+      run: nuget restore $SOLUTION
+
+    - name: Build
+      run: dotnet build $SOLUTION --configuration $BUILD_CONFIG --no-restore
+
+    - name: Run tests
+      run: dotnet test -c $BUILD_CONFIG --no-restore --no-build --verbosity normal

@@ -13,9 +13,4 @@
   <ItemGroup>
     <ProjectReference Include="..\DocxTemplater\DocxTemplater.csproj" />
   </ItemGroup>
-	<PropertyGroup>
-		<PackageId>DocxTemplater.Images</PackageId>
-		<RepositoryType>git</RepositoryType>
-		<RepositoryUrl>https://github.com/Amberg/DocxTemplater</RepositoryUrl>
-	</PropertyGroup>
 </Project>
