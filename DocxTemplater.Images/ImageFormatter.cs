@@ -31,6 +31,7 @@ namespace DocxTemplater.Images
             }
             if(imageBytes.Length == 0)
             {
+                target.Text = string.Empty;
                 return;
             }
             try
