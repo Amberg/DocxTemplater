@@ -11,6 +11,9 @@ jobs:
       SOLUTION: 'DocxTemplater.sln'
 
     steps:
+    - name: echo
+      run: echo ${{ github.ref }}
+      
     - uses: actions/checkout@v4 #Fetch all history for all tags and branches
       with:
         fetch-depth: 0
@@ -33,5 +36,5 @@ jobs:
       run: dotnet test -c $BUILD_CONFIG --no-restore --no-build --verbosity normal
 
     - name: Publish
-      if: startsWith(github.ref, 'refs/tags/v') != true
+      if: startsWith(github.ref, 'refs/tags/v') == true
       run: nuget push **\*.nupkg -Source 'https://api.nuget.org/v3/index.json' -ApiKey ${{secrets.NUGET_API_KEY}}
