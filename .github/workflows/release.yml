@@ -33,5 +33,5 @@ jobs:
       run: dotnet test -c $BUILD_CONFIG --no-restore --no-build --verbosity normal
 
     - name: Publish
-      if: startsWith(github.ref, 'refs/heads/tags')
+      if: startsWith(github.ref, 'refs/tags/v')
       run: nuget push **\*.nupkg -Source 'https://api.nuget.org/v3/index.json' -ApiKey ${{secrets.NUGET_API_KEY}}
