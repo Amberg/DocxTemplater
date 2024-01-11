@@ -1,4 +1,6 @@
-﻿using DocumentFormat.OpenXml;
+﻿using System.Collections;
+using System.Globalization;
+using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using DocxTemplater.Images;
@@ -40,6 +42,47 @@ namespace DocxTemplater.Test
             // check that text is replaced
             Assert.That(body.Descendants<Text>().Skip(1).First().Text, Is.EqualTo("Replaced"));
         }
+
+        [Test, TestCaseSource(nameof(CultureIsAppliedTest_Cases))]
+        public string CultureIsAppliedTest(string formatter, CultureInfo culture, object value)
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(new Paragraph(
+                                        new Run(new Text("Double without Formatter:")),
+                                        new Run(new Text($"{{{{var}}{formatter}}}")),
+                                        new Run(new Text("Double with formatter"))
+                                        )));
+            wpDocument.Save();
+            memStream.Position = 0;
+            var docTemplate = new DocxTemplate(memStream, new ProcessSettings() { Culture = culture });
+            docTemplate.BindModel("var", value);
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.IsNotNull(result);
+            result.Position = 0;
+
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            return body.Descendants<Text>().Skip(1).First().Text;
+        }
+
+        static IEnumerable CultureIsAppliedTest_Cases()
+        {
+            yield return new TestCaseData("", new CultureInfo("en-us"), new DateTime(2024, 11, 1)).Returns("11/1/2024 12:00:00 AM");
+            yield return new TestCaseData("", new CultureInfo("de-ch"), new DateTime(2024, 11, 1)).Returns("01.11.2024 00:00:00");
+            yield return new TestCaseData(":f(d)", new CultureInfo("en-us"), new DateTime(2024, 11, 1, 20, 22, 33)).Returns("11/1/2024");
+            yield return new TestCaseData(":FORMAT(D)", new CultureInfo("en-us"), new DateTime(2024, 11, 1, 20, 22, 33)).Returns("Friday, November 1, 2024");
+            yield return new TestCaseData(":F(yyyy MM dd - HH mm ss)", new CultureInfo("en-us"), new DateTime(2024, 11, 1, 20, 22, 33)).Returns("2024 11 01 - 20 22 33");
+            yield return new TestCaseData(":F(n)", new CultureInfo("en-us"), 50000.45).Returns("50,000.450");
+            yield return new TestCaseData(":F(c)", new CultureInfo("en-us"), 50000.45).Returns("$50,000.45");
+            yield return new TestCaseData(":F(n)", new CultureInfo("de"), 50000.45).Returns("50.000,450");
+            yield return new TestCaseData(":F(c)", new CultureInfo("de-ch"), 50000.45).Returns("CHF 50’000.45");
+
+        }
+
 
         [Test]
         public void BindCollection()

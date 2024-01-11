@@ -24,8 +24,9 @@ namespace DocxTemplater
         private readonly VariableReplacer m_variableReplacer;
         private readonly ScriptCompiler m_scriptCompiler;
 
-        public DocxTemplate(Stream docXStream)
+        public DocxTemplate(Stream docXStream, ProcessSettings settings = null)
         {
+            Settings = settings ?? ProcessSettings.Default;
             m_stream = new MemoryStream();
             docXStream.CopyTo(m_stream);
             m_stream.Position = 0;
@@ -42,14 +43,16 @@ namespace DocxTemplater
             m_wpDocument = WordprocessingDocument.Open(m_stream, true, openSettings);
             m_models = new ModelDictionary();
             m_scriptCompiler = new ScriptCompiler(m_models);
-            m_variableReplacer = new VariableReplacer(m_models);
+            m_variableReplacer = new VariableReplacer(m_models, Settings);
             Processed = false;
         }
 
-        public static DocxTemplate Open(string pathToTemplate)
+        public ProcessSettings Settings { get; }
+
+        public static DocxTemplate Open(string pathToTemplate, ProcessSettings settings = null)
         {
             using var fileStream = new FileStream(pathToTemplate, FileMode.Open, FileAccess.Read);
-            return new DocxTemplate(fileStream);
+            return new DocxTemplate(fileStream, settings);
         }
 
         public IReadOnlyDictionary<string, object> Models => m_models.Models;

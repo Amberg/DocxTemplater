@@ -64,8 +64,7 @@ namespace DocxTemplater.Images
                 }
 
                 // case 1. Image ist the only child element of a <wps:wsp> (TextBox)
-                if (TryHandleImageInWordprocessingShape(target, impagepartRelationShipId, image,
-                        context.Args.FirstOrDefault(), maxPropertyId))
+                if (TryHandleImageInWordprocessingShape(target, impagepartRelationShipId, image, context.Args.FirstOrDefault() ?? string.Empty, maxPropertyId))
                 {
                     return;
                 }

@@ -16,6 +16,8 @@ dotnet_diagnostic.IDE0290.severity = silent
 # IDE0045: Convert to conditional expression
 dotnet_diagnostic.IDE0045.severity = suggestion
 
+# IDE0301: Simplify collection initialization
+dotnet_diagnostic.IDE0301.severity = suggestion
 
 [{*Test}/**.cs]
 #Inline variable declaration (IDE0018)

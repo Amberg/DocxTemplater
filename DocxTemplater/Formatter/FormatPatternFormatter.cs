@@ -22,7 +22,7 @@ namespace DocxTemplater.Formatter
             }
             if (context.Value is IFormattable formattable)
             {
-                target.Text = formattable.ToString(context.Args[0], null);
+                target.Text = formattable.ToString(context.Args[0], context.Culture);
             }
             else
             {

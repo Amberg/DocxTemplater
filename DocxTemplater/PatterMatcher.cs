@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace DocxTemplater
@@ -31,7 +33,16 @@ namespace DocxTemplater
                                                                     )
                                                                 )
                                                             \}
-                                                            (?::(?<formatter>[a-zA-z0-9]+)\((?<arg>[a-zA-Z0-9\,]*)\))?
+                                                            (?::
+                                                                (?<formatter>[a-zA-z0-9]+) #formatter
+                                                                (?:\( #arguments with brackets
+                                                                    (?:
+                                                                        (?:,?
+                                                                            (?:   (?<arg>[a-zA-Z0-9\s-\\/_-]+) | (?:'(?<arg>[a-zA-Z0-9\s-\\/_-]*)')   )
+                                                                        )* 
+                                                                    )
+                                                                \))?
+                                                            )?
                                                             \}
                                                             ", RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
         public static IEnumerable<PatternMatch> FindSyntaxPatterns(string text)
@@ -67,7 +78,9 @@ namespace DocxTemplater
                 }
                 else
                 {
-                    result.Add(new PatternMatch(match, PatternType.Variable, null, null, match.Groups["varname"].Value, match.Groups["formatter"].Value, match.Groups["arg"].Value.Split(','), match.Index, match.Length));
+                    var argGroup = match.Groups["arg"];
+                    var arguments = argGroup.Success ? argGroup.Captures.Select(x => x.Value).ToArray() : Array.Empty<string>();
+                    result.Add(new PatternMatch(match, PatternType.Variable, null, null, match.Groups["varname"].Value, match.Groups["formatter"].Value, arguments, match.Index, match.Length));
                 }
             }
             return result;
