@@ -26,7 +26,7 @@ namespace DocxTemplater
                                                                     (?:
                                                                         (?<prefix>[\/\#])? #prefix
                                                                         (?:
-                                                                            (?<varname>[a-zA-Z0-9\.]+) #variable name
+                                                                            (?<varname>[a-zA-Z0-9\._]+) #variable name
                                                                             | #or
                                                                             (?<condition>[a-zA-Z0-9+\-*\/><=\s\.]+) #condition
                                                                         )?
