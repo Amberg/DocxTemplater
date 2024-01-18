@@ -68,7 +68,7 @@ This can be used, for example, to bind a collection to a table. In this case, th
 
 |      Name      | Position |
 |----------------|----------|
-| **{{#Items}}** {{Items.Name}} | {{Items.Position}} **{{/Items}}*|
+| **{{#Items}}** {{Items.Name}} | {{Items.Position}} **{{/Items}}**|
 
 This template bound to a model:
 ```c#
@@ -100,7 +100,7 @@ All document content between the start and end tag is rendered only if the condi
 
 ```
 {{Item.Value >= 0}}Only visible if value is >= 0 {{/}}
-{{Item.Value < 0}}Otherwise this text is shown{{/}}
+{{else}}Otherwise this text is shown{{/}}
 ```
 
 ## Formatters
