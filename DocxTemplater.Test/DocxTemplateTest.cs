@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.Dynamic;
 using System.Globalization;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
@@ -14,6 +15,48 @@ namespace DocxTemplater.Test
 {
     internal class DocxTemplateTest
     {
+
+        [Test]
+        public void BindToMultipleModels()
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(new Paragraph(
+                new Run(new Text("{{obj.var1}}")),
+                new Run(new Text("{{obj.var2}}")),
+                new Run(new Text("{{dynObj.var3}}")),
+                new Run(new Text("{{dict.var4}}")),
+                new Run(new Text("{{interface.var5}}"))
+            )));
+            wpDocument.Save();
+            memStream.Position = 0;
+            var docTemplate = new DocxTemplate(memStream);
+
+            docTemplate.BindModel("obj", new { var1 = "var1", var2 = "var2" });
+            dynamic dynObj = new ExpandoObject();
+            dynObj.var3 = "var3";
+            docTemplate.BindModel("dynObj", dynObj);
+
+            var dict = new Dictionary<string, object>();
+            dict.Add("var4", "var4");
+            docTemplate.BindModel("dict", dict);
+
+            var dummyModel = new DummyModel();
+            dummyModel.Add("var5", "var5");
+            docTemplate.BindModel("interface", dummyModel);
+
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.IsNotNull(result);
+            result.Position = 0;
+
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            Assert.That(body.InnerText, Is.EqualTo("var1var2var3var4var5"));
+        }
+
         [Test]
         public void ReplaceTextBoldIsPreserved()
         {
@@ -416,7 +459,25 @@ namespace DocxTemplater.Test
                 set;
             }
         }
+
+        private class DummyModel : ITemplateModel
+        {
+            private readonly Dictionary<string, object> m_dict;
+
+            public DummyModel()
+            {
+                m_dict = new Dictionary<string, object>();
+            }
+
+            public void Add(string key, object value)
+            {
+                m_dict.Add(key, value);
+            }
+
+            public bool TryGetPropertyValue(string propertyName, out object value)
+            {
+                return m_dict.TryGetValue(propertyName, out value);
+            }
+        }
     }
-
-
 }

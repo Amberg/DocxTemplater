@@ -82,18 +82,43 @@ namespace DocxTemplater
                     {
                         throw new OpenXmlTemplateException($"Model {path} not found");
                     }
-                    var property = model.GetType().GetProperty(parts[i], BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.GetProperty | BindingFlags.Instance);
-                    if (property != null)
+                    if (model is ITemplateModel templateModel)
                     {
-                        model = property.GetValue(model);
+                        if (templateModel.TryGetPropertyValue(parts[i], out var value))
+                        {
+                            model = value;
+                        }
+                        else
+                        {
+                            throw new OpenXmlTemplateException($"Property {parts[i]} not found in {path}");
+                        }
                     }
-                    else if (model is ICollection)
+                    else if (model is IDictionary<string, object> dict)
                     {
-                        throw new OpenXmlTemplateException($"Property {parts[i]} on collection {path} not found - is collection start missing? '#{variableName}'");
+                        if (dict.TryGetValue(parts[i], out var value))
+                        {
+                            model = value;
+                        }
+                        else
+                        {
+                            throw new OpenXmlTemplateException($"Property {parts[i]} not found in {path}");
+                        }
                     }
                     else
                     {
-                        throw new OpenXmlTemplateException($"Property {parts[i]} not found in {path}");
+                        var property = model.GetType().GetProperty(parts[i], BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.GetProperty | BindingFlags.Instance);
+                        if (property != null)
+                        {
+                            model = property.GetValue(model);
+                        }
+                        else if (model is ICollection)
+                        {
+                            throw new OpenXmlTemplateException($"Property {parts[i]} on collection {path} not found - is collection start missing? '#{variableName}'");
+                        }
+                        else
+                        {
+                            throw new OpenXmlTemplateException($"Property {parts[i]} not found in {path}");
+                        }
                     }
                 }
                 else
