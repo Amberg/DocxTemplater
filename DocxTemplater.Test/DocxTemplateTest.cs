@@ -1,10 +1,10 @@
-﻿using System.Collections;
-using System.Dynamic;
-using System.Globalization;
-using DocumentFormat.OpenXml;
+﻿using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using DocxTemplater.Images;
+using System.Collections;
+using System.Dynamic;
+using System.Globalization;
 using Bold = DocumentFormat.OpenXml.Wordprocessing.Bold;
 using Paragraph = DocumentFormat.OpenXml.Wordprocessing.Paragraph;
 using Run = DocumentFormat.OpenXml.Wordprocessing.Run;
@@ -15,6 +15,98 @@ namespace DocxTemplater.Test
 {
     internal class DocxTemplateTest
     {
+
+        [Test]
+        public void DynamicTable()
+        {
+            using var fileStream = File.OpenRead("Resources/DynamicTable.docx");
+            var docTemplate = new DocxTemplate(fileStream);
+            var tableModel = new DynamicTable();
+            tableModel.AddRow(new Dictionary<object, object>() { { "Header1", "Value1" }, { "Header2", "Value2" }, { "Header3", "Value3" } });
+            tableModel.AddRow(new Dictionary<object, object>() { { "Header1", "Value4" }, { "Header2", "Value5" }, { "Header3", "Value6" } });
+            tableModel.AddRow(new Dictionary<object, object>() { { "Header1", "Value7" }, { "Header2", "Value8" }, { "Header3", "Value9" } });
+
+            docTemplate.BindModel("ds", tableModel);
+
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            result.Position = 0;
+            result.SaveAsFileAndOpenInWord();
+            result.Position = 0;
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            var table = body.Descendants<Table>().First();
+            var rows = table.Descendants<TableRow>().ToList();
+            Assert.That(rows.Count, Is.EqualTo(5));
+            Assert.That(rows[0].InnerText, Is.EqualTo("Header1Header2Header3"));
+            Assert.That(rows[2].InnerText, Is.EqualTo("Value1Value2Value3"));
+            Assert.That(rows[3].InnerText, Is.EqualTo("Value4Value5Value6"));
+            Assert.That(rows[4].InnerText, Is.EqualTo("Value7Value8Value9"));
+        }
+
+        /// <summary>
+        /// Dynamic tables are only required if the number of columns is not known at design time.
+        /// otherwise a simple table bound to a collection of objects is sufficient.
+        /// </summary>
+        [Test]
+        public void DynamicTableWithComplexObjectsAsHeaderAndValues()
+        {
+            using var fileStream = File.OpenRead("Resources/DynamicTableWithComplexObjectsAsHeaderAndValues.docx");
+            var docTemplate = new DocxTemplate(fileStream);
+            var tableModel = new DynamicTable();
+            tableModel.AddRow(new Dictionary<object, object>()
+            {
+                {
+                    new {HeaderTitle = "Header1"}, new { TheDouble = 20.0, TheDate = new DateTime(2007, 11, 12) }
+                },
+                {
+                    new {HeaderTitle = "Header2"}, new { TheDouble = 30.0, TheDate = new DateTime(2007, 9, 12) }
+                },
+                {
+                    new {HeaderTitle = "Header3"}, new { TheDouble = 40.0, TheDate = new DateTime(2001, 11, 14) }
+                }
+            });
+            tableModel.AddRow(new Dictionary<object, object>()
+            {
+                {
+                    new {HeaderTitle = "Header1"}, new { TheDouble = 50.0, TheDate = new DateTime(2007, 11, 12) }
+                },
+                {
+                    new {HeaderTitle = "Header2"}, new { TheDouble = 60.0, TheDate = new DateTime(2007, 9, 12) }
+                },
+                {
+                    new {HeaderTitle = "Header3"}, new { TheDouble = 70.0, TheDate = new DateTime(2002, 11, 9) }
+                }
+            });
+            tableModel.AddRow(new Dictionary<object, object>()
+            {
+                {
+                    new {HeaderTitle = "Header1"}, new { TheDouble = 80.0, TheDate = new DateTime(2007, 11, 12) }
+                },
+                {
+                    new {HeaderTitle = "Header2"}, new { TheDouble = 90.0, TheDate = new DateTime(2007, 9, 12) }
+                },
+                {
+                    new {HeaderTitle = "Header3"}, new { TheDouble = 100.0, TheDate = new DateTime(2003, 11, 12) }
+                }
+            });
+
+            docTemplate.BindModel("ds", tableModel);
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            result.Position = 0;
+            result.SaveAsFileAndOpenInWord();
+            result.Position = 0;
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            var table = body.Descendants<Table>().First();
+            var rows = table.Descendants<TableRow>().ToList();
+            Assert.That(rows.Count, Is.EqualTo(5));
+            Assert.That(rows[0].InnerText, Is.EqualTo("HEADER1HEADER2HEADER3"));
+            Assert.That(rows[2].InnerText, Is.EqualTo("20.00  11/12/200730.00  9/12/200740.00  11/14/2001"));
+            Assert.That(rows[3].InnerText, Is.EqualTo("50.00  11/12/200760.00  9/12/200770.00  11/9/2002"));
+            Assert.That(rows[4].InnerText, Is.EqualTo("80.00  11/12/200790.00  9/12/2007100.00  11/12/2003"));
+        }
 
         [Test]
         public void BindToMultipleModels()

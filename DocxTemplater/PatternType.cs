@@ -5,8 +5,8 @@
         None,
         Condition,
         ConditionEnd,
-        LoopStart,
-        LoopEnd,
+        CollectionStart,
+        CollectionEnd,
         Variable,
         ConditionElse
     }

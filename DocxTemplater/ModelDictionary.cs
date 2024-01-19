@@ -117,13 +117,17 @@ namespace DocxTemplater
                         }
                         else
                         {
-                            throw new OpenXmlTemplateException($"Property {parts[i]} not found in {path}");
+                            throw new OpenXmlTemplateException($"Property {parts[i]} not found in {parts[Math.Max(i - 1, 0)]}");
                         }
                     }
                 }
                 else
                 {
                     model = nextModel;
+                    if (path == variableName)
+                    {
+                        break;
+                    }
                 }
                 if (i + 1 < parts.Length)
                 {

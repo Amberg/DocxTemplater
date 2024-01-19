@@ -65,7 +65,7 @@ namespace DocxTemplater
                 {
                     if (match.Groups["prefix"].Value == "#")
                     {
-                        result.Add(new PatternMatch(match, PatternType.LoopStart, null, match.Groups["prefix"].Value, match.Groups["varname"].Value, match.Groups["formatter"].Value, match.Groups["arg"].Value.Split(','), match.Index, match.Length));
+                        result.Add(new PatternMatch(match, PatternType.CollectionStart, null, match.Groups["prefix"].Value, match.Groups["varname"].Value, match.Groups["formatter"].Value, match.Groups["arg"].Value.Split(','), match.Index, match.Length));
                     }
                     else if (!match.Groups["varname"].Success)
                     {
@@ -73,7 +73,7 @@ namespace DocxTemplater
                     }
                     else
                     {
-                        result.Add(new PatternMatch(match, PatternType.LoopEnd, null, match.Groups["prefix"].Value, match.Groups["varname"].Value, match.Groups["formatter"].Value, match.Groups["arg"].Value.Split(','), match.Index, match.Length));
+                        result.Add(new PatternMatch(match, PatternType.CollectionEnd, null, match.Groups["prefix"].Value, match.Groups["varname"].Value, match.Groups["formatter"].Value, match.Groups["arg"].Value.Split(','), match.Index, match.Length));
                     }
                 }
                 else

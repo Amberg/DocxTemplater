@@ -181,7 +181,7 @@ namespace DocxTemplater
             foreach (var markedText in element.Descendants<Text>().Where(x => x.IsMarked()).ToList())
             {
                 var value = markedText.GetMarker();
-                if (value is PatternType.LoopStart or PatternType.LoopEnd or PatternType.ConditionEnd or PatternType.ConditionElse)
+                if (value is PatternType.CollectionStart or PatternType.CollectionEnd or PatternType.ConditionEnd or PatternType.ConditionElse)
                 {
                     var parent = markedText.Parent;
                     markedText.RemoveWithEmptyParent();
@@ -215,10 +215,17 @@ namespace DocxTemplater
             foreach (var text in element.Descendants<Text>().Where(x => x.IsMarked()))
             {
                 var value = text.GetMarker();
-                if (value is PatternType.LoopStart)
+                if (value is PatternType.CollectionStart)
                 {
                     var match = PatternMatcher.FindSyntaxPatterns(text.Text).Single();
-                    blockStack.Push((new LoopBlock(match.Variable, m_variableReplacer), match, text));
+                    if (match.Formatter.Equals("dyntable", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        blockStack.Push((new DynamicTableBlock(match.Variable, m_variableReplacer), match, text));
+                    }
+                    else
+                    {
+                        blockStack.Push((new LoopBlock(match.Variable, m_variableReplacer), match, text));
+                    }
                 }
                 else if (value == PatternType.Condition)
                 {
@@ -232,7 +239,7 @@ namespace DocxTemplater
                     {
                         throw new OpenXmlTemplateException($"'{block}' is not closed");
                     }
-                    var loopContent = ExtractLoopContent(matchedTextNode, text, out var leadingPart);
+                    var loopContent = ExtractBlockContent(matchedTextNode, text, out var leadingPart);
                     block.SetContent(leadingPart, loopContent);
                     blockStack.Push((block, patternMatch, text)); // push same block again on Stack but with other text element
                 }
@@ -243,18 +250,18 @@ namespace DocxTemplater
                     {
                         throw new OpenXmlTemplateException($"'{block}' is not closed");
                     }
-                    var loopContent = ExtractLoopContent(matchedTextNode, text, out var leadingPart);
+                    var loopContent = ExtractBlockContent(matchedTextNode, text, out var leadingPart);
                     block.SetContent(leadingPart, loopContent);
                     blockStack.Peek().Block.AddInnerBlock(block);
                 }
-                else if (value == PatternType.LoopEnd)
+                else if (value == PatternType.CollectionEnd)
                 {
                     var (block, patternMatch, matchedTextNode) = blockStack.Pop();
-                    if (patternMatch.Type != PatternType.LoopStart)
+                    if (patternMatch.Type != PatternType.CollectionStart)
                     {
                         throw new OpenXmlTemplateException($"'{block}' is not closed");
                     }
-                    var loopContent = ExtractLoopContent(matchedTextNode, text, out var leadingPart);
+                    var loopContent = ExtractBlockContent(matchedTextNode, text, out var leadingPart);
                     block.SetContent(leadingPart, loopContent);
                     blockStack.Peek().Block.AddInnerBlock(block);
                 }
@@ -265,7 +272,7 @@ namespace DocxTemplater
         }
 
 
-        internal static IReadOnlyCollection<OpenXmlElement> ExtractLoopContent(OpenXmlElement startText, OpenXmlElement endText, out OpenXmlElement leadingPart)
+        internal static IReadOnlyCollection<OpenXmlElement> ExtractBlockContent(OpenXmlElement startText, OpenXmlElement endText, out OpenXmlElement leadingPart)
         {
             var commonParent = startText.FindCommonParent(endText) ?? throw new OpenXmlTemplateException("Start and end text are not in the same tree");
             var result = new List<OpenXmlElement>();
@@ -282,7 +289,7 @@ namespace DocxTemplater
             }
             else
             {
-                // find childs of commmon parent that contains start and end text
+                // find childs of common parent that contains start and end text
                 var startChildOfCommonParent = commonParent.ChildElements.Single(c =>
                     c == startText || c.Descendants<Text>().Any(d => d == startText));
                 var endChildOfCommonParent =

@@ -65,10 +65,10 @@ namespace DocxTemplater.Blocks
             return m_leadingPart?.Id ?? "RootBlock";
         }
 
-        public virtual void SetContent(OpenXmlElement leadingPart, IReadOnlyCollection<OpenXmlElement> loopContent)
+        public virtual void SetContent(OpenXmlElement leadingPart, IReadOnlyCollection<OpenXmlElement> blockContent)
         {
             m_leadingPart = InsertionPoint.CreateForElement(leadingPart);
-            m_content = loopContent;
+            m_content = blockContent;
         }
 
         public void AddInnerBlock(ContentBlock block)

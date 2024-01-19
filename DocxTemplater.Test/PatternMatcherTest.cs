@@ -25,12 +25,12 @@ namespace DocxTemplater.Test
             yield return new TestCaseData("{{Foo}:blupp()}").Returns(new[] { PatternType.Variable });
 
 
-            yield return new TestCaseData("{{/Items}}").Returns(new[] { PatternType.LoopEnd });
-            yield return new TestCaseData("{{#items}}").Returns(new[] { PatternType.LoopStart });
-            yield return new TestCaseData("{{#ds.items_foo}}").Returns(new[] { PatternType.LoopStart }).SetName("LoopStart Underscore dots");
-            yield return new TestCaseData("{{/ds.items_foo}}").Returns(new[] { PatternType.LoopEnd }).SetName("LoopEnd Underscore dots");
-            yield return new TestCaseData("{{/Items.InnerCollection}}").Returns(new[] { PatternType.LoopEnd });
-            yield return new TestCaseData("{{#items.InnerCollection}}").Returns(new[] { PatternType.LoopStart });
+            yield return new TestCaseData("{{/Items}}").Returns(new[] { PatternType.CollectionEnd });
+            yield return new TestCaseData("{{#items}}").Returns(new[] { PatternType.CollectionStart });
+            yield return new TestCaseData("{{#ds.items_foo}}").Returns(new[] { PatternType.CollectionStart }).SetName("LoopStart Underscore dots");
+            yield return new TestCaseData("{{/ds.items_foo}}").Returns(new[] { PatternType.CollectionEnd }).SetName("LoopEnd Underscore dots");
+            yield return new TestCaseData("{{/Items.InnerCollection}}").Returns(new[] { PatternType.CollectionEnd });
+            yield return new TestCaseData("{{#items.InnerCollection}}").Returns(new[] { PatternType.CollectionStart });
             yield return new TestCaseData("{{a.foo > 5}}").Returns(new[] { PatternType.Condition });
             yield return new TestCaseData("{{ a > 5 }}").Returns(new[] { PatternType.Condition });
             yield return new TestCaseData("{{ a / 20 >= 12 }}").Returns(new[] { PatternType.Condition });
@@ -47,8 +47,8 @@ namespace DocxTemplater.Test
                     "I'm here if if this is not the case{{/}}{{/ds.Items.InnerCollection}}{{/Items}}")
                 .Returns(new[]
                 {
-                    PatternType.Variable, PatternType.ConditionElse, PatternType.ConditionEnd, PatternType.LoopEnd,
-                    PatternType.LoopEnd
+                    PatternType.Variable, PatternType.ConditionElse, PatternType.ConditionEnd, PatternType.CollectionEnd,
+                    PatternType.CollectionEnd
                 })
                 .SetName("Complex Match 1");
         }
