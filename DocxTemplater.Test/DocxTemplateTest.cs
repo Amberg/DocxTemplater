@@ -109,6 +109,35 @@ namespace DocxTemplater.Test
         }
 
         [Test]
+        public void LoopStartAndEndTagsAreRemoved()
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(
+                new Paragraph(new Run(new Text("Text123"))),
+                new Paragraph(new Run(new Text("{{#ds.Items}}"))),
+                new Paragraph(new Run(new Text("{{Items.Name}} {{Items.Price < 6}} less than 6 {{else}} more than 6{{/}}"))),
+                new Paragraph(new Run(new Text("{{/ds.Items}}"))),
+                new Paragraph(new Run(new Text("Text456")))
+            ));
+            wpDocument.Save();
+            memStream.Position = 0;
+            var docTemplate = new DocxTemplate(memStream);
+            docTemplate.BindModel("ds", new { Items = new[] { new { Name = "Item1", Price = 5 }, new { Name = "Item2", Price = 7 } } });
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.IsNotNull(result);
+            result.Position = 0;
+            result.SaveAsFileAndOpenInWord();
+            result.Position = 0;
+            // there should only be 4 paragraphs after processing
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            Assert.That(body.Descendants<Paragraph>().Count(), Is.EqualTo(4));
+        }
+
+        [Test]
         public void BindToMultipleModels()
         {
             using var memStream = new MemoryStream();
