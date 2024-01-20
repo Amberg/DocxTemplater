@@ -138,6 +138,35 @@ namespace DocxTemplater.Test
         }
 
         [Test]
+        public void ConditionsWithAndWithoutPrefix()
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(
+                new Paragraph(new Run(new Text("{{Test > 5}}Test1{{else}}else1{{/}}"))),
+                new Paragraph(new Run(new Text("{{ds.Test > 5}}Test2{{else}}else2{{/}}"))),
+                new Paragraph(new Run(new Text("{{ds2.Test > 5}}Test3{{else}}else3{{/}}")))
+
+            ));
+            wpDocument.Save();
+            memStream.Position = 0;
+            var docTemplate = new DocxTemplate(memStream);
+            docTemplate.BindModel("ds", new { Test = 6 });
+            docTemplate.BindModel("ds2", new { Test = 6 });
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.IsNotNull(result);
+            result.Position = 0;
+            result.SaveAsFileAndOpenInWord();
+            result.Position = 0;
+            // check result text
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            Assert.That(body.InnerText, Is.EqualTo("Test1Test2Test3"));
+        }
+
+        [Test]
         public void BindToMultipleModels()
         {
             using var memStream = new MemoryStream();
