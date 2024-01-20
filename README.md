@@ -8,8 +8,9 @@ It supports placeholder **replacement** and **loops** and **images**_
 
 **Features:**
 * Variable Replacement
-* Loops - Bind to collections
+* Collections - Bind to collections
 * Conditional Blocks
+* Dynamic Tables - Columns are defined by the datasource
 * HTML Snippets - Replace placeholder with HTML Content
 * Images - Replace placeholder with Image data
 
@@ -23,9 +24,9 @@ This Text: {{ds.Title}} - will be replaced
 ```
 Open the template, add a model and store the result to a file
 ```c#
-ver template = DocxTemplate.Open("template.docx")
-template.AddModel("ds", new {Title = "Some Text"})
-template.ProcessToFile("generated.docx")
+   var template = DocxTemplate.Open("template.docx");
+   template.BindModel("ds", new { Title = "Some Text"});
+   template.Save("generated.docx");
 ```
 The generated word document then contains
 
@@ -48,7 +49,7 @@ PM> Install-Package DocxTemplater.Images
 
 ## Placeholder Syntax
 
-A placholder can consist of three parts: {{**property**}:**formatter**(**arguments**)}
+A placeholder can consist of three parts: {{**property**}:**formatter**(**arguments**)}
 
 - **property**:   the path to the property in the datasource objects.
 - **formatter**:  formatter applied to convert the model value to openxml _(ae. toupper, tolower img format etc)_ 
@@ -68,7 +69,7 @@ The syntax is case insensitive
 | {{SomeDate:F("MM/dd/yyyy")}}  | Date variable with formatting - short syntax
 | {{SomeBytes:img()}}  | Image Formatter for image data
 | {{SomeHtmlString:html()}}  | Inserts html string into word document
-### Loops
+### Collections
 
 To repeat document content for each item in a collection the loop syntax can be used:
 **{{#_\<collection\>_}}** .. content .. **{{_<collection\>_}}**
@@ -167,3 +168,26 @@ The stretching behavior can be configured
 | KEEPRATIO| {{imgData}:img(keepratio)} | Scales the image to fit the container - keeps aspect ratio
 | STRETCHW | {imgData}:img(STRETCHW)}| Scales the image to fit the width of the container
 | STRETCHH | {imgData}:img(STRETCHH)}| Scales the image to fit the height of the container
+
+### Error Handling
+
+If a placeholder is not found in the model an exception is thrown.
+This can be configured with the ```ProcessSettings```
+
+```c#
+var docTemplate = new DocxTemplate(memStream);
+docTemplate.Settings.BindingErrorHandling = BindingErrorHandling.SkipBindingAndRemoveContent;
+var result = docTemplate.Process();
+```
+
+### Culture
+
+The culture used to format the model values can be configured with the ```ProcessSettings```
+
+```c#
+var docTemplate = new DocxTemplate(memStream, new ProcessSettings()
+{
+    Culture = new CultureInfo("en-us")
+});
+var result = docTemplate.Process();
+```

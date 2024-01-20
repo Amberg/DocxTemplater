@@ -68,7 +68,7 @@ namespace DocxTemplater
             var path = parts[0];
 
             int startIndex = 0;
-            if (!m_models.ContainsKey(path))
+            if (!m_models.ContainsKey(path) && m_models.Count > 0)
             {
                 startIndex = -1;
                 path = m_defaultModelPrefix.Value;

@@ -109,6 +109,38 @@ namespace DocxTemplater.Test
         }
 
         [Test]
+        public void MissingVariableThrows()
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(new Paragraph(new Run(new Text("{{missing}}")))));
+            wpDocument.Save();
+            memStream.Position = 0;
+            var docTemplate = new DocxTemplate(memStream);
+            Assert.Throws<OpenXmlTemplateException>(() => docTemplate.Process());
+        }
+
+        [Test]
+        public void MissingVariableWithSkipErrorHandling()
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(new Paragraph(new Run(new Text("Text1{{missing}}Text2{{missing2}:toupper}{{missingImg}:img()}")))));
+            wpDocument.Save();
+            memStream.Position = 0;
+            var docTemplate = new DocxTemplate(memStream);
+            docTemplate.Settings.BindingErrorHandling = BindingErrorHandling.SkipBindingAndRemoveContent;
+            var result = docTemplate.Process();
+
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            //check values have been replaced
+            Assert.That(body.InnerText, Is.EqualTo("Text1Text2"));
+        }
+
+        [Test]
         public void LoopStartAndEndTagsAreRemoved()
         {
             using var memStream = new MemoryStream();
