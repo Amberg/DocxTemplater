@@ -26,22 +26,27 @@ namespace DocxTemplater.Test
 
 
             yield return new TestCaseData("{{/Items}}").Returns(new[] { PatternType.CollectionEnd });
+            yield return new TestCaseData("{{ /Items }}").Returns(new[] { PatternType.CollectionEnd });
             yield return new TestCaseData("{{#items}}").Returns(new[] { PatternType.CollectionStart });
+            yield return new TestCaseData("{{  #items  }}").Returns(new[] { PatternType.CollectionStart });
             yield return new TestCaseData("{{#ds.items_foo}}").Returns(new[] { PatternType.CollectionStart }).SetName("LoopStart Underscore dots");
             yield return new TestCaseData("{{/ds.items_foo}}").Returns(new[] { PatternType.CollectionEnd }).SetName("LoopEnd Underscore dots");
             yield return new TestCaseData("{{/Items.InnerCollection}}").Returns(new[] { PatternType.CollectionEnd });
             yield return new TestCaseData("{{#items.InnerCollection}}").Returns(new[] { PatternType.CollectionStart });
             yield return new TestCaseData("{{a.foo > 5}}").Returns(new[] { PatternType.Condition });
             yield return new TestCaseData("{{ a > 5 }}").Returns(new[] { PatternType.Condition });
+            yield return new TestCaseData("{ { a > 5 } }").Returns(new[] { PatternType.Condition });
             yield return new TestCaseData("{{ a / 20 >= 12 }}").Returns(new[] { PatternType.Condition });
             yield return new TestCaseData("{{var}:F(d)}").Returns(new[] { PatternType.Variable });
             yield return new TestCaseData("{{ds.foo.var}:F(d)}").Returns(new[] { PatternType.Variable }).SetName("Variable with dot");
             yield return new TestCaseData("{{ds.foo_blubb.var}:F(d)}").Returns(new[] { PatternType.Variable }).SetName("Variable with underscore");
             yield return new TestCaseData("{{var}:toupper}").Returns(new[] { PatternType.Variable });
             yield return new TestCaseData("{{else}}").Returns(new[] { PatternType.ConditionElse });
+            yield return new TestCaseData("{{  else  }}").Returns(new[] { PatternType.ConditionElse });
             yield return new TestCaseData("{{var}:format(a,b)}").Returns(new[] { PatternType.Variable })
                 .SetName("Multiple Arguments");
             yield return new TestCaseData("{{/}}").Returns(new[] { PatternType.ConditionEnd });
+            yield return new TestCaseData("{ { / } }").Returns(new[] { PatternType.ConditionEnd });
             yield return new TestCaseData(
                     "NumericValue is greater than 0 - {{ds.Items.InnerCollection.InnerValue}:toupper()}{{else}}" +
                     "I'm here if if this is not the case{{/}}{{/ds.Items.InnerCollection}}{{/Items}}")

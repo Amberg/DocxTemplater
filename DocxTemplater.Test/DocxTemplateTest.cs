@@ -144,7 +144,7 @@ namespace DocxTemplater.Test
             using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
             MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
             mainPart.Document = new Document(new Body(
-                new Paragraph(new Run(new Text("{{Test > 5}}Test1{{else}}else1{{/}}"))),
+                new Paragraph(new Run(new Text("{{ Test > 5 }}Test1{{ else }}else1{{ / }}"))),
                 new Paragraph(new Run(new Text("{{ds.Test > 5}}Test2{{else}}else2{{/}}"))),
                 new Paragraph(new Run(new Text("{{ds2.Test > 5}}Test3{{else}}else3{{/}}")))
 
