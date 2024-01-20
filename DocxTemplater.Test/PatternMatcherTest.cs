@@ -75,6 +75,15 @@ namespace DocxTemplater.Test
             yield return new TestCaseData("{{Foo}:format(a,b,'YYYY_MMM/DD FF',d)}").Returns(new[] { "a", "b", "YYYY_MMM/DD FF", "d" });
             yield return new TestCaseData("{{Foo}:format(a,'John Doe','YYYY_MMM/DD FF',d)}").Returns(new[] { "a", "John Doe", "YYYY_MMM/DD FF", "d" });
         }
+
+        [TestCase("Some TExt {{    Variable   }} Some other text", ExpectedResult = "Variable")]
+        [TestCase("Some TExt {{Variable   }} Some other text", ExpectedResult = "Variable")]
+        [TestCase("Some TExt {{ Variable }} Some other text", ExpectedResult = "Variable")]
+        public string AllowWhiteSpaceForVariables(string syntax)
+        {
+            var match = PatternMatcher.FindSyntaxPatterns(syntax).First();
+            return match.Variable;
+        }
     }
 }
 
