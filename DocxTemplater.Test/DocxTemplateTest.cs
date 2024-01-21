@@ -53,6 +53,7 @@ namespace DocxTemplater.Test
         {
             using var fileStream = File.OpenRead("Resources/DynamicTableWithComplexObjectsAsHeaderAndValues.docx");
             var docTemplate = new DocxTemplate(fileStream);
+            docTemplate.Settings.Culture = new CultureInfo("en-US");
             var tableModel = new DynamicTable();
             tableModel.AddRow(new Dictionary<object, object>()
             {
