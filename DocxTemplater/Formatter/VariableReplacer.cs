@@ -65,8 +65,18 @@ namespace DocxTemplater.Formatter
             foreach (var text in variables)
             {
                 var variableMatch = PatternMatcher.FindSyntaxPatterns(text.Text).FirstOrDefault() ?? throw new OpenXmlTemplateException($"Invalid variable syntax '{text.Text}'");
-                var value = m_models.GetValue(variableMatch.Variable);
-                ApplyFormatter(variableMatch, value, text);
+                try
+                {
+                    var value = m_models.GetValue(variableMatch.Variable);
+                    ApplyFormatter(variableMatch, value, text);
+                }
+                catch (OpenXmlTemplateException) when (m_processSettings.BindingErrorHandling != BindingErrorHandling.ThrowException)
+                {
+                    if (m_processSettings.BindingErrorHandling == BindingErrorHandling.SkipBindingAndRemoveContent)
+                    {
+                        text.RemoveWithEmptyParent();
+                    }
+                }
             }
         }
     }

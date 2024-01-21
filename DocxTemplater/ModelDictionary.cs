@@ -68,7 +68,7 @@ namespace DocxTemplater
             var path = parts[0];
 
             int startIndex = 0;
-            if (!m_models.ContainsKey(path))
+            if (!m_models.ContainsKey(path) && m_models.Count > 0)
             {
                 startIndex = -1;
                 path = m_defaultModelPrefix.Value;
@@ -82,23 +82,52 @@ namespace DocxTemplater
                     {
                         throw new OpenXmlTemplateException($"Model {path} not found");
                     }
-                    var property = model.GetType().GetProperty(parts[i], BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.GetProperty | BindingFlags.Instance);
-                    if (property != null)
+                    if (model is ITemplateModel templateModel)
                     {
-                        model = property.GetValue(model);
+                        if (templateModel.TryGetPropertyValue(parts[i], out var value))
+                        {
+                            model = value;
+                        }
+                        else
+                        {
+                            throw new OpenXmlTemplateException($"Property {parts[i]} not found in {path}");
+                        }
                     }
-                    else if (model is ICollection)
+                    else if (model is IDictionary<string, object> dict)
                     {
-                        throw new OpenXmlTemplateException($"Property {parts[i]} on collection {path} not found - is collection start missing? '#{variableName}'");
+                        if (dict.TryGetValue(parts[i], out var value))
+                        {
+                            model = value;
+                        }
+                        else
+                        {
+                            throw new OpenXmlTemplateException($"Property {parts[i]} not found in {path}");
+                        }
                     }
                     else
                     {
-                        throw new OpenXmlTemplateException($"Property {parts[i]} not found in {path}");
+                        var property = model.GetType().GetProperty(parts[i], BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.GetProperty | BindingFlags.Instance);
+                        if (property != null)
+                        {
+                            model = property.GetValue(model);
+                        }
+                        else if (model is ICollection)
+                        {
+                            throw new OpenXmlTemplateException($"Property {parts[i]} on collection {path} not found - is collection start missing? '#{variableName}'");
+                        }
+                        else
+                        {
+                            throw new OpenXmlTemplateException($"Property {parts[i]} not found in {parts[Math.Max(i - 1, 0)]}");
+                        }
                     }
                 }
                 else
                 {
                     model = nextModel;
+                    if (path == variableName)
+                    {
+                        break;
+                    }
                 }
                 if (i + 1 < parts.Length)
                 {

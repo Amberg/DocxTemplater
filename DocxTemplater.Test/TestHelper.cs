@@ -1,6 +1,5 @@
-﻿#if DEBUG
-using System.Diagnostics;
-#endif
+﻿using System.Diagnostics;
+
 
 namespace DocxTemplater.Test
 {
@@ -8,7 +7,14 @@ namespace DocxTemplater.Test
     {
         public static void SaveAsFileAndOpenInWord(this Stream stream, string extension = "docx")
         {
-#if DEBUG
+#if RELEASE
+            return;
+#pragma warning disable CS0162
+#endif
+            if (Environment.GetEnvironmentVariable("DOCX_TEMPLATER_VISUAL_TESTING") == null)
+            {
+                return;
+            }
             stream.Position = 0;
             var fileName = Path.ChangeExtension(Path.GetTempFileName(), extension);
             using (var fileStream = File.OpenWrite(fileName))
@@ -22,7 +28,7 @@ namespace DocxTemplater.Test
                 UseShellExecute = true
             };
             using var proc = Process.Start(psi);
-#endif
+#pragma warning restore CS0162
         }
     }
 }

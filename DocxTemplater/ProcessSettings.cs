@@ -4,13 +4,18 @@ namespace DocxTemplater
 {
     public class ProcessSettings
     {
-        private CultureInfo m_culture;
 
         public CultureInfo Culture
         {
-            get => m_culture ?? CultureInfo.CurrentUICulture;
-            set => m_culture = value;
-        }
+            get;
+            set;
+        } = CultureInfo.CurrentUICulture;
+
+        public BindingErrorHandling BindingErrorHandling
+        {
+            get;
+            set;
+        } = BindingErrorHandling.ThrowException;
 
         public static ProcessSettings Default { get; } = new ProcessSettings() { Culture = null }; // will use current ui culture
     }

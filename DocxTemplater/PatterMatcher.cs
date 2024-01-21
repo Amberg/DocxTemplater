@@ -20,7 +20,7 @@ namespace DocxTemplater
         {{images}:foo(arg1,arg2)} -- variable with formatter and arguments
          */
 
-        private static readonly Regex PatternRegex = new(@"\{\{
+        private static readonly Regex PatternRegex = new(@"\{\s*\{\s*
                                                                 (?:   
                                                                     (?<else>else) |
                                                                     (?:
@@ -28,11 +28,11 @@ namespace DocxTemplater
                                                                         (?:
                                                                             (?<varname>[a-zA-Z0-9\._]+) #variable name
                                                                             | #or
-                                                                            (?<condition>[a-zA-Z0-9+\-*\/><=\s\.]+) #condition
+                                                                            (?<condition>[a-zA-Z0-9+\-*\/><=\s\.]{2,}) #condition
                                                                         )?
                                                                     )
                                                                 )
-                                                            \}
+                                                            \s*\}
                                                             (?::
                                                                 (?<formatter>[a-zA-z0-9]+) #formatter
                                                                 (?:\( #arguments with brackets
@@ -43,7 +43,7 @@ namespace DocxTemplater
                                                                     )
                                                                 \))?
                                                             )?
-                                                            \}
+                                                            \s*\}
                                                             ", RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
         public static IEnumerable<PatternMatch> FindSyntaxPatterns(string text)
         {
@@ -65,7 +65,7 @@ namespace DocxTemplater
                 {
                     if (match.Groups["prefix"].Value == "#")
                     {
-                        result.Add(new PatternMatch(match, PatternType.LoopStart, null, match.Groups["prefix"].Value, match.Groups["varname"].Value, match.Groups["formatter"].Value, match.Groups["arg"].Value.Split(','), match.Index, match.Length));
+                        result.Add(new PatternMatch(match, PatternType.CollectionStart, null, match.Groups["prefix"].Value, match.Groups["varname"].Value, match.Groups["formatter"].Value, match.Groups["arg"].Value.Split(','), match.Index, match.Length));
                     }
                     else if (!match.Groups["varname"].Success)
                     {
@@ -73,7 +73,7 @@ namespace DocxTemplater
                     }
                     else
                     {
-                        result.Add(new PatternMatch(match, PatternType.LoopEnd, null, match.Groups["prefix"].Value, match.Groups["varname"].Value, match.Groups["formatter"].Value, match.Groups["arg"].Value.Split(','), match.Index, match.Length));
+                        result.Add(new PatternMatch(match, PatternType.CollectionEnd, null, match.Groups["prefix"].Value, match.Groups["varname"].Value, match.Groups["formatter"].Value, match.Groups["arg"].Value.Split(','), match.Index, match.Length));
                     }
                 }
                 else

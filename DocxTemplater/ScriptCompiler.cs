@@ -19,7 +19,15 @@ namespace DocxTemplater
             var identifiers = interpreter.DetectIdentifiers(scriptAsString);
             foreach (var identifier in identifiers.UnknownIdentifiers)
             {
-                interpreter.SetVariable(identifier, new ModelVariable(m_modelDictionary, identifier));
+                var val = m_modelDictionary.GetValue(identifier);
+                if (val == null || val.GetType().IsPrimitive)
+                {
+                    interpreter.SetVariable(identifier, val);
+                }
+                else
+                {
+                    interpreter.SetVariable(identifier, new ModelVariable(m_modelDictionary, identifier));
+                }
             }
             return interpreter.ParseAsDelegate<Func<bool>>(scriptAsString);
         }

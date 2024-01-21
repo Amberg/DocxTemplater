@@ -31,15 +31,15 @@ namespace DocxTemplater.Blocks
             element.Remove();
         }
 
-        public override void SetContent(OpenXmlElement leadingPart, IReadOnlyCollection<OpenXmlElement> loopContent)
+        public override void SetContent(OpenXmlElement leadingPart, IReadOnlyCollection<OpenXmlElement> blockContent)
         {
             if (m_leadingPart == null)
             {
-                base.SetContent(leadingPart, loopContent);
+                base.SetContent(leadingPart, blockContent);
             }
             else
             {
-                m_elseContent = loopContent;
+                m_elseContent = blockContent;
             }
         }
 
