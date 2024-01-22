@@ -23,7 +23,7 @@ namespace DocxTemplater.Blocks
             {
 
                 var headersName = $"{m_tablenName}.{nameof(IDynamicTable.Headers)}";
-                var columnsName = $"{m_tablenName}.Columns";
+                var columnsName = $"{m_tablenName}.{nameof(IDynamicTable.Rows)}";
 
                 var table = m_content.OfType<Table>().FirstOrDefault();
                 var headerRow = table?.Elements<TableRow>().FirstOrDefault(row => row.Descendants<Text>().Any(d => d.HasMarker(PatternType.Variable) && d.Text.Contains($"{{{{{headersName}")));
@@ -33,7 +33,7 @@ namespace DocxTemplater.Blocks
                 var dataCell = dataRow?.Elements<TableCell>().FirstOrDefault(row => row.Descendants<Text>().Any(d => d.HasMarker(PatternType.Variable) && d.Text.Contains($"{{{{{columnsName}")));
                 if (headerCell == null || dataCell == null)
                 {
-                    throw new OpenXmlTemplateException($"Dynamic table block must contain exactly one table with at least two rows and one column, but found");
+                    throw new OpenXmlTemplateException($"Dynamic table block must contain exactly one table with at least a header and a data row");
                 }
 
                 // write headers
