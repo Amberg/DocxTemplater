@@ -33,7 +33,7 @@ namespace DocxTemplater.Formatter
             }
             if (!html.EndsWith("</html>", StringComparison.CurrentCultureIgnoreCase))
             {
-                html = html + "</html>";
+                html += "</html>";
             }
             var root = target.GetRoot();
             string alternativeFormatImportPartId = null;

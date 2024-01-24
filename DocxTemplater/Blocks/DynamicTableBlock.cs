@@ -41,8 +41,9 @@ namespace DocxTemplater.Blocks
                 {
                     models.RemoveLoopVariable(headersName);
                     models.AddLoopVariable(headersName, header);
-                    var clonedCell = CreateBlockContentForCurrentVariableStack(new List<OpenXmlElement> { headerCell });
+                    var clonedCell = headerCell.CloneNode(true);
                     headerCell.InsertAfterSelf(clonedCell);
+                    m_variableReplacer.ReplaceVariables(clonedCell);
                     ExpandChildBlocks(models, parentNode);
                 }
                 models.RemoveLoopVariable(headersName);
@@ -63,8 +64,9 @@ namespace DocxTemplater.Blocks
                     {
                         models.RemoveLoopVariable(columnsName);
                         models.AddLoopVariable(columnsName, column);
-                        var clonedCell = CreateBlockContentForCurrentVariableStack(new List<OpenXmlElement> { dataCell }).Single();
+                        var clonedCell = dataCell.CloneNode(true);
                         insertion.InsertAfterSelf(clonedCell);
+                        m_variableReplacer.ReplaceVariables(clonedCell);
                         ExpandChildBlocks(models, parentNode);
                     }
                     insertion.Remove();

@@ -122,7 +122,7 @@ namespace DocxTemplater.Test
         }
 
         [TestCase("<html><body><h1>Test</h1></body></html>", "<html><body><h1>Test</h1></body></html>")]
-        [TestCase("<body><h1>Test</h1></body>","<html><body><h1>Test</h1></body></html>")]
+        [TestCase("<body><h1>Test</h1></body>", "<html><body><h1>Test</h1></body></html>")]
         [TestCase("<h1>Test</h1>", "<html><h1>Test</h1></html>")]
         [TestCase("Test", "<html>Test</html>")]
         [TestCase("foo<br>Test", "<html>foo<br>Test</html>")]
@@ -153,6 +153,29 @@ namespace DocxTemplater.Test
             var content = new StreamReader(stream).ReadToEnd();
             Assert.That(content, Is.EqualTo(expexted));
             // check html part contains html;
+        }
+
+        [Test]
+        public void InsertHtmlInLoop()
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(new Paragraph(new Run(new Text("{{#Items}}{{Items}:html}{{/Items}}")))));
+            wpDocument.Save();
+            memStream.Position = 0;
+
+            var docTemplate = new DocxTemplate(memStream);
+            docTemplate.BindModel("Items", new[] { "<h1>Test1</h1>", "<h1>Test2</h1>" });
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.IsNotNull(result);
+            result.SaveAsFileAndOpenInWord();
+            // check document contains 2 altChunks
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            var altChunks = body.Descendants<AltChunk>().ToList();
+            Assert.That(altChunks.Count, Is.EqualTo(2));
         }
 
         [Test]

@@ -28,8 +28,9 @@ namespace DocxTemplater.Blocks
                     models.RemoveLoopVariable(m_collectionName);
                     models.AddLoopVariable(m_collectionName, item);
 
-                    var paragraphs = CreateBlockContentForCurrentVariableStack(m_content);
-                    InsertContent(parentNode, paragraphs);
+                    var cloned = m_content.Select(x => x.CloneNode(true)).ToList();
+                    InsertContent(parentNode, cloned);
+                    m_variableReplacer.ReplaceVariables(cloned);
                     ExpandChildBlocks(models, parentNode);
                 }
                 models.RemoveLoopVariable(m_collectionName);

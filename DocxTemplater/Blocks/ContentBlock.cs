@@ -25,8 +25,9 @@ namespace DocxTemplater.Blocks
 
         public virtual void Expand(ModelDictionary models, OpenXmlElement parentNode)
         {
-            var paragraphs = CreateBlockContentForCurrentVariableStack(m_content);
-            InsertContent(parentNode, paragraphs);
+            var cloned = m_content.Select(x => x.CloneNode(true)).ToList();
+            InsertContent(parentNode, cloned);
+            m_variableReplacer.ReplaceVariables(cloned);
             ExpandChildBlocks(models, parentNode);
         }
 
@@ -36,17 +37,6 @@ namespace DocxTemplater.Blocks
             {
                 child.Expand(models, parentNode);
             }
-        }
-
-        protected IEnumerable<OpenXmlElement> CreateBlockContentForCurrentVariableStack(IReadOnlyCollection<OpenXmlElement> content)
-        {
-            var paragraphs = content.Select(x =>
-            {
-                var cloned = x.CloneNode(true);
-                m_variableReplacer.ReplaceVariables(cloned);
-                return cloned;
-            });
-            return paragraphs;
         }
 
         protected void InsertContent(OpenXmlElement parentNode, IEnumerable<OpenXmlElement> paragraphs)

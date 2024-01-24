@@ -1,6 +1,7 @@
 ﻿using DocumentFormat.OpenXml;
 using DocxTemplater.Formatter;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace DocxTemplater.Blocks
 {
@@ -23,8 +24,9 @@ namespace DocxTemplater.Blocks
             var content = conditionResult ? m_content : m_elseContent;
             if (content != null)
             {
-                var paragraphs = CreateBlockContentForCurrentVariableStack(content);
-                InsertContent(parentNode, paragraphs);
+                var cloned = content.Select(x => x.CloneNode(true)).ToList();
+                InsertContent(parentNode, cloned);
+                m_variableReplacer.ReplaceVariables(cloned);
                 ExpandChildBlocks(models, parentNode);
             }
             var element = m_leadingPart.GetElement(parentNode);

@@ -59,6 +59,14 @@ namespace DocxTemplater.Formatter
 
         }
 
+        public void ReplaceVariables(IReadOnlyCollection<OpenXmlElement> content)
+        {
+            foreach (var element in content)
+            {
+                ReplaceVariables(element);
+            }
+        }
+
         public void ReplaceVariables(OpenXmlElement cloned)
         {
             var variables = cloned.GetElementsWithMarker(PatternType.Variable).OfType<Text>().ToList();
