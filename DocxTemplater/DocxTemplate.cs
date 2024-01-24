@@ -26,6 +26,7 @@ namespace DocxTemplater
 
         public DocxTemplate(Stream docXStream, ProcessSettings settings = null)
         {
+            ArgumentNullException.ThrowIfNull(docXStream);
             Settings = settings ?? ProcessSettings.Default;
             m_stream = new MemoryStream();
             docXStream.CopyTo(m_stream);
@@ -112,7 +113,7 @@ namespace DocxTemplater
             {
                 ProcessNode(header.Header);
             }
-            ProcessNode(m_wpDocument.MainDocumentPart.Document.Body);
+            ProcessNode(m_wpDocument.MainDocumentPart.RootElement);
             foreach (var footer in m_wpDocument.MainDocumentPart.FooterParts)
             {
                 ProcessNode(footer.Footer);
@@ -122,35 +123,35 @@ namespace DocxTemplater
             return m_stream;
         }
 
-        private void ProcessNode(OpenXmlCompositeElement content)
+        private void ProcessNode(OpenXmlPartRootElement rootElement)
         {
 #if DEBUG
             Console.WriteLine("----------- Original --------");
-            Console.WriteLine(content.ToPrettyPrintXml());
+            Console.WriteLine(rootElement.ToPrettyPrintXml());
 #endif
-            PreProcess(content);
+            PreProcess(rootElement);
 
-            DocxTemplate.IsolateAndMergeTextTemplateMarkers(content);
+            DocxTemplate.IsolateAndMergeTextTemplateMarkers(rootElement);
 
 #if DEBUG
             Console.WriteLine("----------- Isolate Texts --------");
-            Console.WriteLine(content.ToPrettyPrintXml());
+            Console.WriteLine(rootElement.ToPrettyPrintXml());
 #endif
 
-            var loops = ExpandLoops(content);
+            var loops = ExpandLoops(rootElement);
 #if DEBUG
             Console.WriteLine("----------- After Loops --------");
-            Console.WriteLine(content.ToPrettyPrintXml());
+            Console.WriteLine(rootElement.ToPrettyPrintXml());
 #endif
-            m_variableReplacer.ReplaceVariables(content);
+            m_variableReplacer.ReplaceVariables(rootElement);
             foreach (var loop in loops)
             {
-                loop.Expand(m_models, content);
+                loop.Expand(m_models, rootElement);
             }
-            Cleanup(content);
+            Cleanup(rootElement);
 #if DEBUG
             Console.WriteLine("----------- Completed --------");
-            Console.WriteLine(content.ToPrettyPrintXml());
+            Console.WriteLine(rootElement.ToPrettyPrintXml());
 #endif
         }
 
@@ -205,7 +206,7 @@ namespace DocxTemplater
             }
         }
 
-        private IReadOnlyCollection<ContentBlock> ExpandLoops(OpenXmlCompositeElement element)
+        private IReadOnlyCollection<ContentBlock> ExpandLoops(OpenXmlPartRootElement element)
         {
 
             // TODO: store metadata for tag in cache
