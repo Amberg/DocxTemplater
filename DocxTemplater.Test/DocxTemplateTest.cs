@@ -121,6 +121,40 @@ namespace DocxTemplater.Test
             Assert.Throws<OpenXmlTemplateException>(() => docTemplate.Process());
         }
 
+        [TestCase("<html><body><h1>Test</h1></body></html>", "<html><body><h1>Test</h1></body></html>")]
+        [TestCase("<body><h1>Test</h1></body>","<html><body><h1>Test</h1></body></html>")]
+        [TestCase("<h1>Test</h1>", "<html><h1>Test</h1></html>")]
+        [TestCase("Test", "<html>Test</html>")]
+        [TestCase("foo<br>Test", "<html>foo<br>Test</html>")]
+        public void HtmlIsAlwaysEnclosedWithHtmlTags(string html, string expexted)
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(new Paragraph(new Run(new Text("Here comes HTML {{ds}:html}")))));
+            wpDocument.Save();
+            memStream.Position = 0;
+            var docTemplate = new DocxTemplate(memStream);
+            docTemplate.BindModel("ds", html);
+
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.IsNotNull(result);
+            result.SaveAsFileAndOpenInWord();
+            result.Position = 0;
+            var document = WordprocessingDocument.Open(result, false);
+            // check word contains altChunk
+            var body = document.MainDocumentPart.Document.Body;
+            var altChunk = body.Descendants<AltChunk>().FirstOrDefault();
+            Assert.IsNotNull(altChunk);
+            // extract html part
+            var htmlPart = document.MainDocumentPart.GetPartById(altChunk.Id);
+            var stream = htmlPart.GetStream();
+            var content = new StreamReader(stream).ReadToEnd();
+            Assert.That(content, Is.EqualTo(expexted));
+            // check html part contains html;
+        }
+
         [Test]
         public void MissingVariableWithSkipErrorHandling()
         {
