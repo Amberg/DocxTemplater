@@ -16,7 +16,7 @@ namespace DocxTemplater.Blocks
             m_collectionName = collectionName;
         }
 
-        public override void Expand(ModelDictionary models, OpenXmlElement parentNode)
+        public override void Expand(ModelLookup models, OpenXmlElement parentNode)
         {
             var model = models.GetValue(m_collectionName);
             if (model is IEnumerable<object> enumerable)
@@ -25,15 +25,13 @@ namespace DocxTemplater.Blocks
                 foreach (var item in enumerable.Reverse())
                 {
                     count++;
-                    models.RemoveLoopVariable(m_collectionName);
-                    models.AddLoopVariable(m_collectionName, item);
-
+                    using var loopScope = models.OpenScope();
+                    loopScope.AddVariable(m_collectionName, item);
                     var cloned = m_content.Select(x => x.CloneNode(true)).ToList();
                     InsertContent(parentNode, cloned);
                     m_variableReplacer.ReplaceVariables(cloned);
                     ExpandChildBlocks(models, parentNode);
                 }
-                models.RemoveLoopVariable(m_collectionName);
             }
             else
             {

@@ -31,7 +31,8 @@
                     new { b = 6 }
                 }
             });
-            m_modelDictionary.AddLoopVariable("y.items", new
+            var blockScope = m_modelDictionary.OpenScope();
+            blockScope.AddVariable("y.items", new
             {
                 b = 5
             });

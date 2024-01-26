@@ -9,160 +9,149 @@ namespace DocxTemplater
 {
     internal class ModelLookup
     {
-        private readonly Dictionary<string, object> m_models;
-        private readonly Dictionary<string, object> m_loopVariables;
-        private readonly Stack<object> m_loopVariablesStack;
-
-        private readonly Lazy<string> m_defaultModelPrefix;
-
-        private string m_rootModelPrefix;
+        private readonly Dictionary<string, object> m_rootScope;
+        private readonly Stack<Dictionary<string, object>> m_blockScopes;
 
         public ModelLookup()
         {
-            m_models = new Dictionary<string, object>();
-            m_loopVariables = new Dictionary<string, object>();
-            m_loopVariablesStack = new Stack<object>();
-            m_defaultModelPrefix = new Lazy<string>(() => m_rootModelPrefix = m_models.Keys.FirstOrDefault());
+           m_rootScope = new Dictionary<string, object>();
+           m_blockScopes = new Stack<Dictionary<string, object>>();
+           m_blockScopes.Push(m_rootScope);
         }
 
-        public IReadOnlyDictionary<string, object> Models => m_models;
+        public IReadOnlyDictionary<string, object> Models => m_rootScope;
 
         public void Add(string prefix, object model)
         {
-            m_models.Add(prefix, model);
+            m_rootScope.Add(prefix, model);
         }
 
-        public void AddLoopVariable(string name, object value)
+        public IVariableScope OpenScope()
         {
-            name = AddPathPrefixInSingleModelMode(name);
-            m_loopVariablesStack.Push(value);
-            m_loopVariables.Add(name, value);
+           return new VariableScope(m_blockScopes);
         }
 
         public bool IsLoopVariable(string name)
         {
-            name = AddPathPrefixInSingleModelMode(name);
-            return m_loopVariables.ContainsKey(name);
-        }
-
-        public void RemoveLoopVariable(string name)
-        {
-            name = AddPathPrefixInSingleModelMode(name);
-            if (m_loopVariables.Remove(name))
-            {
-                m_loopVariablesStack.Pop();
-            }
-            Debug.Assert(m_loopVariables.Count == m_loopVariablesStack.Count);
-        }
-
-        private string AddPathPrefixInSingleModelMode(string name)
-        {
-            var dotIndex = name.IndexOf('.');
-            if (dotIndex == -1 || !m_models.ContainsKey(name[..dotIndex]))
-            {
-                if (m_defaultModelPrefix.Value != null &&
-                    !name.Equals(m_rootModelPrefix, StringComparison.CurrentCultureIgnoreCase) &&
-                    !name.StartsWith(m_defaultModelPrefix.Value + ".", StringComparison.CurrentCultureIgnoreCase))
-                {
-                    name = $"{m_rootModelPrefix}.{name}";
-                }
-            }
-
-            return name;
+            return m_blockScopes.Peek().ContainsKey(name) && m_blockScopes.Count > 1;
         }
 
         public object GetValue(string variableName)
         {
-            object nextModel = null;
-            m_models.TryGetValue(variableName, out nextModel);
-            return nextModel;
-        }
-
-
-        public object GetValueOld(string variableName)
-        {
-            //remove and count leading dots
-            var leadingDotCount = variableName.TakeWhile(x => x == '.').Count();
-            object model = null;
-            if (leadingDotCount > 0)
-            {
-                if(m_loopVariablesStack.Count < leadingDotCount)
-                {
-                    throw new OpenXmlTemplateException($"Property not found:{variableName}");
-                }
-                variableName = variableName[leadingDotCount..];
-                model = m_loopVariablesStack.ElementAt(leadingDotCount - 1);
-            }
+            var leadingDotsCount = variableName.TakeWhile(x => x == '.').Count();
+            variableName = variableName[leadingDotsCount..];
+            int partIndex = 0;
             var parts = variableName.Split('.');
-            var path = parts[0];
-
-            int startIndex = 0;
-            if (!m_models.ContainsKey(path) && m_models.Count > 0)
+            object model = null;
+            string modelRootPath = variableName;
+            if (leadingDotsCount == 0)
             {
-                startIndex = -1;
-                path = m_defaultModelPrefix.Value;
-            }
-            for (int i = startIndex; i < parts.Length; i++)
-            {
-                if (!m_loopVariables.TryGetValue(path, out var nextModel) && !m_models.TryGetValue(path, out nextModel))
+                model = SearchLongestPathInLookup(parts, out modelRootPath, out partIndex, 0);
+                if (model == null && m_rootScope.Count > 0)
                 {
-                    if (model == null)
+                    var firstModelEntry = m_rootScope.First();
+                    // a.b.c.d and b.c.d.e ==> a.b.c.d.e
+                    parts = firstModelEntry.Key.Split('.').Concat(variableName.Split('.')).Distinct().ToArray();
+                    model = SearchLongestPathInLookup(parts, out modelRootPath, out partIndex, 0);
+                }
+
+                if (model == null)
+                {
+                    throw new OpenXmlTemplateException($"Model {variableName} not found");
+                }
+            }
+            else
+            {
+                modelRootPath = "parent scope";
+                model = m_blockScopes.ElementAt(leadingDotsCount - 1).Values.FirstOrDefault();
+            }
+            if (model == null)
+            {
+                throw new OpenXmlTemplateException($"Model {variableName} not found");
+            }
+
+            for (int i = partIndex; i < parts.Length; i++)
+            {
+                var propertyName = parts[i];
+                if (model is ITemplateModel templateModel)
+                {
+                    if (!templateModel.TryGetPropertyValue(propertyName, out model))
                     {
-                        throw new OpenXmlTemplateException($"Model {path} not found");
+                        throw new OpenXmlTemplateException($"Property {propertyName} not found in {modelRootPath}");
                     }
-                    if (model is ITemplateModel templateModel)
+                }
+                else if (model is IDictionary<string, object> dict)
+                {
+                    if (!dict.TryGetValue(parts[i], out model))
                     {
-                        if (templateModel.TryGetPropertyValue(parts[i], out var value))
-                        {
-                            model = value;
-                        }
-                        else
-                        {
-                            throw new OpenXmlTemplateException($"Property {parts[i]} not found in {path}");
-                        }
-                    }
-                    else if (model is IDictionary<string, object> dict)
-                    {
-                        if (dict.TryGetValue(parts[i], out var value))
-                        {
-                            model = value;
-                        }
-                        else
-                        {
-                            throw new OpenXmlTemplateException($"Property {parts[i]} not found in {path}");
-                        }
-                    }
-                    else
-                    {
-                        var property = model.GetType().GetProperty(parts[i], BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.GetProperty | BindingFlags.Instance);
-                        if (property != null)
-                        {
-                            model = property.GetValue(model);
-                        }
-                        else if (model is ICollection)
-                        {
-                            throw new OpenXmlTemplateException($"Property {parts[i]} on collection {path} not found - is collection start missing? '#{variableName}'");
-                        }
-                        else
-                        {
-                            throw new OpenXmlTemplateException($"Property {parts[i]} not found in {parts[Math.Max(i - 1, 0)]}");
-                        }
+                        throw new OpenXmlTemplateException($"Property {propertyName} not found in {modelRootPath}");
                     }
                 }
                 else
                 {
-                    model = nextModel;
-                    if (path == variableName)
+                    var property = model.GetType().GetProperty(propertyName, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.GetProperty | BindingFlags.Instance);
+                    if (property != null)
                     {
-                        break;
+                        model = property.GetValue(model);
                     }
-                }
-                if (i + 1 < parts.Length)
-                {
-                    path = $"{path}.{parts[i + 1]}";
+                    else if (model is ICollection)
+                    {
+                        throw new OpenXmlTemplateException($"Property {propertyName} on collection {modelRootPath} not found - is collection start missing? '#{variableName}'");
+                    }
+                    else
+                    {
+                        throw new OpenXmlTemplateException($"Property {propertyName} not found in {modelRootPath}");
+                    }
                 }
             }
             return model;
+        }
+
+        private object SearchLongestPathInLookup(string[] parts, out string modelRootPath, out int partIndex, int startScopeIndex)
+        {
+            modelRootPath = null;
+            partIndex = parts.Length;
+            foreach (Dictionary<string, object> scope in m_blockScopes.Skip(startScopeIndex))
+            {
+                partIndex = parts.Length;
+                // search the longest path in the lookup
+                for (; partIndex > 0; partIndex--)
+                {
+                    modelRootPath = string.Join('.', parts[..partIndex]);
+                    if (scope.TryGetValue(modelRootPath, out var model))
+                    {
+                        return model;
+                    }
+                }
+            }
+            return null;
+        }
+
+
+        internal class VariableScope : IVariableScope
+        {
+            private readonly Dictionary<string, object> m_scope;
+            private readonly Stack<Dictionary<string, object>> m_scopeStack;
+
+            public VariableScope(Stack<Dictionary<string, object>> scopeStack)
+            {
+                m_scopeStack = scopeStack;
+                m_scope = new Dictionary<string, object>();
+                scopeStack.Push(m_scope);
+            }
+
+            public void AddVariable(string name, object value)
+            {
+                // remove leading dots
+                name = name.TrimStart('.');
+                Debug.Assert(m_scopeStack.Count > 1, "Added Block variable in root scope");
+                m_scope.Add(name, value);
+            }
+
+            public void Dispose()
+            {
+                m_scopeStack.Pop();
+            }
         }
     }
 }

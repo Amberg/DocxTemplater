@@ -1,4 +1,5 @@
-﻿using DynamicExpresso;
+﻿using DocumentFormat.OpenXml.Vml;
+using DynamicExpresso;
 using System;
 using System.Dynamic;
 
@@ -6,9 +7,9 @@ namespace DocxTemplater
 {
     internal class ScriptCompiler
     {
-        private readonly ModelDictionary m_modelDictionary;
+        private readonly ModelLookup m_modelDictionary;
 
-        public ScriptCompiler(ModelDictionary modelDictionary)
+        public ScriptCompiler(ModelLookup modelDictionary)
         {
             this.m_modelDictionary = modelDictionary;
         }
@@ -34,10 +35,10 @@ namespace DocxTemplater
 
         private class ModelVariable : DynamicObject
         {
-            private readonly ModelDictionary m_modelDictionary;
+            private readonly ModelLookup m_modelDictionary;
             private readonly string m_rootName;
 
-            public ModelVariable(ModelDictionary modelDictionary, string rootName)
+            public ModelVariable(ModelLookup modelDictionary, string rootName)
             {
                 m_modelDictionary = modelDictionary;
                 m_rootName = rootName;
@@ -49,7 +50,7 @@ namespace DocxTemplater
             {
                 var name = m_rootName + "." + binder.Name;
                 result = m_modelDictionary.GetValue(name);
-                if (m_modelDictionary.IsLoopVariable(name))
+                if (result != null && !result.GetType().IsPrimitive)
                 {
                     result = new ModelVariable(m_modelDictionary, name);
                 }

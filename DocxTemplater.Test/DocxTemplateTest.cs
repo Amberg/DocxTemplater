@@ -121,6 +121,33 @@ namespace DocxTemplater.Test
             Assert.Throws<OpenXmlTemplateException>(() => docTemplate.Process());
         }
 
+        [Test]
+        public void ImplicitIterator()
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(new Paragraph(new Run(new Text("{{#ds}} {{.OuterVal}} {{#.Inner}} {{.InnerVal}} {{..OuterVal}} {{/.Inner}} {{/ds}}")))));
+            wpDocument.Save();
+            memStream.Position = 0;
+
+            var docTemplate = new DocxTemplate(memStream);
+            var model = new[]
+            {
+                new { OuterVal = "OuterValue0", Inner = new[] { new { InnerVal = "InnerValue00" } } },
+                new { OuterVal = "OuterValue1", Inner = new[] { new { InnerVal = "InnerValue10" } , new { InnerVal = "InnerValue11" } } },
+                new { OuterVal = "OuterValue2", Inner = new[] { new { InnerVal = "InnerValue20" } , new { InnerVal = "InnerValue21" } } }
+            };
+            docTemplate.BindModel("ds", model);
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.IsNotNull(result);
+            // check result text
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            Assert.That(body.InnerText, Is.EqualTo(" OuterValue0  InnerValue00 OuterValue0   OuterValue1  InnerValue10 OuterValue1  InnerValue11 OuterValue1   OuterValue2  InnerValue20 OuterValue2  InnerValue21 OuterValue2  "));
+        }
+
         [TestCase("<html><body><h1>Test</h1></body></html>", "<html><body><h1>Test</h1></body></html>")]
         [TestCase("<body><h1>Test</h1></body>", "<html><body><h1>Test</h1></body></html>")]
         [TestCase("<h1>Test</h1>", "<html><h1>Test</h1></html>")]

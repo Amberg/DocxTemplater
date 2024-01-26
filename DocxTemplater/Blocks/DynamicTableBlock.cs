@@ -39,14 +39,13 @@ namespace DocxTemplater.Blocks
                 // write headers
                 foreach (var header in dynamicTable.Headers.Reverse())
                 {
-                    models.RemoveLoopVariable(headersName);
-                    models.AddLoopVariable(headersName, header);
+                    using var headerScope = models.OpenScope();
+                    headerScope.AddVariable(headersName, header);
                     var clonedCell = headerCell.CloneNode(true);
                     headerCell.InsertAfterSelf(clonedCell);
                     m_variableReplacer.ReplaceVariables(clonedCell);
                     ExpandChildBlocks(models, parentNode);
                 }
-                models.RemoveLoopVariable(headersName);
                 // remove header cell
                 headerCell.Remove();
 
@@ -62,15 +61,14 @@ namespace DocxTemplater.Blocks
                     var insertion = cellInsertionPoint.GetElement(clonedRow);
                     foreach (var column in row.Reverse())
                     {
-                        models.RemoveLoopVariable(columnsName);
-                        models.AddLoopVariable(columnsName, column);
+                        using var columnScope = models.OpenScope();
+                        columnScope.AddVariable(columnsName, column);
                         var clonedCell = dataCell.CloneNode(true);
                         insertion.InsertAfterSelf(clonedCell);
                         m_variableReplacer.ReplaceVariables(clonedCell);
                         ExpandChildBlocks(models, parentNode);
                     }
                     insertion.Remove();
-                    models.RemoveLoopVariable(columnsName);
                 }
                 dataRow.Remove();
                 dataCell.Remove();

@@ -16,7 +16,7 @@ namespace DocxTemplater
     {
         private readonly Stream m_stream;
         private readonly WordprocessingDocument m_wpDocument;
-        private readonly ModelDictionary m_models;
+        private readonly ModelLookup m_models;
 
         private static readonly FileFormatVersions TargetMinimumVersion = FileFormatVersions.Office2010;
 
@@ -42,7 +42,7 @@ namespace DocxTemplater
             };
 
             m_wpDocument = WordprocessingDocument.Open(m_stream, true, openSettings);
-            m_models = new ModelDictionary();
+            m_models = new ModelLookup();
             m_scriptCompiler = new ScriptCompiler(m_models);
             m_variableReplacer = new VariableReplacer(m_models, Settings);
             Processed = false;
