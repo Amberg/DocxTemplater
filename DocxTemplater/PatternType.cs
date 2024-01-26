@@ -6,6 +6,7 @@
         Condition,
         ConditionEnd,
         CollectionStart,
+        CollectionSeparator,
         CollectionEnd,
         Variable,
         ConditionElse

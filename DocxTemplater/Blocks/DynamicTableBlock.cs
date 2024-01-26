@@ -16,14 +16,14 @@ namespace DocxTemplater.Blocks
             m_tablenName = tablenName;
         }
 
-        public override void Expand(ModelDictionary models, OpenXmlElement parentNode)
+        public override void Expand(ModelLookup models, OpenXmlElement parentNode)
         {
             var model = models.GetValue(m_tablenName);
             if (model is IDynamicTable dynamicTable)
             {
 
                 var headersName = $"{m_tablenName}.{nameof(IDynamicTable.Headers)}";
-                var columnsName = $"{m_tablenName}.Columns";
+                var columnsName = $"{m_tablenName}.{nameof(IDynamicTable.Rows)}";
 
                 var table = m_content.OfType<Table>().FirstOrDefault();
                 var headerRow = table?.Elements<TableRow>().FirstOrDefault(row => row.Descendants<Text>().Any(d => d.HasMarker(PatternType.Variable) && d.Text.Contains($"{{{{{headersName}")));
@@ -33,19 +33,19 @@ namespace DocxTemplater.Blocks
                 var dataCell = dataRow?.Elements<TableCell>().FirstOrDefault(row => row.Descendants<Text>().Any(d => d.HasMarker(PatternType.Variable) && d.Text.Contains($"{{{{{columnsName}")));
                 if (headerCell == null || dataCell == null)
                 {
-                    throw new OpenXmlTemplateException($"Dynamic table block must contain exactly one table with at least two rows and one column, but found");
+                    throw new OpenXmlTemplateException($"Dynamic table block must contain exactly one table with at least a header and a data row");
                 }
 
                 // write headers
                 foreach (var header in dynamicTable.Headers.Reverse())
                 {
-                    models.RemoveLoopVariable(headersName);
-                    models.AddLoopVariable(headersName, header);
-                    var clonedCell = CreateBlockContentForCurrentVariableStack(new List<OpenXmlElement> { headerCell });
+                    using var headerScope = models.OpenScope();
+                    headerScope.AddVariable(headersName, header);
+                    var clonedCell = headerCell.CloneNode(true);
                     headerCell.InsertAfterSelf(clonedCell);
+                    m_variableReplacer.ReplaceVariables(clonedCell);
                     ExpandChildBlocks(models, parentNode);
                 }
-                models.RemoveLoopVariable(headersName);
                 // remove header cell
                 headerCell.Remove();
 
@@ -61,14 +61,14 @@ namespace DocxTemplater.Blocks
                     var insertion = cellInsertionPoint.GetElement(clonedRow);
                     foreach (var column in row.Reverse())
                     {
-                        models.RemoveLoopVariable(columnsName);
-                        models.AddLoopVariable(columnsName, column);
-                        var clonedCell = CreateBlockContentForCurrentVariableStack(new List<OpenXmlElement> { dataCell }).Single();
+                        using var columnScope = models.OpenScope();
+                        columnScope.AddVariable(columnsName, column);
+                        var clonedCell = dataCell.CloneNode(true);
                         insertion.InsertAfterSelf(clonedCell);
+                        m_variableReplacer.ReplaceVariables(clonedCell);
                         ExpandChildBlocks(models, parentNode);
                     }
                     insertion.Remove();
-                    models.RemoveLoopVariable(columnsName);
                 }
                 dataRow.Remove();
                 dataCell.Remove();

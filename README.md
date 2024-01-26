@@ -62,8 +62,11 @@ The syntax is case insensitive
 |      Syntax      |               Desciption |
 |----------------|--------------------------|
 | {{SomeVar}}  | Simple Variable replacement
-| {{someVar > 5}}...{{else}}...{{/}}  | Conditional blocks
-| {{/Items}}...{\{Items.Name}} ... {{/Items}}  | Text block bound to collection items
+| {?{someVar > 5}}...{{:}}...{{/}}  | Conditional blocks
+| {{/Items}}...{{Items.Name}} ... {{/Items}}  | Text block bound to collection of complex items
+| {{/Items}}...{{.Name}} ... {{/Items}}  | Dot notation - implicit iterator
+| {{/Items}}...{{.}:toUpper} ... {{/Items}}  | A list of string all upper case
+| {{/Items}}{{.}}{{:s:}},{{/Items}}  | A list of string comma separated
 | {{SomeString:ToUpper()}}  | Variable with formatter to upper
 | {{SomeDate:Format("MM/dd/yyyy")}}  | Date variable with formatting
 | {{SomeDate:F("MM/dd/yyyy")}}  | Date variable with formatting - short syntax
@@ -107,15 +110,24 @@ will render a table row for each item in the collection
 | John | Developer|
 | Alice | CEO|
 
+#### Separator
+
+If you want to render a separator between the items in the collection, you can use the separator syntax:
+```
+{{#Items}} This text {{.Name}} is rendered for each element in the items collection {{:s:}} This is rendered between each elment {{/items}}
+```
+
+
+
 ### Conditional Blocks
 
 Show or hide a given section depending on a condition:
-**{{\<condition>}}** .. content .. **{{/}}**
+**{?{\<condition>}}** .. content .. **{{/}}**
 All document content between the start and end tag is rendered only if the condition is met
 
 ```
-{{Item.Value >= 0}}Only visible if value is >= 0 {{/}}
-{{else}}Otherwise this text is shown{{/}}
+{?{Item.Value >= 0}}Only visible if value is >= 0
+{{:}}Otherwise this text is shown{{/}}
 ```
 
 ## Formatters

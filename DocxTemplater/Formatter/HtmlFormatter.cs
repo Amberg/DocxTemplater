@@ -26,6 +26,15 @@ namespace DocxTemplater.Formatter
                 return;
             }
 
+            // fix html - ensure starts and ends with <html> and <body>
+            if (!html.StartsWith("<html>", StringComparison.CurrentCultureIgnoreCase))
+            {
+                html = "<html>" + html;
+            }
+            if (!html.EndsWith("</html>", StringComparison.CurrentCultureIgnoreCase))
+            {
+                html += "</html>";
+            }
             var root = target.GetRoot();
             string alternativeFormatImportPartId = null;
             if (root is OpenXmlPartRootElement openXmlPartRootElement && openXmlPartRootElement.OpenXmlPart != null)
@@ -45,7 +54,7 @@ namespace DocxTemplater.Formatter
             }
             if (alternativeFormatImportPartId == null)
             {
-                throw new OpenXmlTemplateException("Could not find a valid image part");
+                throw new OpenXmlTemplateException("Could not find root to insert HTML");
             }
             AltChunk altChunk = new()
             {

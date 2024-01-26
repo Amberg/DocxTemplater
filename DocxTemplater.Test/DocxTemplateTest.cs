@@ -15,7 +15,6 @@ namespace DocxTemplater.Test
 {
     internal class DocxTemplateTest
     {
-
         [Test]
         public void DynamicTable()
         {
@@ -123,6 +122,90 @@ namespace DocxTemplater.Test
         }
 
         [Test]
+        public void ImplicitIterator()
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(new Paragraph(new Run(new Text("{{#ds}} {{.OuterVal}} {{#.Inner}} {{.InnerVal}} {{..OuterVal}} {{/.Inner}} {{/ds}}")))));
+            wpDocument.Save();
+            memStream.Position = 0;
+
+            var docTemplate = new DocxTemplate(memStream);
+            var model = new[]
+            {
+                new { OuterVal = "OuterValue0", Inner = new[] { new { InnerVal = "InnerValue00" } } },
+                new { OuterVal = "OuterValue1", Inner = new[] { new { InnerVal = "InnerValue10" } , new { InnerVal = "InnerValue11" } } },
+                new { OuterVal = "OuterValue2", Inner = new[] { new { InnerVal = "InnerValue20" } , new { InnerVal = "InnerValue21" } } }
+            };
+            docTemplate.BindModel("ds", model);
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.IsNotNull(result);
+            // check result text
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            Assert.That(body.InnerText, Is.EqualTo(" OuterValue0  InnerValue00 OuterValue0   OuterValue1  InnerValue10 OuterValue1  InnerValue11 OuterValue1   OuterValue2  InnerValue20 OuterValue2  InnerValue21 OuterValue2  "));
+        }
+
+        [TestCase("<html><body><h1>Test</h1></body></html>", "<html><body><h1>Test</h1></body></html>")]
+        [TestCase("<body><h1>Test</h1></body>", "<html><body><h1>Test</h1></body></html>")]
+        [TestCase("<h1>Test</h1>", "<html><h1>Test</h1></html>")]
+        [TestCase("Test", "<html>Test</html>")]
+        [TestCase("foo<br>Test", "<html>foo<br>Test</html>")]
+        public void HtmlIsAlwaysEnclosedWithHtmlTags(string html, string expexted)
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(new Paragraph(new Run(new Text("Here comes HTML {{ds}:html}")))));
+            wpDocument.Save();
+            memStream.Position = 0;
+            var docTemplate = new DocxTemplate(memStream);
+            docTemplate.BindModel("ds", html);
+
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.IsNotNull(result);
+            result.SaveAsFileAndOpenInWord();
+            result.Position = 0;
+            var document = WordprocessingDocument.Open(result, false);
+            // check word contains altChunk
+            var body = document.MainDocumentPart.Document.Body;
+            var altChunk = body.Descendants<AltChunk>().FirstOrDefault();
+            Assert.IsNotNull(altChunk);
+            // extract html part
+            var htmlPart = document.MainDocumentPart.GetPartById(altChunk.Id);
+            var stream = htmlPart.GetStream();
+            var content = new StreamReader(stream).ReadToEnd();
+            Assert.That(content, Is.EqualTo(expexted));
+            // check html part contains html;
+        }
+
+        [Test]
+        public void InsertHtmlInLoop()
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(new Paragraph(new Run(new Text("{{#Items}}{{Items}:html}{{/Items}}")))));
+            wpDocument.Save();
+            memStream.Position = 0;
+
+            var docTemplate = new DocxTemplate(memStream);
+            docTemplate.BindModel("Items", new[] { "<h1>Test1</h1>", "<h1>Test2</h1>" });
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.IsNotNull(result);
+            result.SaveAsFileAndOpenInWord();
+            // check document contains 2 altChunks
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            var altChunks = body.Descendants<AltChunk>().ToList();
+            Assert.That(altChunks.Count, Is.EqualTo(2));
+        }
+
+        [Test]
         public void MissingVariableWithSkipErrorHandling()
         {
             using var memStream = new MemoryStream();
@@ -150,7 +233,7 @@ namespace DocxTemplater.Test
             mainPart.Document = new Document(new Body(
                 new Paragraph(new Run(new Text("Text123"))),
                 new Paragraph(new Run(new Text("{{#ds.Items}}"))),
-                new Paragraph(new Run(new Text("{{Items.Name}} {{Items.Price < 6}} less than 6 {{else}} more than 6{{/}}"))),
+                new Paragraph(new Run(new Text("{{Items.Name}} {?{Items.Price < 6}} less than 6 {{else}} more than 6{{/}}"))),
                 new Paragraph(new Run(new Text("{{/ds.Items}}"))),
                 new Paragraph(new Run(new Text("Text456")))
             ));
@@ -170,6 +253,27 @@ namespace DocxTemplater.Test
             Assert.That(body.Descendants<Paragraph>().Count(), Is.EqualTo(4));
         }
 
+
+        [Test]
+        public void CollectionSeparatorTest()
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(new Paragraph(new Run(new Text("{{#ds}}{{.}}{{:s:}},{{/ds}}")))));
+            wpDocument.Save();
+            memStream.Position = 0;
+            var docTemplate = new DocxTemplate(memStream);
+            docTemplate.BindModel("ds", new[] { "Item1", "Item2", "Item3" });
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.IsNotNull(result);
+            // check result text
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            Assert.That(body.InnerText, Is.EqualTo("Item1,Item2,Item3"));
+        }
+
         [Test]
         public void ConditionsWithAndWithoutPrefix()
         {
@@ -177,16 +281,19 @@ namespace DocxTemplater.Test
             using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
             MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
             mainPart.Document = new Document(new Body(
-                new Paragraph(new Run(new Text("{{ Test > 5 }}Test1{{ else }}else1{{ / }}"))),
-                new Paragraph(new Run(new Text("{{ds.Test > 5}}Test2{{else}}else2{{/}}"))),
-                new Paragraph(new Run(new Text("{{ds2.Test > 5}}Test3{{else}}else3{{/}}")))
-
+                new Paragraph(new Run(new Text("{?{ Test > 5 }}Test1{{ else }}else1{{ / }}"))),
+                new Paragraph(new Run(new Text("{?{ ds.Test > 5}}Test2{{else}}else2{{/}}"))),
+                new Paragraph(new Run(new Text("{?{ ds2.Test > 5}}Test3{{else}}else3{{/}}"))),
+                new Paragraph(new Run(new Text("{?{ds3.MyBool}}Test4{{:}}else4{{/}}"))),
+                new Paragraph(new Run(new Text("{?{!ds4.MyBool}}Test5{{:}}else4{{/}}")))
             ));
             wpDocument.Save();
             memStream.Position = 0;
             var docTemplate = new DocxTemplate(memStream);
             docTemplate.BindModel("ds", new { Test = 6 });
             docTemplate.BindModel("ds2", new { Test = 6 });
+            docTemplate.BindModel("ds3", new { MyBool = true });
+            docTemplate.BindModel("ds4", new { MyBool = false });
             var result = docTemplate.Process();
             docTemplate.Validate();
             Assert.IsNotNull(result);
@@ -196,7 +303,7 @@ namespace DocxTemplater.Test
             // check result text
             var document = WordprocessingDocument.Open(result, false);
             var body = document.MainDocumentPart.Document.Body;
-            Assert.That(body.InnerText, Is.EqualTo("Test1Test2Test3"));
+            Assert.That(body.InnerText, Is.EqualTo("Test1Test2Test3Test4Test5"));
         }
 
         [Test]
@@ -331,7 +438,7 @@ namespace DocxTemplater.Test
                     new Run(new Text("{{Items.Value}}")), // --> same as ds.Items.Value
                     new Run(new Text("{{ds.Items.InnerCollection.Name}}")),
                     new Run(new Text("{{Items.InnerCollection.InnerValue}}")), // --> same as ds.Items.InnerCollection.InnerValue
-                    new Run(new Text("{{ds.Items.InnerCollection.NumericValue > 0 }}I'm only here if NumericValue is greater than 0 - {{ds.Items.InnerCollection.InnerValue}:toupper()}{{else}}I'm here if if this is not the case{{/}}")),
+                    new Run(new Text("{?{.NumericValue > 0 }}I'm only here if NumericValue is greater than 0 - {{ds.Items.InnerCollection.InnerValue}:toupper()}{{:}}I'm here if if this is not the case{{/}}")),
                     new Run(new Text("{{/ds.Items.InnerCollection}}")),
                     new Run(new Text("{{/Items}}")), // --> same as ds.Items.InnerCollection
                     new Run(new Text("will be replaced {{company.Name}}"))

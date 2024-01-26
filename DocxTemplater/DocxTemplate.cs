@@ -16,7 +16,7 @@ namespace DocxTemplater
     {
         private readonly Stream m_stream;
         private readonly WordprocessingDocument m_wpDocument;
-        private readonly ModelDictionary m_models;
+        private readonly ModelLookup m_models;
 
         private static readonly FileFormatVersions TargetMinimumVersion = FileFormatVersions.Office2010;
 
@@ -26,6 +26,7 @@ namespace DocxTemplater
 
         public DocxTemplate(Stream docXStream, ProcessSettings settings = null)
         {
+            ArgumentNullException.ThrowIfNull(docXStream);
             Settings = settings ?? ProcessSettings.Default;
             m_stream = new MemoryStream();
             docXStream.CopyTo(m_stream);
@@ -41,7 +42,7 @@ namespace DocxTemplater
             };
 
             m_wpDocument = WordprocessingDocument.Open(m_stream, true, openSettings);
-            m_models = new ModelDictionary();
+            m_models = new ModelLookup();
             m_scriptCompiler = new ScriptCompiler(m_models);
             m_variableReplacer = new VariableReplacer(m_models, Settings);
             Processed = false;
@@ -112,7 +113,7 @@ namespace DocxTemplater
             {
                 ProcessNode(header.Header);
             }
-            ProcessNode(m_wpDocument.MainDocumentPart.Document.Body);
+            ProcessNode(m_wpDocument.MainDocumentPart.RootElement);
             foreach (var footer in m_wpDocument.MainDocumentPart.FooterParts)
             {
                 ProcessNode(footer.Footer);
@@ -122,35 +123,35 @@ namespace DocxTemplater
             return m_stream;
         }
 
-        private void ProcessNode(OpenXmlCompositeElement content)
+        private void ProcessNode(OpenXmlPartRootElement rootElement)
         {
 #if DEBUG
             Console.WriteLine("----------- Original --------");
-            Console.WriteLine(content.ToPrettyPrintXml());
+            Console.WriteLine(rootElement.ToPrettyPrintXml());
 #endif
-            PreProcess(content);
+            PreProcess(rootElement);
 
-            DocxTemplate.IsolateAndMergeTextTemplateMarkers(content);
+            DocxTemplate.IsolateAndMergeTextTemplateMarkers(rootElement);
 
 #if DEBUG
             Console.WriteLine("----------- Isolate Texts --------");
-            Console.WriteLine(content.ToPrettyPrintXml());
+            Console.WriteLine(rootElement.ToPrettyPrintXml());
 #endif
 
-            var loops = ExpandLoops(content);
+            var loops = ExpandLoops(rootElement);
 #if DEBUG
             Console.WriteLine("----------- After Loops --------");
-            Console.WriteLine(content.ToPrettyPrintXml());
+            Console.WriteLine(rootElement.ToPrettyPrintXml());
 #endif
-            m_variableReplacer.ReplaceVariables(content);
+            m_variableReplacer.ReplaceVariables(rootElement);
             foreach (var loop in loops)
             {
-                loop.Expand(m_models, content);
+                loop.Expand(m_models, rootElement);
             }
-            Cleanup(content);
+            Cleanup(rootElement);
 #if DEBUG
             Console.WriteLine("----------- Completed --------");
-            Console.WriteLine(content.ToPrettyPrintXml());
+            Console.WriteLine(rootElement.ToPrettyPrintXml());
 #endif
         }
 
@@ -205,7 +206,7 @@ namespace DocxTemplater
             }
         }
 
-        private IReadOnlyCollection<ContentBlock> ExpandLoops(OpenXmlCompositeElement element)
+        private IReadOnlyCollection<ContentBlock> ExpandLoops(OpenXmlPartRootElement element)
         {
 
             // TODO: store metadata for tag in cache
@@ -227,6 +228,28 @@ namespace DocxTemplater
                         blockStack.Push((new LoopBlock(match.Variable, m_variableReplacer), match, text));
                     }
                 }
+                else if (value == PatternType.CollectionSeparator)
+                {
+                    var (block, patternMatch, matchedTextNode) = blockStack.Pop();
+                    if (block is not LoopBlock)
+                    {
+                        throw new OpenXmlTemplateException($"Separator in '{block}' is invalid");
+                    }
+                    var loopContent = ExtractBlockContent(matchedTextNode, text, out var leadingPart);
+                    block.SetContent(leadingPart, loopContent);
+                    blockStack.Push((block, patternMatch, text)); // push same block again on Stack but with other text element
+                }
+                else if (value == PatternType.CollectionEnd)
+                {
+                    var (block, patternMatch, matchedTextNode) = blockStack.Pop();
+                    if (patternMatch.Type != PatternType.CollectionStart)
+                    {
+                        throw new OpenXmlTemplateException($"'{block}' is not closed");
+                    }
+                    var loopContent = ExtractBlockContent(matchedTextNode, text, out var leadingPart);
+                    block.SetContent(leadingPart, loopContent);
+                    blockStack.Peek().Block.AddInnerBlock(block);
+                }
                 else if (value == PatternType.Condition)
                 {
                     var match = PatternMatcher.FindSyntaxPatterns(text.Text).Single();
@@ -237,7 +260,7 @@ namespace DocxTemplater
                     var (block, patternMatch, matchedTextNode) = blockStack.Pop();
                     if (block is not ConditionalBlock)
                     {
-                        throw new OpenXmlTemplateException($"'{block}' is not closed");
+                        throw new OpenXmlTemplateException($"else block in '{block}' is invalid");
                     }
                     var loopContent = ExtractBlockContent(matchedTextNode, text, out var leadingPart);
                     block.SetContent(leadingPart, loopContent);
@@ -254,18 +277,6 @@ namespace DocxTemplater
                     block.SetContent(leadingPart, loopContent);
                     blockStack.Peek().Block.AddInnerBlock(block);
                 }
-                else if (value == PatternType.CollectionEnd)
-                {
-                    var (block, patternMatch, matchedTextNode) = blockStack.Pop();
-                    if (patternMatch.Type != PatternType.CollectionStart)
-                    {
-                        throw new OpenXmlTemplateException($"'{block}' is not closed");
-                    }
-                    var loopContent = ExtractBlockContent(matchedTextNode, text, out var leadingPart);
-                    block.SetContent(leadingPart, loopContent);
-                    blockStack.Peek().Block.AddInnerBlock(block);
-                }
-
             }
             var (contentBlock, _, _) = blockStack.Pop();
             return contentBlock.ChildBlocks;

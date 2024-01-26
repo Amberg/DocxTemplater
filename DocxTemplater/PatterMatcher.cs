@@ -20,16 +20,16 @@ namespace DocxTemplater
         {{images}:foo(arg1,arg2)} -- variable with formatter and arguments
          */
 
-        private static readonly Regex PatternRegex = new(@"\{\s*\{\s*
+        private static readonly Regex PatternRegex = new(@"\{\s*(?<condMarker>\?\s*)?\{\s* # a leading ? indicates a condition
                                                                 (?:   
-                                                                    (?<else>else) |
-                                                                    (?:
-                                                                        (?<prefix>[\/\#])? #prefix
+                                                                    (?<separator>:\s*s\s*:) |
+                                                                    (?<else>(?:else)|:) |
+                                                                    (?(condMarker) # if condition marker is set, we expect a condition
+                                                                        (?<condition>[a-zA-Z0-9+\-*\/><=\s\.\!]+)? #condition name (without brackets)
+                                                                        |
                                                                         (?:
-                                                                            (?<varname>[a-zA-Z0-9\._]+) #variable name
-                                                                            | #or
-                                                                            (?<condition>[a-zA-Z0-9+\-*\/><=\s\.]{2,}) #condition
-                                                                        )?
+                                                                            (?<prefix>[\/\#])?(?<varname>[a-zA-Z0-9\._]+)? #variable name
+                                                                        ) 
                                                                     )
                                                                 )
                                                             \s*\}
@@ -51,13 +51,15 @@ namespace DocxTemplater
             var result = new List<PatternMatch>(matches.Count);
             foreach (Match match in matches)
             {
-                if (match.Groups["else"].Success)
+                if (match.Groups["separator"].Success)
+                {
+                    result.Add(new PatternMatch(match, PatternType.CollectionSeparator, null, null, null, null, null, match.Index, match.Length));
+                }
+                else if (match.Groups["else"].Success)
                 {
                     result.Add(new PatternMatch(match, PatternType.ConditionElse, null, null, null, null, null, match.Index, match.Length));
                 }
-                else
-
-                if (match.Groups["condition"].Success)
+                else if (match.Groups["condition"].Success)
                 {
                     result.Add(new PatternMatch(match, PatternType.Condition, match.Groups["condition"].Value, null, null, null, null, match.Index, match.Length));
                 }
@@ -76,11 +78,15 @@ namespace DocxTemplater
                         result.Add(new PatternMatch(match, PatternType.CollectionEnd, null, match.Groups["prefix"].Value, match.Groups["varname"].Value, match.Groups["formatter"].Value, match.Groups["arg"].Value.Split(','), match.Index, match.Length));
                     }
                 }
-                else
+                else if (match.Groups["varname"].Success)
                 {
                     var argGroup = match.Groups["arg"];
                     var arguments = argGroup.Success ? argGroup.Captures.Select(x => x.Value).ToArray() : Array.Empty<string>();
                     result.Add(new PatternMatch(match, PatternType.Variable, null, null, match.Groups["varname"].Value, match.Groups["formatter"].Value, arguments, match.Index, match.Length));
+                }
+                else
+                {
+                    throw new OpenXmlTemplateException($"Invalid syntax '{match.Value}'");
                 }
             }
             return result;
