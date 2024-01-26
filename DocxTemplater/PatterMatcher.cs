@@ -78,7 +78,7 @@ namespace DocxTemplater
                         result.Add(new PatternMatch(match, PatternType.CollectionEnd, null, match.Groups["prefix"].Value, match.Groups["varname"].Value, match.Groups["formatter"].Value, match.Groups["arg"].Value.Split(','), match.Index, match.Length));
                     }
                 }
-                else if(match.Groups["varname"].Success)
+                else if (match.Groups["varname"].Success)
                 {
                     var argGroup = match.Groups["arg"];
                     var arguments = argGroup.Success ? argGroup.Captures.Select(x => x.Value).ToArray() : Array.Empty<string>();

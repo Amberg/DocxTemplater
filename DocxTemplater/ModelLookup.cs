@@ -58,7 +58,7 @@ namespace DocxTemplater
             {
                 modelRootPath = "parent scope";
                 model = m_blockScopes.ElementAt(leadingDotsCount - 1).Values.FirstOrDefault();
-                if(parts.Length == 1 && string.IsNullOrWhiteSpace(parts[0]))
+                if (parts.Length == 1 && string.IsNullOrWhiteSpace(parts[0]))
                 {
                     return model;
                 }
