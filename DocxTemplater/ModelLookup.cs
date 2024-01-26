@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -14,9 +13,9 @@ namespace DocxTemplater
 
         public ModelLookup()
         {
-           m_rootScope = new Dictionary<string, object>();
-           m_blockScopes = new Stack<Dictionary<string, object>>();
-           m_blockScopes.Push(m_rootScope);
+            m_rootScope = new Dictionary<string, object>();
+            m_blockScopes = new Stack<Dictionary<string, object>>();
+            m_blockScopes.Push(m_rootScope);
         }
 
         public IReadOnlyDictionary<string, object> Models => m_rootScope;
@@ -28,12 +27,7 @@ namespace DocxTemplater
 
         public IVariableScope OpenScope()
         {
-           return new VariableScope(m_blockScopes);
-        }
-
-        public bool IsLoopVariable(string name)
-        {
-            return m_blockScopes.Peek().ContainsKey(name) && m_blockScopes.Count > 1;
+            return new VariableScope(m_blockScopes);
         }
 
         public object GetValue(string variableName)
