@@ -62,8 +62,11 @@ The syntax is case insensitive
 |      Syntax      |               Desciption |
 |----------------|--------------------------|
 | {{SomeVar}}  | Simple Variable replacement
-| {{someVar > 5}}...{{else}}...{{/}}  | Conditional blocks
-| {{/Items}}...{\{Items.Name}} ... {{/Items}}  | Text block bound to collection items
+| {?{someVar > 5}}...{{:}}...{{/}}  | Conditional blocks
+| {{/Items}}...{{Items.Name}} ... {{/Items}}  | Text block bound to collection of complex items
+| {{/Items}}...{{.Name}} ... {{/Items}}  | Dot notation - implicit iterator
+| {{/Items}}...{{.}:toUpper} ... {{/Items}}  | A list of string all upper case
+| {{/Items}}{{.}}{{:s:}},{{/Items}}  | A list of string comma separated
 | {{SomeString:ToUpper()}}  | Variable with formatter to upper
 | {{SomeDate:Format("MM/dd/yyyy")}}  | Date variable with formatting
 | {{SomeDate:F("MM/dd/yyyy")}}  | Date variable with formatting - short syntax
