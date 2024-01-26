@@ -233,7 +233,7 @@ namespace DocxTemplater.Test
             mainPart.Document = new Document(new Body(
                 new Paragraph(new Run(new Text("Text123"))),
                 new Paragraph(new Run(new Text("{{#ds.Items}}"))),
-                new Paragraph(new Run(new Text("{{Items.Name}} {{Items.Price < 6}} less than 6 {{else}} more than 6{{/}}"))),
+                new Paragraph(new Run(new Text("{{Items.Name}} {?{Items.Price < 6}} less than 6 {{else}} more than 6{{/}}"))),
                 new Paragraph(new Run(new Text("{{/ds.Items}}"))),
                 new Paragraph(new Run(new Text("Text456")))
             ));
@@ -260,16 +260,19 @@ namespace DocxTemplater.Test
             using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
             MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
             mainPart.Document = new Document(new Body(
-                new Paragraph(new Run(new Text("{{ Test > 5 }}Test1{{ else }}else1{{ / }}"))),
-                new Paragraph(new Run(new Text("{{ds.Test > 5}}Test2{{else}}else2{{/}}"))),
-                new Paragraph(new Run(new Text("{{ds2.Test > 5}}Test3{{else}}else3{{/}}")))
-
+                new Paragraph(new Run(new Text("{?{ Test > 5 }}Test1{{ else }}else1{{ / }}"))),
+                new Paragraph(new Run(new Text("{?{ ds.Test > 5}}Test2{{else}}else2{{/}}"))),
+                new Paragraph(new Run(new Text("{?{ ds2.Test > 5}}Test3{{else}}else3{{/}}"))),
+                new Paragraph(new Run(new Text("{?{ds3.MyBool}}Test4{{e}}else4{{/}}"))),
+                new Paragraph(new Run(new Text("{?{!ds4.MyBool}}Test5{{e}}else4{{/}}")))
             ));
             wpDocument.Save();
             memStream.Position = 0;
             var docTemplate = new DocxTemplate(memStream);
             docTemplate.BindModel("ds", new { Test = 6 });
             docTemplate.BindModel("ds2", new { Test = 6 });
+            docTemplate.BindModel("ds3", new { MyBool = true });
+            docTemplate.BindModel("ds4", new { MyBool = false });
             var result = docTemplate.Process();
             docTemplate.Validate();
             Assert.IsNotNull(result);
@@ -279,7 +282,7 @@ namespace DocxTemplater.Test
             // check result text
             var document = WordprocessingDocument.Open(result, false);
             var body = document.MainDocumentPart.Document.Body;
-            Assert.That(body.InnerText, Is.EqualTo("Test1Test2Test3"));
+            Assert.That(body.InnerText, Is.EqualTo("Test1Test2Test3Test4Test5"));
         }
 
         [Test]
@@ -414,7 +417,7 @@ namespace DocxTemplater.Test
                     new Run(new Text("{{Items.Value}}")), // --> same as ds.Items.Value
                     new Run(new Text("{{ds.Items.InnerCollection.Name}}")),
                     new Run(new Text("{{Items.InnerCollection.InnerValue}}")), // --> same as ds.Items.InnerCollection.InnerValue
-                    new Run(new Text("{{ds.Items.InnerCollection.NumericValue > 0 }}I'm only here if NumericValue is greater than 0 - {{ds.Items.InnerCollection.InnerValue}:toupper()}{{else}}I'm here if if this is not the case{{/}}")),
+                    new Run(new Text("{?{.NumericValue > 0 }}I'm only here if NumericValue is greater than 0 - {{ds.Items.InnerCollection.InnerValue}:toupper()}{{e}}I'm here if if this is not the case{{/}}")),
                     new Run(new Text("{{/ds.Items.InnerCollection}}")),
                     new Run(new Text("{{/Items}}")), // --> same as ds.Items.InnerCollection
                     new Run(new Text("will be replaced {{company.Name}}"))

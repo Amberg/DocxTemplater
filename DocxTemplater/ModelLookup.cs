@@ -147,5 +147,10 @@ namespace DocxTemplater
                 m_scopeStack.Pop();
             }
         }
+
+        public object GetScopeParentLevel(int parentLevel)
+        {
+            return m_blockScopes.ElementAt(parentLevel).Values.FirstOrDefault();
+        }
     }
 }

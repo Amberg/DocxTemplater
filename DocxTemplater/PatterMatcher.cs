@@ -20,16 +20,15 @@ namespace DocxTemplater
         {{images}:foo(arg1,arg2)} -- variable with formatter and arguments
          */
 
-        private static readonly Regex PatternRegex = new(@"\{\s*\{\s*
+        private static readonly Regex PatternRegex = new(@"\{\s*(?<condMarker>\?\s*)?\{\s* # a leading ? indicates a condition
                                                                 (?:   
-                                                                    (?<else>else) |
-                                                                    (?:
-                                                                        (?<prefix>[\/\#])? #prefix
+                                                                    (?<else>(?:else)|(?:e)) |
+                                                                    (?(condMarker) # if condition marker is set, we expect a condition
+                                                                        (?<condition>[a-zA-Z0-9+\-*\/><=\s\.\!]+)? #condition name (without brackets)
+                                                                        |
                                                                         (?:
-                                                                            (?<varname>[a-zA-Z0-9\._]+) #variable name
-                                                                            | #or
-                                                                            (?<condition>[a-zA-Z0-9+\-*\/><=\s\.]{2,}) #condition
-                                                                        )?
+                                                                            (?<prefix>[\/\#])?(?<varname>[a-zA-Z0-9\._]+)? #variable name
+                                                                        ) 
                                                                     )
                                                                 )
                                                             \s*\}
