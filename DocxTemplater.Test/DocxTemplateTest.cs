@@ -284,8 +284,8 @@ namespace DocxTemplater.Test
                 new Paragraph(new Run(new Text("{?{ Test > 5 }}Test1{{ else }}else1{{ / }}"))),
                 new Paragraph(new Run(new Text("{?{ ds.Test > 5}}Test2{{else}}else2{{/}}"))),
                 new Paragraph(new Run(new Text("{?{ ds2.Test > 5}}Test3{{else}}else3{{/}}"))),
-                new Paragraph(new Run(new Text("{?{ds3.MyBool}}Test4{{e}}else4{{/}}"))),
-                new Paragraph(new Run(new Text("{?{!ds4.MyBool}}Test5{{e}}else4{{/}}")))
+                new Paragraph(new Run(new Text("{?{ds3.MyBool}}Test4{{:}}else4{{/}}"))),
+                new Paragraph(new Run(new Text("{?{!ds4.MyBool}}Test5{{:}}else4{{/}}")))
             ));
             wpDocument.Save();
             memStream.Position = 0;
@@ -438,7 +438,7 @@ namespace DocxTemplater.Test
                     new Run(new Text("{{Items.Value}}")), // --> same as ds.Items.Value
                     new Run(new Text("{{ds.Items.InnerCollection.Name}}")),
                     new Run(new Text("{{Items.InnerCollection.InnerValue}}")), // --> same as ds.Items.InnerCollection.InnerValue
-                    new Run(new Text("{?{.NumericValue > 0 }}I'm only here if NumericValue is greater than 0 - {{ds.Items.InnerCollection.InnerValue}:toupper()}{{e}}I'm here if if this is not the case{{/}}")),
+                    new Run(new Text("{?{.NumericValue > 0 }}I'm only here if NumericValue is greater than 0 - {{ds.Items.InnerCollection.InnerValue}:toupper()}{{:}}I'm here if if this is not the case{{/}}")),
                     new Run(new Text("{{/ds.Items.InnerCollection}}")),
                     new Run(new Text("{{/Items}}")), // --> same as ds.Items.InnerCollection
                     new Run(new Text("will be replaced {{company.Name}}"))
