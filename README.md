@@ -110,15 +110,24 @@ will render a table row for each item in the collection
 | John | Developer|
 | Alice | CEO|
 
+#### Separator
+
+If you want to render a separator between the items in the collection, you can use the separator syntax:
+```
+{{#Items}} This text {{.Name}} is rendered for each element in the items collection {{:s:}} This is rendered between each elment {{/items}}
+```
+
+
+
 ### Conditional Blocks
 
 Show or hide a given section depending on a condition:
-**{{\<condition>}}** .. content .. **{{/}}**
+**{?{\<condition>}}** .. content .. **{{/}}**
 All document content between the start and end tag is rendered only if the condition is met
 
 ```
-{{Item.Value >= 0}}Only visible if value is >= 0 {{/}}
-{{else}}Otherwise this text is shown{{/}}
+{?{Item.Value >= 0}}Only visible if value is >= 0
+{{:}}Otherwise this text is shown{{/}}
 ```
 
 ## Formatters
