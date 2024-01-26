@@ -1,12 +1,14 @@
 ﻿using DynamicExpresso;
 using System;
 using System.Dynamic;
+using System.Text.RegularExpressions;
 
 namespace DocxTemplater
 {
     internal class ScriptCompiler
     {
         private readonly ModelLookup m_modelDictionary;
+        private static readonly Regex RegexWordStartingWithDot = new(@"^(\.+)([a-zA-z0-9_]+)", RegexOptions.Compiled);
 
         public ScriptCompiler(ModelLookup modelDictionary)
         {
@@ -15,7 +17,9 @@ namespace DocxTemplater
 
         public Func<bool> CompileScript(string scriptAsString)
         {
+            // replace replace leading dots (implicit scope) with variables
             var interpreter = new Interpreter();
+            scriptAsString = RegexWordStartingWithDot.Replace(scriptAsString, (m) => OnVariableReplace(m, interpreter));
             var identifiers = interpreter.DetectIdentifiers(scriptAsString);
             foreach (var identifier in identifiers.UnknownIdentifiers)
             {
@@ -30,6 +34,15 @@ namespace DocxTemplater
                 }
             }
             return interpreter.ParseAsDelegate<Func<bool>>(scriptAsString);
+        }
+
+        private string OnVariableReplace(Match match, Interpreter interpreter)
+        {
+            var dotCount = match.Groups[1].Length;
+            var scope = m_modelDictionary.GetScopeParentLevel(dotCount - 1);
+            var varName = $"__s{dotCount}_"; // choose a variable name that is unlikely to be used by the user
+            interpreter.SetVariable(varName, scope);
+            return $"{varName}.{match.Groups[2].Value}";
         }
 
         private class ModelVariable : DynamicObject
