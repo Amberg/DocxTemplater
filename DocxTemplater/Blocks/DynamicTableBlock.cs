@@ -16,7 +16,7 @@ namespace DocxTemplater.Blocks
             m_tablenName = tablenName;
         }
 
-        public override void Expand(ModelDictionary models, OpenXmlElement parentNode)
+        public override void Expand(ModelLookup models, OpenXmlElement parentNode)
         {
             var model = models.GetValue(m_tablenName);
             if (model is IDynamicTable dynamicTable)

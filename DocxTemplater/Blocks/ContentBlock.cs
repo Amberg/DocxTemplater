@@ -23,7 +23,7 @@ namespace DocxTemplater.Blocks
 
         public IReadOnlyCollection<ContentBlock> ChildBlocks => m_childBlocks;
 
-        public virtual void Expand(ModelDictionary models, OpenXmlElement parentNode)
+        public virtual void Expand(ModelLookup models, OpenXmlElement parentNode)
         {
             var cloned = m_content.Select(x => x.CloneNode(true)).ToList();
             InsertContent(parentNode, cloned);
@@ -31,7 +31,7 @@ namespace DocxTemplater.Blocks
             ExpandChildBlocks(models, parentNode);
         }
 
-        protected void ExpandChildBlocks(ModelDictionary models, OpenXmlElement parentNode)
+        protected void ExpandChildBlocks(ModelLookup models, OpenXmlElement parentNode)
         {
             foreach (var child in m_childBlocks)
             {

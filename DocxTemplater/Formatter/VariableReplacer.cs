@@ -8,11 +8,11 @@ namespace DocxTemplater.Formatter
 {
     internal class VariableReplacer
     {
-        private readonly ModelDictionary m_models;
+        private readonly ModelLookup m_models;
         private readonly ProcessSettings m_processSettings;
         private readonly List<IFormatter> m_formatters;
 
-        public VariableReplacer(ModelDictionary models, ProcessSettings processSettings)
+        public VariableReplacer(ModelLookup models, ProcessSettings processSettings)
         {
             m_models = models;
             m_processSettings = processSettings;

@@ -1,23 +1,27 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 
 namespace DocxTemplater
 {
-    internal class ModelDictionary
+    internal class ModelLookup
     {
         private readonly Dictionary<string, object> m_models;
         private readonly Dictionary<string, object> m_loopVariables;
+        private readonly Stack<object> m_loopVariablesStack;
+
         private readonly Lazy<string> m_defaultModelPrefix;
 
         private string m_rootModelPrefix;
 
-        public ModelDictionary()
+        public ModelLookup()
         {
             m_models = new Dictionary<string, object>();
             m_loopVariables = new Dictionary<string, object>();
+            m_loopVariablesStack = new Stack<object>();
             m_defaultModelPrefix = new Lazy<string>(() => m_rootModelPrefix = m_models.Keys.FirstOrDefault());
         }
 
@@ -31,6 +35,7 @@ namespace DocxTemplater
         public void AddLoopVariable(string name, object value)
         {
             name = AddPathPrefixInSingleModelMode(name);
+            m_loopVariablesStack.Push(value);
             m_loopVariables.Add(name, value);
         }
 
@@ -43,7 +48,11 @@ namespace DocxTemplater
         public void RemoveLoopVariable(string name)
         {
             name = AddPathPrefixInSingleModelMode(name);
-            m_loopVariables.Remove(name);
+            if (m_loopVariables.Remove(name))
+            {
+                m_loopVariablesStack.Pop();
+            }
+            Debug.Assert(m_loopVariables.Count == m_loopVariablesStack.Count);
         }
 
         private string AddPathPrefixInSingleModelMode(string name)
@@ -64,6 +73,26 @@ namespace DocxTemplater
 
         public object GetValue(string variableName)
         {
+            object nextModel = null;
+            m_models.TryGetValue(variableName, out nextModel);
+            return nextModel;
+        }
+
+
+        public object GetValueOld(string variableName)
+        {
+            //remove and count leading dots
+            var leadingDotCount = variableName.TakeWhile(x => x == '.').Count();
+            object model = null;
+            if (leadingDotCount > 0)
+            {
+                if(m_loopVariablesStack.Count < leadingDotCount)
+                {
+                    throw new OpenXmlTemplateException($"Property not found:{variableName}");
+                }
+                variableName = variableName[leadingDotCount..];
+                model = m_loopVariablesStack.ElementAt(leadingDotCount - 1);
+            }
             var parts = variableName.Split('.');
             var path = parts[0];
 
@@ -73,7 +102,6 @@ namespace DocxTemplater
                 startIndex = -1;
                 path = m_defaultModelPrefix.Value;
             }
-            object model = null;
             for (int i = startIndex; i < parts.Length; i++)
             {
                 if (!m_loopVariables.TryGetValue(path, out var nextModel) && !m_models.TryGetValue(path, out nextModel))

@@ -3,12 +3,12 @@
     internal class ScriptCompilerTest
     {
         private ScriptCompiler m_scriptCompiler;
-        private ModelDictionary m_modelDictionary;
+        private ModelLookup m_modelDictionary;
 
         [SetUp]
         public void Setup()
         {
-            m_modelDictionary = new ModelDictionary();
+            m_modelDictionary = new ModelLookup();
             m_scriptCompiler = new ScriptCompiler(m_modelDictionary);
         }
 

@@ -18,7 +18,7 @@ namespace DocxTemplater.Blocks
             m_scriptCompiler = scriptCompiler;
         }
 
-        public override void Expand(ModelDictionary models, OpenXmlElement parentNode)
+        public override void Expand(ModelLookup models, OpenXmlElement parentNode)
         {
             var conditionResult = m_scriptCompiler.CompileScript(m_condition)();
             var content = conditionResult ? m_content : m_elseContent;
