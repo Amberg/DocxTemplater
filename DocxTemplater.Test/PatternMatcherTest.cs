@@ -46,8 +46,10 @@ namespace DocxTemplater.Test
             yield return new TestCaseData("{{var}:toupper}").Returns(new[] { PatternType.Variable });
             yield return new TestCaseData("{{else}}").Returns(new[] { PatternType.ConditionElse });
             yield return new TestCaseData("{{  else  }}").Returns(new[] { PatternType.ConditionElse });
-            yield return new TestCaseData("{{  e  }}").Returns(new[] { PatternType.ConditionElse });
-            yield return new TestCaseData("{{e}}").Returns(new[] { PatternType.ConditionElse });
+            yield return new TestCaseData("{{  :  }}").Returns(new[] { PatternType.ConditionElse });
+            yield return new TestCaseData("{{:}}").Returns(new[] { PatternType.ConditionElse });
+            yield return new TestCaseData("{{:s:}}").Returns(new[] { PatternType.CollectionSeparator });
+            yield return new TestCaseData("{{: s :}}").Returns(new[] { PatternType.CollectionSeparator });
             yield return new TestCaseData("{{var}:format(a,b)}").Returns(new[] { PatternType.Variable })
                 .SetName("Multiple Arguments");
             yield return new TestCaseData("{{/}}").Returns(new[] { PatternType.ConditionEnd });

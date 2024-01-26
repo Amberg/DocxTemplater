@@ -253,6 +253,27 @@ namespace DocxTemplater.Test
             Assert.That(body.Descendants<Paragraph>().Count(), Is.EqualTo(4));
         }
 
+
+        [Test]
+        public void CollectionSeparatorTest()
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(new Paragraph(new Run(new Text("{{#ds}}{{.}}{{:s:}},{{/ds}}")))));
+            wpDocument.Save();
+            memStream.Position = 0;
+            var docTemplate = new DocxTemplate(memStream);
+            docTemplate.BindModel("ds", new[] { "Item1", "Item2", "Item3" });
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.IsNotNull(result);
+            // check result text
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            Assert.That(body.InnerText, Is.EqualTo("Item1,Item2,Item3"));
+        }
+
         [Test]
         public void ConditionsWithAndWithoutPrefix()
         {

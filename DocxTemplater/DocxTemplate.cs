@@ -228,6 +228,28 @@ namespace DocxTemplater
                         blockStack.Push((new LoopBlock(match.Variable, m_variableReplacer), match, text));
                     }
                 }
+                else if (value == PatternType.CollectionSeparator)
+                {
+                    var (block, patternMatch, matchedTextNode) = blockStack.Pop();
+                    if (block is not LoopBlock)
+                    {
+                        throw new OpenXmlTemplateException($"Separator in '{block}' is invalid");
+                    }
+                    var loopContent = ExtractBlockContent(matchedTextNode, text, out var leadingPart);
+                    block.SetContent(leadingPart, loopContent);
+                    blockStack.Push((block, patternMatch, text)); // push same block again on Stack but with other text element
+                }
+                else if (value == PatternType.CollectionEnd)
+                {
+                    var (block, patternMatch, matchedTextNode) = blockStack.Pop();
+                    if (patternMatch.Type != PatternType.CollectionStart)
+                    {
+                        throw new OpenXmlTemplateException($"'{block}' is not closed");
+                    }
+                    var loopContent = ExtractBlockContent(matchedTextNode, text, out var leadingPart);
+                    block.SetContent(leadingPart, loopContent);
+                    blockStack.Peek().Block.AddInnerBlock(block);
+                }
                 else if (value == PatternType.Condition)
                 {
                     var match = PatternMatcher.FindSyntaxPatterns(text.Text).Single();
@@ -238,7 +260,7 @@ namespace DocxTemplater
                     var (block, patternMatch, matchedTextNode) = blockStack.Pop();
                     if (block is not ConditionalBlock)
                     {
-                        throw new OpenXmlTemplateException($"'{block}' is not closed");
+                        throw new OpenXmlTemplateException($"else block in '{block}' is invalid");
                     }
                     var loopContent = ExtractBlockContent(matchedTextNode, text, out var leadingPart);
                     block.SetContent(leadingPart, loopContent);
@@ -255,18 +277,6 @@ namespace DocxTemplater
                     block.SetContent(leadingPart, loopContent);
                     blockStack.Peek().Block.AddInnerBlock(block);
                 }
-                else if (value == PatternType.CollectionEnd)
-                {
-                    var (block, patternMatch, matchedTextNode) = blockStack.Pop();
-                    if (patternMatch.Type != PatternType.CollectionStart)
-                    {
-                        throw new OpenXmlTemplateException($"'{block}' is not closed");
-                    }
-                    var loopContent = ExtractBlockContent(matchedTextNode, text, out var leadingPart);
-                    block.SetContent(leadingPart, loopContent);
-                    blockStack.Peek().Block.AddInnerBlock(block);
-                }
-
             }
             var (contentBlock, _, _) = blockStack.Pop();
             return contentBlock.ChildBlocks;
