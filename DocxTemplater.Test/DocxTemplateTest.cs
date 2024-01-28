@@ -206,6 +206,32 @@ namespace DocxTemplater.Test
         }
 
         [Test]
+        public void ConditionalBlockInLoop()
+        {
+            var content = "{{#Educations}}{?{.HasTeacher}}{{.ChecklistName}}{{:}}noTeacher {{.ChecklistName}}{{/}}{{:s:}}, {{/Educations}}";
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(new Paragraph(new Run(new Text(content)))));
+            wpDocument.Save();
+            memStream.Position = 0;
+            var docTemplate = new DocxTemplate(memStream);
+            docTemplate.BindModel("Educations", new[]
+            {
+                new { HasTeacher = true, ChecklistName = "ChecklistName1" },
+                new { HasTeacher = false, ChecklistName = "ChecklistName2" },
+                new { HasTeacher = true, ChecklistName = "ChecklistName3" }
+            });
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.IsNotNull(result);
+            // validate content
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            Assert.That(body.InnerText, Is.EqualTo("ChecklistName1, noTeacher ChecklistName2, ChecklistName3"));
+        }
+
+        [Test]
         public void MissingVariableWithSkipErrorHandling()
         {
             using var memStream = new MemoryStream();

@@ -38,7 +38,6 @@ namespace DocxTemplater.Blocks
                         var clonedSeparator = m_separatorBlock.Select(x => x.CloneNode(true)).ToList();
                         InsertContent(parentNode, clonedSeparator);
                         m_variableReplacer.ReplaceVariables(clonedSeparator);
-                        ExpandChildBlocks(models, parentNode);
                     }
                 }
             }
