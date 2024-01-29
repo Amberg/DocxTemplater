@@ -244,7 +244,7 @@ namespace DocxTemplater
                     var (block, patternMatch, matchedTextNode) = blockStack.Pop();
                     if (patternMatch.Type != PatternType.CollectionStart)
                     {
-                        throw new OpenXmlTemplateException($"'{block}' is not closed");
+                        throw new OpenXmlTemplateException($"'{text.InnerText}' is mission collection start: {text.ElementBeforeInDocument<Text>().InnerText} >> {text.InnerText} << {text.ElementAfterInDocument<Text>().InnerText}");
                     }
                     var loopContent = ExtractBlockContent(matchedTextNode, text, out var leadingPart);
                     block.SetContent(leadingPart, loopContent);
