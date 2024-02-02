@@ -8,7 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using ContentBlock = DocxTemplater.Blocks.ContentBlock;
+using DocumentFormat.OpenXml.Drawing.Wordprocessing;
 
 namespace DocxTemplater
 {
@@ -182,7 +182,7 @@ namespace DocxTemplater
             foreach (var markedText in element.Descendants<Text>().Where(x => x.IsMarked()).ToList())
             {
                 var value = markedText.GetMarker();
-                if (value is PatternType.CollectionStart or PatternType.CollectionEnd or PatternType.ConditionEnd or PatternType.ConditionElse)
+                if (value is not PatternType.Variable)
                 {
                     var parent = markedText.Parent;
                     markedText.RemoveWithEmptyParent();
@@ -198,11 +198,27 @@ namespace DocxTemplater
             }
 
             // make all Bookmark ids unique
-            int id = 0;
+            uint id = 0;
             foreach (var bookmarkStart in element.Descendants<BookmarkStart>())
             {
                 bookmarkStart.Id = $"{id++}";
                 bookmarkStart.NextSibling<BookmarkEnd>().Id = bookmarkStart.Id;
+            }
+
+            id = 1;
+            var dockProperties = element.Descendants<DocProperties>().ToList();
+            var existingIds = new HashSet<uint>(dockProperties.Select(x => x.Id.Value).ToList());
+            foreach (var docPropertiesWithSameId in dockProperties.GroupBy(x => x.Id).Where(x => x.Count() > 1))
+            {
+                foreach (var docProperties in docPropertiesWithSameId.Skip(1))
+                {
+                    while (existingIds.Contains(id))
+                    {
+                        id++;
+                    }
+                    docProperties.Id = id;
+                    existingIds.Add(id);
+                }
             }
         }
 
@@ -210,8 +226,8 @@ namespace DocxTemplater
         {
 
             // TODO: store metadata for tag in cache
-            var blockStack = new Stack<(ContentBlock Block, PatternMatch Match, Text MatchedTextNode)>();
-            blockStack.Push((new ContentBlock(m_variableReplacer), null, null)); // dummy block for root
+            var blockStack = new Stack<(ContentBlock Block, PatternType type, Text MatchedTextNode)>();
+            blockStack.Push((new ContentBlock(m_variableReplacer), PatternType.None, null)); // dummy block for root
             // find all begin or end markers
             foreach (var text in element.Descendants<Text>().Where(x => x.IsMarked()))
             {
@@ -221,61 +237,69 @@ namespace DocxTemplater
                     var match = PatternMatcher.FindSyntaxPatterns(text.Text).Single();
                     if (match.Formatter.Equals("dyntable", StringComparison.InvariantCultureIgnoreCase))
                     {
-                        blockStack.Push((new DynamicTableBlock(match.Variable, m_variableReplacer), match, text));
+                        blockStack.Push((new DynamicTableBlock(match.Variable, m_variableReplacer), value, text));
                     }
                     else
                     {
-                        blockStack.Push((new LoopBlock(match.Variable, m_variableReplacer), match, text));
+                        blockStack.Push((new LoopBlock(match.Variable, m_variableReplacer), value, text));
                     }
                 }
                 else if (value == PatternType.CollectionSeparator)
                 {
-                    var (block, patternMatch, matchedTextNode) = blockStack.Pop();
-                    if (block is not LoopBlock)
+                    var (block, _, matchedTextNode) = blockStack.Pop();
+                    if (block is not LoopBlock collectionStartBlock)
                     {
                         throw new OpenXmlTemplateException($"Separator in '{block}' is invalid");
                     }
                     var loopContent = ExtractBlockContent(matchedTextNode, text, out var leadingPart);
-                    block.SetContent(leadingPart, loopContent);
-                    blockStack.Push((block, patternMatch, text)); // push same block again on Stack but with other text element
+                    var insertPoint = InsertionPoint.CreateForElement(leadingPart);
+                    collectionStartBlock.SetContent(insertPoint, loopContent);
+                    var separatorBlock = new ContentBlock(m_variableReplacer, collectionStartBlock, insertPoint);
+                    collectionStartBlock.SetSeparatorBlock(separatorBlock);
+                    blockStack.Push((separatorBlock, value, text));
                 }
                 else if (value == PatternType.CollectionEnd)
                 {
-                    var (block, patternMatch, matchedTextNode) = blockStack.Pop();
-                    if (patternMatch.Type != PatternType.CollectionStart)
+                    var (block, startType, matchedTextNode) = blockStack.Pop();
+                    if (startType is not PatternType.CollectionStart and not PatternType.CollectionSeparator)
                     {
-                        throw new OpenXmlTemplateException($"'{text.InnerText}' is mission collection start: {text.ElementBeforeInDocument<Text>().InnerText} >> {text.InnerText} << {text.ElementAfterInDocument<Text>().InnerText}");
+                        throw new OpenXmlTemplateException($"'{text.InnerText}' is mission collection start: {text.ElementBeforeInDocument<Text>()?.InnerText} >> {text.InnerText} << {text.ElementAfterInDocument<Text>()?.InnerText}");
                     }
                     var loopContent = ExtractBlockContent(matchedTextNode, text, out var leadingPart);
-                    block.SetContent(leadingPart, loopContent);
-                    blockStack.Peek().Block.AddInnerBlock(block);
+                    block.SetContent(InsertionPoint.CreateForElement(leadingPart), loopContent);
+                    blockStack.Peek().Block.AddInnerBlock(block.RootBlock);
                 }
                 else if (value == PatternType.Condition)
                 {
                     var match = PatternMatcher.FindSyntaxPatterns(text.Text).Single();
-                    blockStack.Push((new ConditionalBlock(match.Condition, m_variableReplacer, m_scriptCompiler), match, text));
+                    blockStack.Push((new ConditionalBlock(match.Condition, m_variableReplacer, m_scriptCompiler), value, text));
                 }
                 else if (value == PatternType.ConditionElse)
                 {
-                    var (block, patternMatch, matchedTextNode) = blockStack.Pop();
-                    if (block is not ConditionalBlock)
+                    var (block, startType, matchedTextNode) = blockStack.Pop();
+                    if (block is not ConditionalBlock conditionalBlock)
                     {
                         throw new OpenXmlTemplateException($"else block in '{block}' is invalid");
                     }
                     var loopContent = ExtractBlockContent(matchedTextNode, text, out var leadingPart);
-                    block.SetContent(leadingPart, loopContent);
-                    blockStack.Push((block, patternMatch, text)); // push same block again on Stack but with other text element
+                    var insertPoint = InsertionPoint.CreateForElement(leadingPart);
+                    conditionalBlock.SetContent(insertPoint, loopContent);
+                    var elseBlock = new ContentBlock(m_variableReplacer, conditionalBlock, insertPoint);
+                    conditionalBlock.SetElseBlock(elseBlock);
+                    blockStack.Push((elseBlock, value, text)); // push else block on stack but with other text element
+
                 }
                 else if (value == PatternType.ConditionEnd)
                 {
-                    var (block, _, matchedTextNode) = blockStack.Pop();
-                    if (block is not ConditionalBlock)
+                    var (block, startType, matchedTextNode) = blockStack.Pop();
+                    if (startType is not PatternType.Condition and not PatternType.ConditionElse)
                     {
-                        throw new OpenXmlTemplateException($"'{block}' is not closed");
+                        throw new OpenXmlTemplateException($"'{text.InnerText}' is mission condition start: {text.ElementBeforeInDocument<Text>()?.InnerText} >> {text.InnerText} << {text.ElementAfterInDocument<Text>()?.InnerText}");
                     }
                     var loopContent = ExtractBlockContent(matchedTextNode, text, out var leadingPart);
-                    block.SetContent(leadingPart, loopContent);
-                    blockStack.Peek().Block.AddInnerBlock(block);
+                    var insertPoint = InsertionPoint.CreateForElement(leadingPart);
+                    block.SetContent(insertPoint, loopContent);
+                    blockStack.Peek().Block.AddInnerBlock(block.RootBlock);
                 }
             }
             var (contentBlock, _, _) = blockStack.Pop();

@@ -1,7 +1,5 @@
 ﻿using DocumentFormat.OpenXml;
 using DocxTemplater.Formatter;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace DocxTemplater.Blocks
 {
@@ -9,7 +7,7 @@ namespace DocxTemplater.Blocks
     {
         private readonly string m_condition;
         private readonly ScriptCompiler m_scriptCompiler;
-        private IReadOnlyCollection<OpenXmlElement> m_elseContent;
+        private ContentBlock m_elseBlock;
 
         public ConditionalBlock(string condition, VariableReplacer variableReplacer, ScriptCompiler scriptCompiler)
             : base(variableReplacer)
@@ -20,29 +18,23 @@ namespace DocxTemplater.Blocks
 
         public override void Expand(ModelLookup models, OpenXmlElement parentNode)
         {
+            // todo; catch script errors here and report them or keep element in document
             var conditionResult = m_scriptCompiler.CompileScript(m_condition)();
-            var content = conditionResult ? m_content : m_elseContent;
-            if (content != null)
+            if (conditionResult)
             {
-                var cloned = content.Select(x => x.CloneNode(true)).ToList();
-                InsertContent(parentNode, cloned);
-                m_variableReplacer.ReplaceVariables(cloned);
-                ExpandChildBlocks(models, parentNode);
-            }
-            var element = m_leadingPart.GetElement(parentNode);
-            element.Remove();
-        }
-
-        public override void SetContent(OpenXmlElement leadingPart, IReadOnlyCollection<OpenXmlElement> blockContent)
-        {
-            if (m_leadingPart == null)
-            {
-                base.SetContent(leadingPart, blockContent);
+                base.Expand(models, parentNode);
             }
             else
             {
-                m_elseContent = blockContent;
+                m_elseBlock.Expand(models, parentNode);
             }
+            var element = m_insertionPoint.GetElement(parentNode);
+            element.Remove();
+        }
+
+        public void SetElseBlock(ContentBlock elseBlock)
+        {
+            m_elseBlock = elseBlock;
         }
 
         public override string ToString()

@@ -94,14 +94,14 @@ namespace DocxTemplater.Blocks
             }
         }
 
-        public override void SetContent(OpenXmlElement leadingPart, IReadOnlyCollection<OpenXmlElement> blockContent)
+        public override void SetContent(InsertionPoint insertionPoint, IReadOnlyCollection<OpenXmlElement> blockContent)
         {
             var tables = blockContent.OfType<Table>().ToList();
             if (tables.Count != 1)
             {
                 throw new OpenXmlTemplateException($"Dynamic table block must contain exactly one table, but found {tables.Count}");
             }
-            base.SetContent(leadingPart, tables);
+            base.SetContent(insertionPoint, tables);
         }
 
         public override string ToString()
