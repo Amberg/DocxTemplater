@@ -41,9 +41,9 @@ namespace DocxTemplater.Blocks
                     }
                 }
             }
-            else
+            else if (model != null)
             {
-                throw new OpenXmlTemplateException($"Value of {m_collectionName} is not enumerable");
+                throw new OpenXmlTemplateException($"Value of {m_collectionName} is not enumerable - it is of type {model.GetType().FullName}");
             }
         }
 
