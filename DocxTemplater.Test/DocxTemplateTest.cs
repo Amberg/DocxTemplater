@@ -232,6 +232,27 @@ namespace DocxTemplater.Test
         }
 
         [Test]
+        public void NullValueHandlingForNesteObjects()
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(new Paragraph(new Run(new Text("Test{{ds.Model.Outer.BillName}}")))));
+            wpDocument.Save();
+            memStream.Position = 0;
+            var docTemplate = new DocxTemplate(memStream);
+            docTemplate.Settings.BindingErrorHandling = BindingErrorHandling.SkipBindingAndRemoveContent;
+            docTemplate.BindModel("ds", new { Model = new { Outer = (LessonReportModel)null } });
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.IsNotNull(result);
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            //check values have been replaced
+            Assert.That(body.InnerText, Is.EqualTo("Test"));
+        }
+
+        [Test]
         public void MissingVariableWithSkipErrorHandling()
         {
             using var memStream = new MemoryStream();
