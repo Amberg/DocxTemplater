@@ -1,13 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using DocumentFormat.OpenXml;
+﻿using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using DocxTemplater.Formatter;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Metadata;
+using System;
+using System.IO;
+using System.Linq;
 using A = DocumentFormat.OpenXml.Drawing;
 using DW = DocumentFormat.OpenXml.Drawing.Wordprocessing;
 using PIC = DocumentFormat.OpenXml.Drawing.Pictures; // http://schemas.openxmlformats.org/drawingml/2006/picture"
@@ -40,37 +39,37 @@ namespace DocxTemplater.Images
                 using var image = Image.Load(imageBytes);
                 var imagePartType = DetectPartTypeInfo(context.Placeholder, image.Metadata);
                 var root = target.GetRoot();
-                string impagepartRelationShipId = null;
+                string imagePartRelId = null;
                 uint maxPropertyId = 0;
                 if (root is OpenXmlPartRootElement openXmlPartRootElement && openXmlPartRootElement.OpenXmlPart != null)
                 {
                     maxPropertyId = openXmlPartRootElement.OpenXmlPart.GetMaxDocPropertyId();
                     if (openXmlPartRootElement.OpenXmlPart is HeaderPart headerPart)
                     {
-                        impagepartRelationShipId = CreateImagePart(headerPart, imageBytes, imagePartType);
+                        imagePartRelId = CreateImagePart(headerPart, imageBytes, imagePartType);
                     }
                     else if (openXmlPartRootElement.OpenXmlPart is FooterPart footerPart)
                     {
-                        impagepartRelationShipId = CreateImagePart(footerPart, imageBytes, imagePartType);
+                        imagePartRelId = CreateImagePart(footerPart, imageBytes, imagePartType);
                     }
                     else if (openXmlPartRootElement.OpenXmlPart is MainDocumentPart mainDocumentPart)
                     {
-                        impagepartRelationShipId = CreateImagePart(mainDocumentPart, imageBytes, imagePartType);
+                        imagePartRelId = CreateImagePart(mainDocumentPart, imageBytes, imagePartType);
                     }
                 }
 
-                if (impagepartRelationShipId == null)
+                if (imagePartRelId == null)
                 {
                     throw new OpenXmlTemplateException("Could not find a valid image part");
                 }
 
                 // case 1. Image ist the only child element of a <wps:wsp> (TextBox)
-                if (TryHandleImageInWordprocessingShape(target, impagepartRelationShipId, image, context.Args.FirstOrDefault() ?? string.Empty, maxPropertyId))
+                if (TryHandleImageInWordprocessingShape(target, imagePartRelId, image, context.Args.FirstOrDefault() ?? string.Empty, maxPropertyId))
                 {
                     return;
                 }
 
-                AddInlineGraphicToRun(target, impagepartRelationShipId, image, maxPropertyId);
+                AddInlineGraphicToRun(target, imagePartRelId, image, maxPropertyId);
             }
             catch (Exception e) when (e is InvalidImageContentException or UnknownImageFormatException)
             {
@@ -142,20 +141,20 @@ namespace DocxTemplater.Images
             Drawing original)
         {
             var propertyId = maxDocumentPropertyId + 1;
-            var inlineOrAnchor = (OpenXmlElement) original.GetFirstChild<DW.Anchor>() ??
-                                 (OpenXmlElement) original.GetFirstChild<DW.Inline>();
+            var inlineOrAnchor = (OpenXmlElement)original.GetFirstChild<DW.Anchor>() ??
+                                 (OpenXmlElement)original.GetFirstChild<DW.Inline>();
             var originaleExtent = inlineOrAnchor.GetFirstChild<DW.Extent>();
 
             var clonedInlineOrAnchor = inlineOrAnchor.CloneNode(false);
 
             if (inlineOrAnchor is DW.Anchor anchor)
             {
-                clonedInlineOrAnchor.Append(new DW.SimplePosition {X = 0L, Y = 0L});
+                clonedInlineOrAnchor.Append(new DW.SimplePosition { X = 0L, Y = 0L });
                 var horzPosition = anchor.GetFirstChild<DW.HorizontalPosition>().CloneNode(true);
                 var vertPosition = inlineOrAnchor.GetFirstChild<DW.VerticalPosition>().CloneNode(true);
                 clonedInlineOrAnchor.Append(horzPosition);
                 clonedInlineOrAnchor.Append(vertPosition);
-                clonedInlineOrAnchor.Append(new DW.Extent {Cx = originaleExtent.Cx, Cy = originaleExtent.Cy});
+                clonedInlineOrAnchor.Append(new DW.Extent { Cx = originaleExtent.Cx, Cy = originaleExtent.Cy });
                 clonedInlineOrAnchor.Append(new DW.EffectExtent
                 {
                     LeftEdge = 0L,
@@ -165,9 +164,9 @@ namespace DocxTemplater.Images
                 });
                 clonedInlineOrAnchor.Append(new DW.WrapNone());
             }
-            else if (inlineOrAnchor is DW.Inline inline)
+            else if (inlineOrAnchor is DW.Inline)
             {
-                clonedInlineOrAnchor.Append(new DW.Extent {Cx = originaleExtent.Cx, Cy = originaleExtent.Cy});
+                clonedInlineOrAnchor.Append(new DW.Extent { Cx = originaleExtent.Cx, Cy = originaleExtent.Cy });
                 clonedInlineOrAnchor.Append(new DW.EffectExtent
                 {
                     LeftEdge = 0L,
