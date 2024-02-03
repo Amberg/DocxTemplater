@@ -41,6 +41,8 @@ namespace DocxTemplater.Test
             yield return new TestCaseData("{ ? { MyBool}}").Returns(new[] { PatternType.Condition });
             yield return new TestCaseData("{?{  a / 20 >= 12 }}").Returns(new[] { PatternType.Condition });
             yield return new TestCaseData("{{var}:F(d)}").Returns(new[] { PatternType.Variable });
+            yield return new TestCaseData("{{ds.foo.var}:f('HH : mm : s')}").Returns(new[] { PatternType.Variable }).SetName("Format with date pattern");
+            yield return new TestCaseData("{{ds.foo.var}:f(HH:mm)}").Returns(new[] { PatternType.Variable }).SetName("Format with date pattern");
             yield return new TestCaseData("{{ds.foo.var}:F(d)}").Returns(new[] { PatternType.Variable }).SetName("Variable with dot");
             yield return new TestCaseData("{{ds.foo_blubb.var}:F(d)}").Returns(new[] { PatternType.Variable }).SetName("Variable with underscore");
             yield return new TestCaseData("{{var}:toupper}").Returns(new[] { PatternType.Variable });
@@ -86,6 +88,15 @@ namespace DocxTemplater.Test
             yield return new TestCaseData("{{Foo}:format(a,'a b',c)}").Returns(new[] { "a", "a b", "c" });
             yield return new TestCaseData("{{Foo}:format(a,b,'YYYY_MMM/DD FF',d)}").Returns(new[] { "a", "b", "YYYY_MMM/DD FF", "d" });
             yield return new TestCaseData("{{Foo}:format(a,'John Doe','YYYY_MMM/DD FF',d)}").Returns(new[] { "a", "John Doe", "YYYY_MMM/DD FF", "d" });
+            yield return new TestCaseData("{{Foo}:f(a,'HH:mm',c)}").Returns(new[] { "a", "HH:mm", "c" });
+            yield return new TestCaseData("{{Foo}:F(yyyy MM dd - HH mm ss)}").Returns(new[] { "yyyy MM dd - HH mm ss" });
+            yield return new TestCaseData("{{Foo}:f(HH:mm,'HH:mm','HH : mm : ss')}").Returns(new[] { "HH:mm", "HH:mm", "HH : mm : ss" });
+            yield return new TestCaseData("{{Foo}:f('comma in , argument', foo)}").Returns(new[] { "comma in , argument", "foo" });
+            yield return new TestCaseData("{{Foo}:f(',', ',,')}").Returns(new[] { ",", ",," });
+            yield return new TestCaseData("{{Foo}:f(' whitespacequoted ',   white space not quoted  )}").Returns(new[] { " whitespacequoted ", "white space not quoted  " });
+            yield return new TestCaseData("{{Foo}:f('foo', 'this is \\'quoted\\' end')}").Returns(new[] { "foo", "this is 'quoted' end" });
+            yield return new TestCaseData("{{Foo}:f('äöü', 'Foo \"blubb\" Test', \")}").Returns(new[] { "äöü", "Foo \"blubb\" Test", "\"" });
+
         }
 
         [TestCase("Some TExt {{    Variable   }} Some other text", ExpectedResult = "Variable")]

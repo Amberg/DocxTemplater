@@ -35,13 +35,15 @@ namespace DocxTemplater
                                                             \s*\}
                                                             (?::
                                                                 (?<formatter>[a-zA-z0-9]+) #formatter
-                                                                (?:\( #arguments with brackets
+                                                                (?:\(
                                                                     (?:
-                                                                        (?:,?
-                                                                            (?:   (?<arg>[a-zA-Z0-9\s-\\/_-]+) | (?:'(?<arg>[a-zA-Z0-9\s-\\/_-]*)')   )
-                                                                        )* 
-                                                                    )
-                                                                \))?
+                                                                       (?:
+                                                                           '(?<arg>(?:(?:\\')|[\w\s-\\/:,""])*?)' # quoted string can contain , or whitespace or can be empty
+                                                                            |
+                                                                            (?<arg>[\w\s-\\/:'""]+) # unquoted string
+                                                                        )(?:\s*,\s*)? # starting and leading whitespaces are ignored
+                                                                    )*
+                                                                    \))?
                                                             )?
                                                             \s*\}
                                                             ", RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
@@ -81,7 +83,7 @@ namespace DocxTemplater
                 else if (match.Groups["varname"].Success)
                 {
                     var argGroup = match.Groups["arg"];
-                    var arguments = argGroup.Success ? argGroup.Captures.Select(x => x.Value).ToArray() : Array.Empty<string>();
+                    var arguments = argGroup.Success ? argGroup.Captures.Select(x => x.Value?.Replace("\\'", "'")).ToArray() : Array.Empty<string>();
                     result.Add(new PatternMatch(match, PatternType.Variable, null, null, match.Groups["varname"].Value, match.Groups["formatter"].Value, arguments, match.Index, match.Length));
                 }
                 else
