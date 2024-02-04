@@ -42,7 +42,7 @@ namespace DocxTemplater
             }
             catch (DynamicExpresso.Exceptions.ParseException e)
             {
-               throw new OpenXmlTemplateException($"Error parsing script {scriptAsString}", e);
+                throw new OpenXmlTemplateException($"Error parsing script {scriptAsString}", e);
             }
         }
 

@@ -1,5 +1,4 @@
-﻿using System;
-using DocumentFormat.OpenXml;
+﻿using DocumentFormat.OpenXml;
 using DocxTemplater.Formatter;
 
 namespace DocxTemplater.Blocks
@@ -19,14 +18,13 @@ namespace DocxTemplater.Blocks
 
         public override void Expand(ModelLookup models, OpenXmlElement parentNode)
         {
-            // todo; catch script errors here and report them or keep element in document
             bool conditionResult = false;
             bool removeBlock = true;
             try
             {
                 conditionResult = m_scriptCompiler.CompileScript(m_condition)();
             }
-            catch (OpenXmlTemplateException) when(m_scriptCompiler.ProcessSettings.BindingErrorHandling != BindingErrorHandling.ThrowException)
+            catch (OpenXmlTemplateException) when (m_scriptCompiler.ProcessSettings.BindingErrorHandling != BindingErrorHandling.ThrowException)
             {
                 removeBlock = false;
             }
