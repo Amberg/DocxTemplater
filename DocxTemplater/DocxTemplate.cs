@@ -229,7 +229,7 @@ namespace DocxTemplater
             var blockStack = new Stack<(ContentBlock Block, PatternType type, Text MatchedTextNode)>();
             blockStack.Push((new ContentBlock(m_variableReplacer), PatternType.None, null)); // dummy block for root
             // find all begin or end markers
-            foreach (var text in element.Descendants<Text>().Where(x => x.IsMarked()))
+            foreach (var text in element.Descendants<Text>().ToList().Where(x => x.IsMarked()))
             {
                 var value = text.GetMarker();
                 if (value is PatternType.CollectionStart)
