@@ -1,4 +1,5 @@
-﻿using DocumentFormat.OpenXml;
+﻿using System;
+using DocumentFormat.OpenXml;
 using DocxTemplater.Formatter;
 
 namespace DocxTemplater.Blocks
@@ -19,7 +20,16 @@ namespace DocxTemplater.Blocks
         public override void Expand(ModelLookup models, OpenXmlElement parentNode)
         {
             // todo; catch script errors here and report them or keep element in document
-            var conditionResult = m_scriptCompiler.CompileScript(m_condition)();
+            bool conditionResult = false;
+            bool removeBlock = true;
+            try
+            {
+                conditionResult = m_scriptCompiler.CompileScript(m_condition)();
+            }
+            catch (OpenXmlTemplateException) when(m_scriptCompiler.ProcessSettings.BindingErrorHandling != BindingErrorHandling.ThrowException)
+            {
+                removeBlock = false;
+            }
             if (conditionResult)
             {
                 base.Expand(models, parentNode);
@@ -28,8 +38,12 @@ namespace DocxTemplater.Blocks
             {
                 m_elseBlock.Expand(models, parentNode);
             }
-            var element = m_insertionPoint.GetElement(parentNode);
-            element.Remove();
+            if (removeBlock)
+            {
+                var element = m_insertionPoint.GetElement(parentNode);
+                element.Remove();
+            }
+
         }
 
         public void SetElseBlock(ContentBlock elseBlock)

@@ -10,10 +10,13 @@ namespace DocxTemplater
         private readonly ModelLookup m_modelDictionary;
         private static readonly Regex RegexWordStartingWithDot = new(@"^(\.+)([a-zA-z0-9_]+)", RegexOptions.Compiled);
 
-        public ScriptCompiler(ModelLookup modelDictionary)
+        public ScriptCompiler(ModelLookup modelDictionary, ProcessSettings processSettings)
         {
             this.m_modelDictionary = modelDictionary;
+            ProcessSettings = processSettings;
         }
+
+        public ProcessSettings ProcessSettings { get; }
 
         public Func<bool> CompileScript(string scriptAsString)
         {
@@ -33,7 +36,14 @@ namespace DocxTemplater
                     interpreter.SetVariable(identifier, new ModelVariable(m_modelDictionary, identifier));
                 }
             }
-            return interpreter.ParseAsDelegate<Func<bool>>(scriptAsString);
+            try
+            {
+                return interpreter.ParseAsDelegate<Func<bool>>(scriptAsString);
+            }
+            catch (DynamicExpresso.Exceptions.ParseException e)
+            {
+               throw new OpenXmlTemplateException($"Error parsing script {scriptAsString}", e);
+            }
         }
 
         private string OnVariableReplace(Match match, Interpreter interpreter)

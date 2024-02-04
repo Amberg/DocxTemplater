@@ -23,11 +23,11 @@ namespace DocxTemplater.Test
         {
             yield return new TestCaseData("{{Foo}}").Returns(new[] { PatternType.Variable });
             yield return new TestCaseData("{{Foo}:blupp()}").Returns(new[] { PatternType.Variable });
-
-
             yield return new TestCaseData("{{/Items}}").Returns(new[] { PatternType.CollectionEnd });
             yield return new TestCaseData("{{ /Items }}").Returns(new[] { PatternType.CollectionEnd });
             yield return new TestCaseData("{{#items}}").Returns(new[] { PatternType.CollectionStart });
+            yield return new TestCaseData("{{#.items}}").Returns(new[] { PatternType.CollectionStart });
+            yield return new TestCaseData("{{#..items}}").Returns(new[] { PatternType.CollectionStart });
             yield return new TestCaseData("{{  #items  }}").Returns(new[] { PatternType.CollectionStart });
             yield return new TestCaseData("{{#ds.items_foo}}").Returns(new[] { PatternType.CollectionStart }).SetName("LoopStart Underscore dots");
             yield return new TestCaseData("{{/ds.items_foo}}").Returns(new[] { PatternType.CollectionEnd }).SetName("LoopEnd Underscore dots");
@@ -52,8 +52,7 @@ namespace DocxTemplater.Test
             yield return new TestCaseData("{{:}}").Returns(new[] { PatternType.ConditionElse });
             yield return new TestCaseData("{{:s:}}").Returns(new[] { PatternType.CollectionSeparator });
             yield return new TestCaseData("{{: s :}}").Returns(new[] { PatternType.CollectionSeparator });
-            yield return new TestCaseData("{{var}:format(a,b)}").Returns(new[] { PatternType.Variable })
-                .SetName("Multiple Arguments");
+            yield return new TestCaseData("{{var}:format(a,b)}").Returns(new[] { PatternType.Variable }).SetName("Multiple Arguments");
             yield return new TestCaseData("{{/}}").Returns(new[] { PatternType.ConditionEnd });
             yield return new TestCaseData("{ { / } }").Returns(new[] { PatternType.ConditionEnd });
             yield return new TestCaseData(

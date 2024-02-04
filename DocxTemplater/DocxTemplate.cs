@@ -43,7 +43,7 @@ namespace DocxTemplater
 
             m_wpDocument = WordprocessingDocument.Open(m_stream, true, openSettings);
             m_models = new ModelLookup();
-            m_scriptCompiler = new ScriptCompiler(m_models);
+            m_scriptCompiler = new ScriptCompiler(m_models, Settings);
             m_variableReplacer = new VariableReplacer(m_models, Settings);
             Processed = false;
         }
@@ -301,6 +301,11 @@ namespace DocxTemplater
                     block.SetContent(insertPoint, loopContent);
                     blockStack.Peek().Block.AddInnerBlock(block.RootBlock);
                 }
+            }
+            if (blockStack.Count != 1)
+            {
+                var notClosedBlocks = blockStack.Reverse().Select(x => x.Block).Skip(1).ToList();
+                throw new OpenXmlTemplateException($"Not all blocks are closed: {string.Join(", ", notClosedBlocks)}");
             }
             var (contentBlock, _, _) = blockStack.Pop();
             return contentBlock.ChildBlocks;

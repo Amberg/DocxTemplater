@@ -78,11 +78,15 @@ namespace DocxTemplater.Formatter
                     var value = m_models.GetValue(variableMatch.Variable);
                     ApplyFormatter(variableMatch, value, text);
                 }
-                catch (OpenXmlTemplateException) when (m_processSettings.BindingErrorHandling != BindingErrorHandling.ThrowException)
+                catch (Exception e) when (e is OpenXmlTemplateException or FormatException)
                 {
-                    if (m_processSettings.BindingErrorHandling == BindingErrorHandling.SkipBindingAndRemoveContent)
+                    if (m_processSettings.BindingErrorHandling != BindingErrorHandling.ThrowException)
                     {
                         text.RemoveWithEmptyParent();
+                    }
+                    else
+                    {
+                        throw new OpenXmlTemplateException($"'{text.InnerText}' could not be replaced: {text.ElementBeforeInDocument<Text>()?.InnerText} >> {text.InnerText} << {text.ElementAfterInDocument<Text>()?.InnerText}", e);
                     }
                 }
             }
