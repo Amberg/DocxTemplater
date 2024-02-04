@@ -332,8 +332,9 @@ namespace DocxTemplater.Test
                 new Paragraph(new Run(new Text("{?{ ds.Test > 5}}Test2{{else}}else2{{/}}"))),
                 new Paragraph(new Run(new Text("{?{ ds2.Test > 5}}Test3{{else}}else3{{/}}"))),
                 new Paragraph(new Run(new Text("{?{ds3.MyBool}}Test4{{:}}else4{{/}}"))),
-                new Paragraph(new Run(new Text("{?{!ds4.MyBool}}Test5{{:}}else4{{/}}")))
-            ));
+                new Paragraph(new Run(new Text("{?{!ds4.MyBool}}Test5{{:}}else4{{/}}"))),
+                new Paragraph(new Run(new Text("{?{!ds3.MyBool}}NoElse{{/}}")))
+                    ));
             wpDocument.Save();
             memStream.Position = 0;
             var docTemplate = new DocxTemplate(memStream);

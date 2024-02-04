@@ -34,8 +34,9 @@ namespace DocxTemplater.Blocks
             }
             else
             {
-                m_elseBlock.Expand(models, parentNode);
+                m_elseBlock?.Expand(models, parentNode);
             }
+
             if (removeBlock)
             {
                 var element = m_insertionPoint.GetElement(parentNode);
