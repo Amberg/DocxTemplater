@@ -1,12 +1,12 @@
-﻿using System;
+﻿using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Drawing.Wordprocessing;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Wordprocessing;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Xml.Linq;
-using DocumentFormat.OpenXml;
-using DocumentFormat.OpenXml.Drawing.Wordprocessing;
-using DocumentFormat.OpenXml.Packaging;
-using DocumentFormat.OpenXml.Wordprocessing;
 
 namespace DocxTemplater
 {
@@ -28,6 +28,45 @@ namespace DocxTemplater
                 current = current.Parent;
             }
             return false;
+        }
+
+
+        /// <summary>
+        /// Traverses the tree upwards and returns the first element of the given type.
+        /// </summary>
+        /// <typeparam name="TElement"></typeparam>
+        /// <param name="element"></param>
+        /// <returns></returns>
+        public static OpenXmlElement ElementBeforeInDocument<TElement>(this OpenXmlElement element)
+            where TElement : OpenXmlElement
+        {
+            var parent = element.Parent;
+            while (parent != null)
+            {
+                var result = (parent?.Descendants<TElement>()).LastOrDefault(x => x.IsBefore(element));
+                if (result != null)
+                {
+                    return result;
+                }
+                parent = parent.PreviousSibling() ?? parent.Parent;
+            }
+            return null;
+        }
+
+        public static OpenXmlElement ElementAfterInDocument<TElement>(this OpenXmlElement element)
+            where TElement : OpenXmlElement
+        {
+            var parent = element.Parent;
+            while (parent != null)
+            {
+                var result = parent?.Descendants<TElement>().FirstOrDefault(x => x.IsAfter(element));
+                if (result != null)
+                {
+                    return result;
+                }
+                parent = parent.NextSibling() ?? parent.Parent;
+            }
+            return null;
         }
 
         public static OpenXmlElement FindCommonParent(this OpenXmlElement element, OpenXmlElement otherElement)

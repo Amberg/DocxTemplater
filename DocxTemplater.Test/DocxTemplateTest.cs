@@ -43,6 +43,24 @@ namespace DocxTemplater.Test
             Assert.That(rows[4].InnerText, Is.EqualTo("Value7Value8Value9"));
         }
 
+        [Test]
+        public void EmptyDynamicTable()
+        {
+            using var fileStream = File.OpenRead("Resources/DynamicTable.docx");
+            var docTemplate = new DocxTemplate(fileStream);
+            var tableModel = new DynamicTable();
+            docTemplate.BindModel("ds", tableModel);
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            result.Position = 0;
+            result.SaveAsFileAndOpenInWord();
+            result.Position = 0;
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            var table = body.Descendants<Table>().FirstOrDefault();
+            Assert.That(table, Is.Null);
+        }
+
         /// <summary>
         /// Dynamic tables are only required if the number of columns is not known at design time.
         /// otherwise a simple table bound to a collection of objects is sufficient.
@@ -206,6 +224,53 @@ namespace DocxTemplater.Test
         }
 
         [Test]
+        public void ConditionalBlockInLoop()
+        {
+            var content = "{{#Educations}}{?{.HasTeacher}}{{.ChecklistName}}{{:}}noTeacher {{.ChecklistName}}{{/}}{{:s:}}, {{/Educations}}";
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(new Paragraph(new Run(new Text(content)))));
+            wpDocument.Save();
+            memStream.Position = 0;
+            var docTemplate = new DocxTemplate(memStream);
+            docTemplate.BindModel("Educations", new[]
+            {
+                new { HasTeacher = true, ChecklistName = "ChecklistName1" },
+                new { HasTeacher = false, ChecklistName = "ChecklistName2" },
+                new { HasTeacher = true, ChecklistName = "ChecklistName3" }
+            });
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.IsNotNull(result);
+            // validate content
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            Assert.That(body.InnerText, Is.EqualTo("ChecklistName1, noTeacher ChecklistName2, ChecklistName3"));
+        }
+
+        [Test]
+        public void NullValueHandlingForNesteObjects()
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(new Paragraph(new Run(new Text("Test{{ds.Model.Outer.BillName}}")))));
+            wpDocument.Save();
+            memStream.Position = 0;
+            var docTemplate = new DocxTemplate(memStream);
+            docTemplate.Settings.BindingErrorHandling = BindingErrorHandling.SkipBindingAndRemoveContent;
+            docTemplate.BindModel("ds", new { Model = new { Outer = (LessonReportModel)null } });
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.IsNotNull(result);
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            //check values have been replaced
+            Assert.That(body.InnerText, Is.EqualTo("Test"));
+        }
+
+        [Test]
         public void MissingVariableWithSkipErrorHandling()
         {
             using var memStream = new MemoryStream();
@@ -274,6 +339,7 @@ namespace DocxTemplater.Test
             Assert.That(body.InnerText, Is.EqualTo("Item1,Item2,Item3"));
         }
 
+
         [Test]
         public void ConditionsWithAndWithoutPrefix()
         {
@@ -285,8 +351,9 @@ namespace DocxTemplater.Test
                 new Paragraph(new Run(new Text("{?{ ds.Test > 5}}Test2{{else}}else2{{/}}"))),
                 new Paragraph(new Run(new Text("{?{ ds2.Test > 5}}Test3{{else}}else3{{/}}"))),
                 new Paragraph(new Run(new Text("{?{ds3.MyBool}}Test4{{:}}else4{{/}}"))),
-                new Paragraph(new Run(new Text("{?{!ds4.MyBool}}Test5{{:}}else4{{/}}")))
-            ));
+                new Paragraph(new Run(new Text("{?{!ds4.MyBool}}Test5{{:}}else4{{/}}"))),
+                new Paragraph(new Run(new Text("{?{!ds3.MyBool}}NoElse{{/}}")))
+                    ));
             wpDocument.Save();
             memStream.Position = 0;
             var docTemplate = new DocxTemplate(memStream);

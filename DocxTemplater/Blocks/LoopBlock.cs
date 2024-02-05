@@ -9,7 +9,7 @@ namespace DocxTemplater.Blocks
     internal class LoopBlock : ContentBlock
     {
         private readonly string m_collectionName;
-        private IReadOnlyCollection<OpenXmlElement> m_separatorBlock;
+        private ContentBlock m_separatorBlock;
 
         public LoopBlock(string collectionName, VariableReplacer variableReplacer)
             : base(variableReplacer)
@@ -35,30 +35,19 @@ namespace DocxTemplater.Blocks
                     ExpandChildBlocks(models, parentNode);
                     if (counter < items.Count && m_separatorBlock != null)
                     {
-                        var clonedSeparator = m_separatorBlock.Select(x => x.CloneNode(true)).ToList();
-                        InsertContent(parentNode, clonedSeparator);
-                        m_variableReplacer.ReplaceVariables(clonedSeparator);
-                        ExpandChildBlocks(models, parentNode);
+                        m_separatorBlock.Expand(models, parentNode);
                     }
                 }
             }
-            else
+            else if (model != null)
             {
-                throw new OpenXmlTemplateException($"Value of {m_collectionName} is not enumerable");
+                throw new OpenXmlTemplateException($"Value of {m_collectionName} is not enumerable - it is of type {model.GetType().FullName}");
             }
         }
 
-        public override void SetContent(OpenXmlElement leadingPart, IReadOnlyCollection<OpenXmlElement> blockContent)
+        public void SetSeparatorBlock(ContentBlock separatorBlock)
         {
-            if (m_leadingPart == null)
-            {
-                base.SetContent(leadingPart, blockContent);
-            }
-            else
-            {
-                m_separatorBlock = blockContent;
-                leadingPart.RemoveWithEmptyParent();
-            }
+            m_separatorBlock = separatorBlock;
         }
 
         public override string ToString()

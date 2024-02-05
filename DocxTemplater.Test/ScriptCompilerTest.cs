@@ -9,7 +9,7 @@
         public void Setup()
         {
             m_modelDictionary = new ModelLookup();
-            m_scriptCompiler = new ScriptCompiler(m_modelDictionary);
+            m_scriptCompiler = new ScriptCompiler(m_modelDictionary, null);
         }
 
         [Test]

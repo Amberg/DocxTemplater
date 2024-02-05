@@ -1,12 +1,12 @@
-﻿using System;
-using System.IO;
-using System.Linq;
-using DocumentFormat.OpenXml;
+﻿using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using DocxTemplater.Formatter;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Metadata;
+using System;
+using System.IO;
+using System.Linq;
 using A = DocumentFormat.OpenXml.Drawing;
 using DW = DocumentFormat.OpenXml.Drawing.Wordprocessing;
 using PIC = DocumentFormat.OpenXml.Drawing.Pictures; // http://schemas.openxmlformats.org/drawingml/2006/picture"
@@ -39,37 +39,37 @@ namespace DocxTemplater.Images
                 using var image = Image.Load(imageBytes);
                 var imagePartType = DetectPartTypeInfo(context.Placeholder, image.Metadata);
                 var root = target.GetRoot();
-                string impagepartRelationShipId = null;
+                string imagePartRelId = null;
                 uint maxPropertyId = 0;
                 if (root is OpenXmlPartRootElement openXmlPartRootElement && openXmlPartRootElement.OpenXmlPart != null)
                 {
                     maxPropertyId = openXmlPartRootElement.OpenXmlPart.GetMaxDocPropertyId();
                     if (openXmlPartRootElement.OpenXmlPart is HeaderPart headerPart)
                     {
-                        impagepartRelationShipId = CreateImagePart(headerPart, imageBytes, imagePartType);
+                        imagePartRelId = CreateImagePart(headerPart, imageBytes, imagePartType);
                     }
                     else if (openXmlPartRootElement.OpenXmlPart is FooterPart footerPart)
                     {
-                        impagepartRelationShipId = CreateImagePart(footerPart, imageBytes, imagePartType);
+                        imagePartRelId = CreateImagePart(footerPart, imageBytes, imagePartType);
                     }
                     else if (openXmlPartRootElement.OpenXmlPart is MainDocumentPart mainDocumentPart)
                     {
-                        impagepartRelationShipId = CreateImagePart(mainDocumentPart, imageBytes, imagePartType);
+                        imagePartRelId = CreateImagePart(mainDocumentPart, imageBytes, imagePartType);
                     }
                 }
 
-                if (impagepartRelationShipId == null)
+                if (imagePartRelId == null)
                 {
                     throw new OpenXmlTemplateException("Could not find a valid image part");
                 }
 
                 // case 1. Image ist the only child element of a <wps:wsp> (TextBox)
-                if (TryHandleImageInWordprocessingShape(target, impagepartRelationShipId, image, context.Args.FirstOrDefault() ?? string.Empty, maxPropertyId))
+                if (TryHandleImageInWordprocessingShape(target, imagePartRelId, image, context.Args.FirstOrDefault() ?? string.Empty, maxPropertyId))
                 {
                     return;
                 }
 
-                AddInlineGraphicToRun(target, impagepartRelationShipId, image, maxPropertyId);
+                AddInlineGraphicToRun(target, imagePartRelId, image, maxPropertyId);
             }
             catch (Exception e) when (e is InvalidImageContentException or UnknownImageFormatException)
             {
@@ -103,13 +103,8 @@ namespace DocxTemplater.Images
                 return false;
             }
 
-            var anchor = target.GetFirstAncestor<DW.Anchor>();
-            if (anchor == null)
-            {
-                return false;
-            }
-
-            var targetExtent = anchor.GetFirstChild<DW.Extent>();
+            // get extent of the drawing either from the anchor or inline
+            var targetExtent = target.GetFirstAncestor<DW.Anchor>()?.GetFirstChild<DW.Extent>() ?? target.GetFirstAncestor<DW.Inline>()?.GetFirstChild<DW.Extent>();
             if (targetExtent != null)
             {
                 double scale = 0;
@@ -142,29 +137,48 @@ namespace DocxTemplater.Images
         }
 
 
-        private static void ReplaceAnchorContentWithPicture(string impagepartRelationShipId, uint maxDocumentPropertyId, Drawing original)
+        private static void ReplaceAnchorContentWithPicture(string impagepartRelationShipId, uint maxDocumentPropertyId,
+            Drawing original)
         {
             var propertyId = maxDocumentPropertyId + 1;
-            var originalAnchor = original.GetFirstChild<DW.Anchor>();
-            var originaleExtent = originalAnchor.GetFirstChild<DW.Extent>();
+            var inlineOrAnchor = (OpenXmlElement)original.GetFirstChild<DW.Anchor>() ??
+                                 (OpenXmlElement)original.GetFirstChild<DW.Inline>();
+            var originaleExtent = inlineOrAnchor.GetFirstChild<DW.Extent>();
 
-            var horzPosition = originalAnchor.GetFirstChild<DW.HorizontalPosition>().CloneNode(true);
-            var vertPosition = originalAnchor.GetFirstChild<DW.VerticalPosition>().CloneNode(true);
+            var clonedInlineOrAnchor = inlineOrAnchor.CloneNode(false);
 
-            var anchorChildElments = new OpenXmlElement[]
+            if (inlineOrAnchor is DW.Anchor anchor)
             {
-                new DW.SimplePosition {X = 0L, Y = 0L},
-                horzPosition,
-                vertPosition,
-                new DW.Extent {Cx = originaleExtent.Cx, Cy = originaleExtent.Cy},
-                new DW.EffectExtent
+                clonedInlineOrAnchor.Append(new DW.SimplePosition { X = 0L, Y = 0L });
+                var horzPosition = anchor.GetFirstChild<DW.HorizontalPosition>().CloneNode(true);
+                var vertPosition = inlineOrAnchor.GetFirstChild<DW.VerticalPosition>().CloneNode(true);
+                clonedInlineOrAnchor.Append(horzPosition);
+                clonedInlineOrAnchor.Append(vertPosition);
+                clonedInlineOrAnchor.Append(new DW.Extent { Cx = originaleExtent.Cx, Cy = originaleExtent.Cy });
+                clonedInlineOrAnchor.Append(new DW.EffectExtent
                 {
                     LeftEdge = 0L,
                     TopEdge = 0L,
                     RightEdge = 0L,
                     BottomEdge = 0L
-                },
-                new DW.WrapNone(),
+                });
+                clonedInlineOrAnchor.Append(new DW.WrapNone());
+            }
+            else if (inlineOrAnchor is DW.Inline)
+            {
+                clonedInlineOrAnchor.Append(new DW.Extent { Cx = originaleExtent.Cx, Cy = originaleExtent.Cy });
+                clonedInlineOrAnchor.Append(new DW.EffectExtent
+                {
+                    LeftEdge = 0L,
+                    TopEdge = 0L,
+                    RightEdge = 0L,
+                    BottomEdge = 0L
+                });
+            }
+
+            clonedInlineOrAnchor.Append(new OpenXmlElement[]
+            {
+
                 new DW.DocProperties
                 {
                     Id = propertyId,
@@ -177,11 +191,8 @@ namespace DocxTemplater.Images
                             CreatePicture(impagepartRelationShipId, propertyId, originaleExtent.Cx, originaleExtent.Cy)
                         )
                         {Uri = "http://schemas.openxmlformats.org/drawingml/2006/picture"})
-            };
-
-            var anchor = originalAnchor.CloneNode(false);
-            anchor.Append(anchorChildElments);
-            var dw = new Drawing(anchor);
+            });
+            var dw = new Drawing(clonedInlineOrAnchor);
             original.InsertAfterSelf(dw);
             original.Remove();
         }

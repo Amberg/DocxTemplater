@@ -21,6 +21,10 @@ namespace DocxTemplater.Blocks
             var model = models.GetValue(m_tablenName);
             if (model is IDynamicTable dynamicTable)
             {
+                if (!dynamicTable.Headers.Any())
+                {
+                    return;
+                }
 
                 var headersName = $"{m_tablenName}.{nameof(IDynamicTable.Headers)}";
                 var columnsName = $"{m_tablenName}.{nameof(IDynamicTable.Rows)}";
@@ -74,7 +78,7 @@ namespace DocxTemplater.Blocks
                 dataCell.Remove();
 
                 // ensure all rows have the same number of cells
-                var maxCells = dynamicTable.Rows.Max(r => r.Count());
+                var maxCells = dynamicTable.Rows.DefaultIfEmpty().Max(r => r?.Count() ?? 0);
                 foreach (var row in table.Elements<TableRow>())
                 {
                     var cells = row.Elements<TableCell>().ToList();
@@ -94,14 +98,14 @@ namespace DocxTemplater.Blocks
             }
         }
 
-        public override void SetContent(OpenXmlElement leadingPart, IReadOnlyCollection<OpenXmlElement> blockContent)
+        public override void SetContent(InsertionPoint insertionPoint, IReadOnlyCollection<OpenXmlElement> blockContent)
         {
             var tables = blockContent.OfType<Table>().ToList();
             if (tables.Count != 1)
             {
                 throw new OpenXmlTemplateException($"Dynamic table block must contain exactly one table, but found {tables.Count}");
             }
-            base.SetContent(leadingPart, tables);
+            base.SetContent(insertionPoint, tables);
         }
 
         public override string ToString()

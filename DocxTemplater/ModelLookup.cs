@@ -91,6 +91,13 @@ namespace DocxTemplater
                     if (property != null)
                     {
                         model = property.GetValue(model);
+                        if (model == null)
+                        {
+                            // if a property is null, we can't continue searching
+                            //same behavior as null propagation in C#
+                            // ae A.B.C.D --> A?.B?.C?.D
+                            return null;
+                        }
                     }
                     else if (model is ICollection)
                     {
