@@ -43,6 +43,24 @@ namespace DocxTemplater.Test
             Assert.That(rows[4].InnerText, Is.EqualTo("Value7Value8Value9"));
         }
 
+        [Test]
+        public void EmptyDynamicTable()
+        {
+            using var fileStream = File.OpenRead("Resources/DynamicTable.docx");
+            var docTemplate = new DocxTemplate(fileStream);
+            var tableModel = new DynamicTable();
+            docTemplate.BindModel("ds", tableModel);
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            result.Position = 0;
+            result.SaveAsFileAndOpenInWord();
+            result.Position = 0;
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            var table = body.Descendants<Table>().FirstOrDefault();
+            Assert.That(table, Is.Null);
+        }
+
         /// <summary>
         /// Dynamic tables are only required if the number of columns is not known at design time.
         /// otherwise a simple table bound to a collection of objects is sufficient.
@@ -320,6 +338,7 @@ namespace DocxTemplater.Test
             var body = document.MainDocumentPart.Document.Body;
             Assert.That(body.InnerText, Is.EqualTo("Item1,Item2,Item3"));
         }
+
 
         [Test]
         public void ConditionsWithAndWithoutPrefix()
