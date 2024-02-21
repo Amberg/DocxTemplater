@@ -144,7 +144,8 @@ namespace DocxTemplater.Images
             var inlineOrAnchor = (OpenXmlElement)original.GetFirstChild<DW.Anchor>() ??
                                  (OpenXmlElement)original.GetFirstChild<DW.Inline>();
             var originaleExtent = inlineOrAnchor.GetFirstChild<DW.Extent>();
-
+            var transform = inlineOrAnchor.Descendants<A.Transform2D>().FirstOrDefault();
+            int rotation = transform?.Rotation ?? 0;
             var clonedInlineOrAnchor = inlineOrAnchor.CloneNode(false);
 
             if (inlineOrAnchor is DW.Anchor anchor)
@@ -188,7 +189,7 @@ namespace DocxTemplater.Images
                     new A.GraphicFrameLocks {NoChangeAspect = true}),
                 new A.Graphic(
                     new A.GraphicData(
-                            CreatePicture(impagepartRelationShipId, propertyId, originaleExtent.Cx, originaleExtent.Cy)
+                            CreatePicture(impagepartRelationShipId, propertyId, originaleExtent.Cx, originaleExtent.Cy, rotation)
                         )
                         {Uri = "http://schemas.openxmlformats.org/drawingml/2006/picture"})
             });
@@ -224,7 +225,7 @@ namespace DocxTemplater.Images
                             new A.GraphicFrameLocks { NoChangeAspect = true }),
                         new A.Graphic(
                             new A.GraphicData(
-                                    CreatePicture(impagepartRelationShipId, propertyId, cx, cy)
+                                    CreatePicture(impagepartRelationShipId, propertyId, cx, cy, 0)
                                 )
                             { Uri = "http://schemas.openxmlformats.org/drawingml/2006/picture" })
                     )
@@ -239,7 +240,7 @@ namespace DocxTemplater.Images
             target.Remove();
         }
 
-        private static PIC.Picture CreatePicture(string impagepartRelationShipId, uint propertyId, long cx, long cy)
+        private static PIC.Picture CreatePicture(string impagepartRelationShipId, uint propertyId, long cx, long cy, int rotation)
         {
             return new PIC.Picture(
                 new PIC.NonVisualPictureProperties(
@@ -265,11 +266,16 @@ namespace DocxTemplater.Images
                 new PIC.ShapeProperties(
                     new A.Transform2D(
                         new A.Offset { X = 0L, Y = 0L },
-                        new A.Extents { Cx = cx, Cy = cy }),
+                        new A.Extents { Cx = cx, Cy = cy })
+                    {
+                        Rotation = rotation
+                    },
                     new A.PresetGeometry(
                             new A.AdjustValueList()
                         )
-                    { Preset = A.ShapeTypeValues.Rectangle }));
+                    {
+                        Preset = A.ShapeTypeValues.Rectangle
+                    }));
         }
 
         private static string CreateImagePart<T>(T parent, byte[] imageBytes, PartTypeInfo partType)
