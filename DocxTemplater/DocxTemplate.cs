@@ -263,7 +263,7 @@ namespace DocxTemplater
                     var (block, startType, matchedTextNode) = blockStack.Pop();
                     if (startType is not PatternType.CollectionStart and not PatternType.CollectionSeparator)
                     {
-                        throw new OpenXmlTemplateException($"'{text.InnerText}' is mission collection start: {text.ElementBeforeInDocument<Text>()?.InnerText} >> {text.InnerText} << {text.ElementAfterInDocument<Text>()?.InnerText}");
+                        throw new OpenXmlTemplateException($"'{text.InnerText}' is missing collection start: {text.ElementBeforeInDocument<Text>()?.InnerText} >> {text.InnerText} << {text.ElementAfterInDocument<Text>()?.InnerText}");
                     }
                     var loopContent = ExtractBlockContent(matchedTextNode, text, out var leadingPart);
                     block.SetContent(InsertionPoint.CreateForElement(leadingPart), loopContent);
@@ -294,7 +294,7 @@ namespace DocxTemplater
                     var (block, startType, matchedTextNode) = blockStack.Pop();
                     if (startType is not PatternType.Condition and not PatternType.ConditionElse)
                     {
-                        throw new OpenXmlTemplateException($"'{text.InnerText}' is mission condition start: {text.ElementBeforeInDocument<Text>()?.InnerText} >> {text.InnerText} << {text.ElementAfterInDocument<Text>()?.InnerText}");
+                        throw new OpenXmlTemplateException($"'{text.InnerText}' is missing condition start: {text.ElementBeforeInDocument<Text>()?.InnerText} >> {text.InnerText} << {text.ElementAfterInDocument<Text>()?.InnerText}");
                     }
                     var loopContent = ExtractBlockContent(matchedTextNode, text, out var leadingPart);
                     var insertPoint = InsertionPoint.CreateForElement(leadingPart);
