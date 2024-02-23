@@ -77,6 +77,7 @@ namespace DocxTemplater.Formatter
                 {
                     var value = m_models.GetValue(variableMatch.Variable);
                     ApplyFormatter(variableMatch, value, text);
+                    VariableReplacer.SplitNewLinesInText(text);
                 }
                 catch (Exception e) when (e is OpenXmlTemplateException or FormatException)
                 {
@@ -89,6 +90,30 @@ namespace DocxTemplater.Formatter
                         throw new OpenXmlTemplateException($"'{text.InnerText}' could not be replaced: {text.ElementBeforeInDocument<Text>()?.InnerText} >> {text.InnerText} << {text.ElementAfterInDocument<Text>()?.InnerText}", e);
                     }
                 }
+            }
+        }
+
+        /// <summary>
+        /// Insert Breaks for line breaks in the text
+        /// </summary>
+        private static void SplitNewLinesInText(Text text)
+        {
+            if (text.Parent == null)
+            {
+                return;
+            }
+            text.Text = text.Text.Replace("\r\n", "\n").Replace("\r", "\n");
+            if (text.Text.Contains('\n'))
+            {
+                var parts = text.Text.Split('\n');
+                OpenXmlElement lastElement = text;
+                foreach (var part in parts)
+                {
+                    lastElement = lastElement.InsertAfterSelf(new Text(part));
+                    lastElement = lastElement.InsertAfterSelf(new Break());
+                }
+
+                text.Remove();
             }
         }
     }
