@@ -341,12 +341,39 @@ namespace DocxTemplater
         public static void RemoveWithEmptyParent(this OpenXmlElement element)
         {
             var parent = element.Parent;
+            bool removeParent = true;
             if (parent != null)
             {
-                element.Remove();
-                if (!parent.HasChildren)
+                if (element is TableCell)
                 {
-                    parent.RemoveWithEmptyParent();
+                    removeParent = parent.ChildElements.OfType<TableCell>().Count() == 1;
+                }
+                else if (element is TableRow row)
+                {
+                    var rowProperties = row.ChildElements.OfType<TableRowProperties>().FirstOrDefault();
+                    if (rowProperties != null)
+                    {
+                        var nextSibling = row.NextSibling<TableRow>();
+                        if (nextSibling != null)
+                        {
+                            var nextRowProperties = nextSibling.ChildElements.OfType<TableRowProperties>().FirstOrDefault();
+                            if (nextRowProperties == null)
+                            {
+                                rowProperties.Remove();
+                                nextSibling.AddChild(rowProperties);
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    removeParent = !element.ChildElements.Any(x => x is not Languages and not RunProperties and not ParagraphProperties);
+                }
+
+                if (removeParent)
+                {
+                    element.Remove();
+                    RemoveWithEmptyParent(parent);
                 }
             }
         }
