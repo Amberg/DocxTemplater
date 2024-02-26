@@ -148,7 +148,7 @@ namespace DocxTemplater
             {
                 loop.Expand(m_models, rootElement);
             }
-            Cleanup(rootElement);
+            Cleanup(rootElement, removeEmptyElements: true);
 #if DEBUG
             Console.WriteLine("----------- Completed --------");
             Console.WriteLine(rootElement.ToPrettyPrintXml());
@@ -176,20 +176,16 @@ namespace DocxTemplater
             }
         }
 
-        private static void Cleanup(OpenXmlCompositeElement element)
+        private static void Cleanup(OpenXmlCompositeElement element, bool removeEmptyElements)
         {
             InsertionPoint.RemoveAll(element);
             foreach (var markedText in element.Descendants<Text>().Where(x => x.IsMarked()).ToList())
             {
                 var value = markedText.GetMarker();
-                if (value is not PatternType.Variable)
+                if (removeEmptyElements && value is not PatternType.Variable)
                 {
                     var parent = markedText.Parent;
                     markedText.RemoveWithEmptyParent();
-                    if (parent != null && parent.ChildElements.All(x => x is Languages))
-                    {
-                        parent.RemoveWithEmptyParent();
-                    }
                 }
                 else
                 {
@@ -205,6 +201,7 @@ namespace DocxTemplater
                 bookmarkStart.NextSibling<BookmarkEnd>().Id = bookmarkStart.Id;
             }
 
+            // make dock properties ids unique
             id = 1;
             var dockProperties = element.Descendants<DocProperties>().ToList();
             var existingIds = new HashSet<uint>(dockProperties.Select(x => x.Id.Value).ToList());
@@ -218,6 +215,17 @@ namespace DocxTemplater
                     }
                     docProperties.Id = id;
                     existingIds.Add(id);
+                }
+            }
+
+            //ensure all table cells have a paragraph
+            // 'If a table cell does not include at least one block-level element, then this document shall be considered corrupt
+            // https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.wordprocessing.tablecell?view=openxml-3.0.1#remarks
+            foreach (var tableCell in element.Descendants<TableCell>())
+            {
+                if (!tableCell.ChildElements.OfType<Paragraph>().Any())
+                {
+                    tableCell.Append(new Paragraph());
                 }
             }
         }
@@ -263,7 +271,7 @@ namespace DocxTemplater
                     var (block, startType, matchedTextNode) = blockStack.Pop();
                     if (startType is not PatternType.CollectionStart and not PatternType.CollectionSeparator)
                     {
-                        throw new OpenXmlTemplateException($"'{text.InnerText}' is mission collection start: {text.ElementBeforeInDocument<Text>()?.InnerText} >> {text.InnerText} << {text.ElementAfterInDocument<Text>()?.InnerText}");
+                        throw new OpenXmlTemplateException($"'{text.InnerText}' is missing collection start: {text.ElementBeforeInDocument<Text>()?.InnerText} >> {text.InnerText} << {text.ElementAfterInDocument<Text>()?.InnerText}");
                     }
                     var loopContent = ExtractBlockContent(matchedTextNode, text, out var leadingPart);
                     block.SetContent(InsertionPoint.CreateForElement(leadingPart), loopContent);
@@ -294,7 +302,7 @@ namespace DocxTemplater
                     var (block, startType, matchedTextNode) = blockStack.Pop();
                     if (startType is not PatternType.Condition and not PatternType.ConditionElse)
                     {
-                        throw new OpenXmlTemplateException($"'{text.InnerText}' is mission condition start: {text.ElementBeforeInDocument<Text>()?.InnerText} >> {text.InnerText} << {text.ElementAfterInDocument<Text>()?.InnerText}");
+                        throw new OpenXmlTemplateException($"'{text.InnerText}' is missing condition start: {text.ElementBeforeInDocument<Text>()?.InnerText} >> {text.InnerText} << {text.ElementAfterInDocument<Text>()?.InnerText}");
                     }
                     var loopContent = ExtractBlockContent(matchedTextNode, text, out var leadingPart);
                     var insertPoint = InsertionPoint.CreateForElement(leadingPart);

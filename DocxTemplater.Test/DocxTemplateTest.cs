@@ -166,6 +166,30 @@ namespace DocxTemplater.Test
             Assert.That(body.InnerText, Is.EqualTo(" OuterValue0  InnerValue00 OuterValue0   OuterValue1  InnerValue10 OuterValue1  InnerValue11 OuterValue1   OuterValue2  InnerValue20 OuterValue2  InnerValue21 OuterValue2  "));
         }
 
+        [TestCase("d", ExpectedResult = "2/22/2024")]
+        [TestCase("D", ExpectedResult = "Thursday, February 22, 2024")]
+        public string DateTimeFormatterTest(string format)
+        {
+
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(new Paragraph(new Run(new Text($"{{{{.}}:f({format})}}")))));
+            wpDocument.Save();
+            memStream.Position = 0;
+
+            var docTemplate = new DocxTemplate(memStream, new ProcessSettings() { Culture = new CultureInfo("en-US") });
+            docTemplate.BindModel("ds", new DateTime(2024, 2, 22, 10, 51, 35));
+
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.IsNotNull(result);
+            // check result text
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            return body.InnerText;
+        }
+
         [TestCase("<html><body><h1>Test</h1></body></html>", "<html><body><h1>Test</h1></body></html>")]
         [TestCase("<body><h1>Test</h1></body>", "<html><body><h1>Test</h1></body></html>")]
         [TestCase("<h1>Test</h1>", "<html><h1>Test</h1></html>")]
@@ -221,6 +245,32 @@ namespace DocxTemplater.Test
             var body = document.MainDocumentPart.Document.Body;
             var altChunks = body.Descendants<AltChunk>().ToList();
             Assert.That(altChunks.Count, Is.EqualTo(2));
+        }
+
+
+        [Test]
+        public void InsertTextWithNewline()
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(new Paragraph(new Run(new Text("Start {{.}} End")))));
+            wpDocument.Save();
+            memStream.Position = 0;
+
+            var docTemplate = new DocxTemplate(memStream);
+            docTemplate.BindModel("ds", "FirstLine\r\nSecondLine\nThirdLine");
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.IsNotNull(result);
+            // check document contains newline
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            Assert.That(body.InnerXml, Is.EqualTo("<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:r><w:t xml:space=\"preserve\">" +
+                                                  "Start </w:t><w:t>FirstLine</w:t>" +
+                                                  "<w:br /><w:t>SecondLine</w:t>" +
+                                                  "<w:br /><w:t>ThirdLine</w:t>" +
+                                                  "<w:br /><w:t xml:space=\"preserve\"> End</w:t></w:r></w:p>"));
         }
 
         [Test]

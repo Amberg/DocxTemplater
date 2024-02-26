@@ -5,6 +5,7 @@ using DocxTemplater.Formatter;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Metadata;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using A = DocumentFormat.OpenXml.Drawing;
@@ -15,6 +16,10 @@ namespace DocxTemplater.Images
 {
     public class ImageFormatter : IFormatter
     {
+        private sealed record ImageInfo(int PixelWidth, int PixelHeight, string ImagePartRelationId);
+        private readonly Dictionary<byte[], ImageInfo> m_imagePartRelIdCache = new();
+        private OpenXmlPartRootElement m_currentRoot;
+
         public bool CanHandle(Type type, string prefix)
         {
             var prefixUpper = prefix.ToUpper();
@@ -36,45 +41,63 @@ namespace DocxTemplater.Images
             }
             try
             {
-                using var image = Image.Load(imageBytes);
-                var imagePartType = DetectPartTypeInfo(context.Placeholder, image.Metadata);
                 var root = target.GetRoot();
-                string imagePartRelId = null;
-                uint maxPropertyId = 0;
                 if (root is OpenXmlPartRootElement openXmlPartRootElement && openXmlPartRootElement.OpenXmlPart != null)
                 {
-                    maxPropertyId = openXmlPartRootElement.OpenXmlPart.GetMaxDocPropertyId();
-                    if (openXmlPartRootElement.OpenXmlPart is HeaderPart headerPart)
-                    {
-                        imagePartRelId = CreateImagePart(headerPart, imageBytes, imagePartType);
-                    }
-                    else if (openXmlPartRootElement.OpenXmlPart is FooterPart footerPart)
-                    {
-                        imagePartRelId = CreateImagePart(footerPart, imageBytes, imagePartType);
-                    }
-                    else if (openXmlPartRootElement.OpenXmlPart is MainDocumentPart mainDocumentPart)
-                    {
-                        imagePartRelId = CreateImagePart(mainDocumentPart, imageBytes, imagePartType);
-                    }
-                }
+                    var maxPropertyId = openXmlPartRootElement.OpenXmlPart.GetMaxDocPropertyId();
 
-                if (imagePartRelId == null)
+                    if (!TryGetImageIdFromCache(imageBytes, openXmlPartRootElement, out var imageInfo))
+                    {
+                        using var image = Image.Load(imageBytes);
+                        string imagePartRelId = null;
+                        var imagePartType = DetectPartTypeInfo(context.Placeholder, image.Metadata);
+                        if (openXmlPartRootElement.OpenXmlPart is HeaderPart headerPart)
+                        {
+                            imagePartRelId = CreateImagePart(headerPart, imageBytes, imagePartType);
+                        }
+                        else if (openXmlPartRootElement.OpenXmlPart is FooterPart footerPart)
+                        {
+                            imagePartRelId = CreateImagePart(footerPart, imageBytes, imagePartType);
+                        }
+                        else if (openXmlPartRootElement.OpenXmlPart is MainDocumentPart mainDocumentPart)
+                        {
+                            imagePartRelId = CreateImagePart(mainDocumentPart, imageBytes, imagePartType);
+                        }
+                        if (imagePartRelId == null)
+                        {
+                            throw new OpenXmlTemplateException("Could not find a valid image part");
+                        }
+                        imageInfo = new ImageInfo(image.Width, image.Height, imagePartRelId);
+                        m_imagePartRelIdCache[imageBytes] = imageInfo;
+                    }
+
+                    // case 1. Image ist the only child element of a <wps:wsp> (TextBox)
+                    if (TryHandleImageInWordprocessingShape(target, imageInfo, context.Args.FirstOrDefault() ?? string.Empty, maxPropertyId))
+                    {
+                        return;
+                    }
+
+                    AddInlineGraphicToRun(target, imageInfo, maxPropertyId);
+                }
+                else
                 {
-                    throw new OpenXmlTemplateException("Could not find a valid image part");
+                    throw new OpenXmlTemplateException("Could not find root to insert image");
                 }
-
-                // case 1. Image ist the only child element of a <wps:wsp> (TextBox)
-                if (TryHandleImageInWordprocessingShape(target, imagePartRelId, image, context.Args.FirstOrDefault() ?? string.Empty, maxPropertyId))
-                {
-                    return;
-                }
-
-                AddInlineGraphicToRun(target, imagePartRelId, image, maxPropertyId);
             }
             catch (Exception e) when (e is InvalidImageContentException or UnknownImageFormatException)
             {
                 throw new OpenXmlTemplateException("Could not detect image format", e);
             }
+        }
+
+        private bool TryGetImageIdFromCache(byte[] imageBytes, OpenXmlPartRootElement root, out ImageInfo imageInfo)
+        {
+            if (m_currentRoot != root)
+            {
+                m_imagePartRelIdCache.Clear();
+                m_currentRoot = root;
+            }
+            return m_imagePartRelIdCache.TryGetValue(imageBytes, out imageInfo);
         }
 
         private static PartTypeInfo DetectPartTypeInfo(string modelPath, ImageMetadata imageMetadata)
@@ -94,7 +117,7 @@ namespace DocxTemplater.Images
         ///     If the image is contained in a "wsp" element (TextBox), the text box is used as a container for the image.
         ///     the size of the text box is adjusted to the size of the image.
         /// </summary>
-        private static bool TryHandleImageInWordprocessingShape(Text target, string impagepartRelationShipId, Image image,
+        private static bool TryHandleImageInWordprocessingShape(Text target, ImageInfo imageInfo,
             string firstArgument, uint maxPropertyId)
         {
             var drawing = target.GetFirstAncestor<Drawing>();
@@ -108,8 +131,8 @@ namespace DocxTemplater.Images
             if (targetExtent != null)
             {
                 double scale = 0;
-                var imageCx = image.Width * 9525;
-                var imageCy = image.Height * 9525;
+                var imageCx = imageInfo.PixelWidth * 9525;
+                var imageCy = imageInfo.PixelHeight * 9525;
                 if (firstArgument.Equals("KEEPRATIO", StringComparison.CurrentCultureIgnoreCase))
                 {
                     scale = Math.Min(targetExtent.Cx / (double)imageCx, targetExtent.Cy / (double)imageCy);
@@ -129,7 +152,7 @@ namespace DocxTemplater.Images
                     targetExtent.Cy = (long)(imageCy * scale);
                 }
 
-                ReplaceAnchorContentWithPicture(impagepartRelationShipId, maxPropertyId, drawing);
+                ReplaceAnchorContentWithPicture(imageInfo.ImagePartRelationId, maxPropertyId, drawing);
             }
 
             target.Remove();
@@ -144,7 +167,8 @@ namespace DocxTemplater.Images
             var inlineOrAnchor = (OpenXmlElement)original.GetFirstChild<DW.Anchor>() ??
                                  (OpenXmlElement)original.GetFirstChild<DW.Inline>();
             var originaleExtent = inlineOrAnchor.GetFirstChild<DW.Extent>();
-
+            var transform = inlineOrAnchor.Descendants<A.Transform2D>().FirstOrDefault();
+            int rotation = transform?.Rotation ?? 0;
             var clonedInlineOrAnchor = inlineOrAnchor.CloneNode(false);
 
             if (inlineOrAnchor is DW.Anchor anchor)
@@ -176,9 +200,9 @@ namespace DocxTemplater.Images
                 });
             }
 
+#pragma warning disable IDE0300
             clonedInlineOrAnchor.Append(new OpenXmlElement[]
             {
-
                 new DW.DocProperties
                 {
                     Id = propertyId,
@@ -188,7 +212,7 @@ namespace DocxTemplater.Images
                     new A.GraphicFrameLocks {NoChangeAspect = true}),
                 new A.Graphic(
                     new A.GraphicData(
-                            CreatePicture(impagepartRelationShipId, propertyId, originaleExtent.Cx, originaleExtent.Cy)
+                            CreatePicture(impagepartRelationShipId, propertyId, originaleExtent.Cx, originaleExtent.Cy, rotation)
                         )
                         {Uri = "http://schemas.openxmlformats.org/drawingml/2006/picture"})
             });
@@ -197,12 +221,11 @@ namespace DocxTemplater.Images
             original.Remove();
         }
 
-        private static void AddInlineGraphicToRun(Text target, string impagepartRelationShipId, Image image,
-            uint maxDocumentPropertyId)
+        private static void AddInlineGraphicToRun(Text target, ImageInfo imageInfo, uint maxDocumentPropertyId)
         {
             var propertyId = maxDocumentPropertyId + 1;
-            var cx = image.Width * 9525;
-            var cy = image.Height * 9525;
+            var cx = imageInfo.PixelWidth * 9525;
+            var cy = imageInfo.PixelHeight * 9525;
             // Define the reference of the image.
             var drawing =
                 new Drawing(
@@ -224,7 +247,7 @@ namespace DocxTemplater.Images
                             new A.GraphicFrameLocks { NoChangeAspect = true }),
                         new A.Graphic(
                             new A.GraphicData(
-                                    CreatePicture(impagepartRelationShipId, propertyId, cx, cy)
+                                    CreatePicture(imageInfo.ImagePartRelationId, propertyId, cx, cy, 0)
                                 )
                             { Uri = "http://schemas.openxmlformats.org/drawingml/2006/picture" })
                     )
@@ -239,7 +262,7 @@ namespace DocxTemplater.Images
             target.Remove();
         }
 
-        private static PIC.Picture CreatePicture(string impagepartRelationShipId, uint propertyId, long cx, long cy)
+        private static PIC.Picture CreatePicture(string impagepartRelationShipId, uint propertyId, long cx, long cy, int rotation)
         {
             return new PIC.Picture(
                 new PIC.NonVisualPictureProperties(
@@ -265,11 +288,16 @@ namespace DocxTemplater.Images
                 new PIC.ShapeProperties(
                     new A.Transform2D(
                         new A.Offset { X = 0L, Y = 0L },
-                        new A.Extents { Cx = cx, Cy = cy }),
+                        new A.Extents { Cx = cx, Cy = cy })
+                    {
+                        Rotation = rotation
+                    },
                     new A.PresetGeometry(
                             new A.AdjustValueList()
                         )
-                    { Preset = A.ShapeTypeValues.Rectangle }));
+                    {
+                        Preset = A.ShapeTypeValues.Rectangle
+                    }));
         }
 
         private static string CreateImagePart<T>(T parent, byte[] imageBytes, PartTypeInfo partType)

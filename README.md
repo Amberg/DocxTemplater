@@ -64,14 +64,14 @@ The syntax is case insensitive
 | {{SomeVar}}  | Simple Variable replacement
 | {?{someVar > 5}}...{{:}}...{{/}}  | Conditional blocks
 | {{/Items}}...{{Items.Name}} ... {{/Items}}  | Text block bound to collection of complex items
-| {{/Items}}...{{.Name}} ... {{/Items}}  | Dot notation - implicit iterator
-| {{/Items}}...{{.}:toUpper} ... {{/Items}}  | A list of string all upper case
-| {{/Items}}{{.}}{{:s:}},{{/Items}}  | A list of string comma separated
-| {{SomeString:ToUpper()}}  | Variable with formatter to upper
-| {{SomeDate:Format("MM/dd/yyyy")}}  | Date variable with formatting
-| {{SomeDate:F("MM/dd/yyyy")}}  | Date variable with formatting - short syntax
-| {{SomeBytes:img()}}  | Image Formatter for image data
-| {{SomeHtmlString:html()}}  | Inserts html string into word document
+| {{/Items}}...{{.Name}} ... {{/Items}}  | Same as above with dot notation - implicit iterator - renders property 'Name' of each item in the collection
+| {{/Items}}...{{.}:toUpper} ... {{/Items}}  | A list of string all upper case - dot notation
+| {{/Items}}{{.}}{{:s:}},{{/Items}}  | A list of strings comma separated - dot notation
+| {{SomeString}:ToUpper()}  | Variable with formatter to upper
+| {{SomeDate}:Format("MM/dd/yyyy")}  | Date variable with formatting
+| {{SomeDate}:F("MM/dd/yyyy")}  | Date variable with formatting - short syntax
+| {{SomeBytes}:img()}  | Image Formatter for image data
+| {{SomeHtmlString}:html()}  | Inserts html string into word document
 ### Collections
 
 To repeat document content for each item in a collection the loop syntax can be used:
