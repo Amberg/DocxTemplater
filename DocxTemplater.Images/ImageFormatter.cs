@@ -200,9 +200,9 @@ namespace DocxTemplater.Images
                 });
             }
 
+#pragma warning disable IDE0300
             clonedInlineOrAnchor.Append(new OpenXmlElement[]
             {
-
                 new DW.DocProperties
                 {
                     Id = propertyId,
