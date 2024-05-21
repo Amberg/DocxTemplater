@@ -18,7 +18,7 @@ namespace DocxTemplater.Test
             var splitedParts = paragraph.SplitAfterElement(element);
 
             Assert.That(splitedParts.Count, Is.EqualTo(2));
-            Assert.True(splitedParts.All(x => x is Paragraph));
+            Assert.That(splitedParts.All(x => x is Paragraph));
             Assert.That(splitedParts.ElementAt(0).Descendants<Text>().Count(), Is.EqualTo(2));
             Assert.That(splitedParts.ElementAt(1).Descendants<Text>().Count(), Is.EqualTo(3));
             Assert.That(body.InnerText, Is.EqualTo(innerTextBefore));
@@ -41,7 +41,7 @@ namespace DocxTemplater.Test
             var splitedParts = paragraph.SplitAfterElement(element);
 
             Assert.That(splitedParts.Count, Is.EqualTo(2));
-            Assert.True(splitedParts.All(x => x is Paragraph));
+            Assert.That(splitedParts.All(x => x is Paragraph));
             Assert.That(splitedParts.ElementAt(0).Descendants<Text>().Count(), Is.EqualTo(2));
             Assert.That(splitedParts.ElementAt(1).Descendants<Text>().Count(), Is.EqualTo(3));
             Assert.That(body.InnerText, Is.EqualTo(innerTextBefore));
@@ -62,7 +62,7 @@ namespace DocxTemplater.Test
 
             var splitedParts = run.SplitAfterElement(element);
             Assert.That(splitedParts.Count, Is.EqualTo(2));
-            Assert.True(splitedParts.All(x => x is Run));
+            Assert.That(splitedParts.All(x => x is Run));
             Assert.That(splitedParts.ElementAt(0).Descendants<Text>().Count(), Is.EqualTo(2));
             Assert.That(splitedParts.ElementAt(1).Descendants<Text>().Count(), Is.EqualTo(3));
             Assert.That(body.InnerText, Is.EqualTo(innerTextBefore));
@@ -82,7 +82,7 @@ namespace DocxTemplater.Test
             var splitedParts = paragraph.SplitBeforeElement(element);
 
             Assert.That(splitedParts.Count, Is.EqualTo(2));
-            Assert.True(splitedParts.All(x => x is Paragraph));
+            Assert.That(splitedParts.All(x => x is Paragraph));
             Assert.That(splitedParts.ElementAt(0).Descendants<Text>().Count(), Is.EqualTo(1));
             Assert.That(splitedParts.ElementAt(1).Descendants<Text>().Count(), Is.EqualTo(4));
             Assert.That(body.InnerText, Is.EqualTo(innerTextBefore));
@@ -103,7 +103,7 @@ namespace DocxTemplater.Test
             var splitedParts = run.SplitBeforeElement(element);
 
             Assert.That(splitedParts.Count, Is.EqualTo(2));
-            Assert.True(splitedParts.All(x => x is Run));
+            Assert.That(splitedParts.All(x => x is Run));
             Assert.That(splitedParts.ElementAt(0).Descendants<Text>().Count(), Is.EqualTo(1));
             Assert.That(splitedParts.ElementAt(1).Descendants<Text>().Count(), Is.EqualTo(4));
             Assert.That(body.InnerText, Is.EqualTo(innerTextBefore));
@@ -125,7 +125,7 @@ namespace DocxTemplater.Test
             var splitedParts = run.SplitAfterElement(element);
 
             Assert.That(splitedParts.Count, Is.EqualTo(1));
-            Assert.True(splitedParts.All(x => x is Run));
+            Assert.That(splitedParts.All(x => x is Run));
             Assert.That(splitedParts.ElementAt(0).Descendants<Text>().Count(), Is.EqualTo(5));
             Assert.That(body.InnerText, Is.EqualTo(innerTextBefore));
         }
@@ -146,7 +146,7 @@ namespace DocxTemplater.Test
             var splitedParts = run.SplitBeforeElement(element);
 
             Assert.That(splitedParts.Count, Is.EqualTo(1));
-            Assert.True(splitedParts.All(x => x is Run));
+            Assert.That(splitedParts.All(x => x is Run));
             Assert.That(splitedParts.ElementAt(0).Descendants<Text>().Count(), Is.EqualTo(5));
             Assert.That(body.InnerText, Is.EqualTo(innerTextBefore));
         }
@@ -165,7 +165,7 @@ namespace DocxTemplater.Test
             var paragraph = new Paragraph(xml);
             var parts = paragraph.ChildElements.First<Run>().SplitAfterElement(paragraph.Descendants<Text>().First());
             Assert.That(parts.Count, Is.EqualTo(2));
-            CollectionAssert.AreEqual(parts.Select(x => x.InnerText), new[] { "Text1", "Text2" });
+            Assert.That(parts.Select(x => x.InnerText), Is.EqualTo(new[] { "Text1", "Text2" }));
 
             var runs = paragraph.Descendants<Run>().ToList();
             Assert.That(runs.Count, Is.EqualTo(2));
@@ -186,7 +186,7 @@ namespace DocxTemplater.Test
             var paragraph = new Paragraph(xml);
             var parts = paragraph.ChildElements.First<Run>().SplitAfterElement(paragraph.Descendants<Text>().First());
             Assert.That(parts.Count, Is.EqualTo(1));
-            CollectionAssert.AreEqual(parts.Select(x => x.InnerText), new[] { "Text1" });
+            Assert.That(parts.Select(x => x.InnerText), Is.EqualTo(new[] { "Text1" }));
 
             var runs = paragraph.Descendants<Run>().ToList();
             Assert.That(runs.Count, Is.EqualTo(1));
@@ -259,7 +259,7 @@ namespace DocxTemplater.Test
             var paragraph = new Paragraph(xml);
             var firstText = paragraph.Descendants<Text>().Single(x => x.Text == "LeadingMiddleEnd");
             firstText.MergeText(7, firstText, 6);
-            CollectionAssert.AreEqual(new[] { "Leading", "Middle", "End" }, paragraph.Descendants<Text>().Select(x => x.Text));
+            Assert.That(paragraph.Descendants<Text>().Select(x => x.Text), Is.EqualTo(new[] { "Leading", "Middle", "End" }));
         }
     }
 }
