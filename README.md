@@ -68,8 +68,8 @@ The syntax is case insensitive
 | {{/Items}}...{{.}:toUpper} ... {{/Items}}  | A list of string all upper case - dot notation
 | {{/Items}}{{.}}{{:s:}},{{/Items}}  | A list of strings comma separated - dot notation
 | {{SomeString}:ToUpper()}  | Variable with formatter to upper
-| {{SomeDate}:Format("MM/dd/yyyy")}  | Date variable with formatting
-| {{SomeDate}:F("MM/dd/yyyy")}  | Date variable with formatting - short syntax
+| {{SomeDate}:Format('MM/dd/yyyy')}  | Date variable with formatting
+| {{SomeDate}:F('MM/dd/yyyy')}  | Date variable with formatting - short syntax
 | {{SomeBytes}:img()}  | Image Formatter for image data
 | {{SomeHtmlString}:html()}  | Inserts html string into word document
 ### Collections
