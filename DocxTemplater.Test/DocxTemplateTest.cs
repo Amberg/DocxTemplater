@@ -159,7 +159,7 @@ namespace DocxTemplater.Test
             docTemplate.BindModel("ds", model);
             var result = docTemplate.Process();
             docTemplate.Validate();
-            Assert.IsNotNull(result);
+            Assert.That(result, Is.Not.Null);
             // check result text
             var document = WordprocessingDocument.Open(result, false);
             var body = document.MainDocumentPart.Document.Body;
@@ -183,7 +183,7 @@ namespace DocxTemplater.Test
 
             var result = docTemplate.Process();
             docTemplate.Validate();
-            Assert.IsNotNull(result);
+            Assert.That(result, Is.Not.Null);
             // check result text
             var document = WordprocessingDocument.Open(result, false);
             var body = document.MainDocumentPart.Document.Body;
@@ -208,14 +208,14 @@ namespace DocxTemplater.Test
 
             var result = docTemplate.Process();
             docTemplate.Validate();
-            Assert.IsNotNull(result);
+            Assert.That(result, Is.Not.Null);
             result.SaveAsFileAndOpenInWord();
             result.Position = 0;
             var document = WordprocessingDocument.Open(result, false);
             // check word contains altChunk
             var body = document.MainDocumentPart.Document.Body;
             var altChunk = body.Descendants<AltChunk>().FirstOrDefault();
-            Assert.IsNotNull(altChunk);
+            Assert.That(result, Is.Not.Null);
             // extract html part
             var htmlPart = document.MainDocumentPart.GetPartById(altChunk.Id);
             var stream = htmlPart.GetStream();
@@ -238,7 +238,7 @@ namespace DocxTemplater.Test
             docTemplate.BindModel("Items", new[] { "<h1>Test1</h1>", "<h1>Test2</h1>" });
             var result = docTemplate.Process();
             docTemplate.Validate();
-            Assert.IsNotNull(result);
+            Assert.That(result, Is.Not.Null);
             result.SaveAsFileAndOpenInWord();
             // check document contains 2 altChunks
             var document = WordprocessingDocument.Open(result, false);
@@ -262,7 +262,7 @@ namespace DocxTemplater.Test
             docTemplate.BindModel("ds", "FirstLine\r\nSecondLine\nThirdLine");
             var result = docTemplate.Process();
             docTemplate.Validate();
-            Assert.IsNotNull(result);
+            Assert.That(result, Is.Not.Null);
             // check document contains newline
             var document = WordprocessingDocument.Open(result, false);
             var body = document.MainDocumentPart.Document.Body;
@@ -292,7 +292,7 @@ namespace DocxTemplater.Test
             });
             var result = docTemplate.Process();
             docTemplate.Validate();
-            Assert.IsNotNull(result);
+            Assert.That(result, Is.Not.Null);
             // validate content
             var document = WordprocessingDocument.Open(result, false);
             var body = document.MainDocumentPart.Document.Body;
@@ -313,7 +313,7 @@ namespace DocxTemplater.Test
             docTemplate.BindModel("ds", new { Model = new { Outer = (LessonReportModel)null } });
             var result = docTemplate.Process();
             docTemplate.Validate();
-            Assert.IsNotNull(result);
+            Assert.That(result, Is.Not.Null);
             var document = WordprocessingDocument.Open(result, false);
             var body = document.MainDocumentPart.Document.Body;
             //check values have been replaced
@@ -358,7 +358,7 @@ namespace DocxTemplater.Test
             docTemplate.BindModel("ds", new { Items = new[] { new { Name = "Item1", Price = 5 }, new { Name = "Item2", Price = 7 } } });
             var result = docTemplate.Process();
             docTemplate.Validate();
-            Assert.IsNotNull(result);
+            Assert.That(result, Is.Not.Null);
             result.Position = 0;
             result.SaveAsFileAndOpenInWord();
             result.Position = 0;
@@ -382,7 +382,7 @@ namespace DocxTemplater.Test
             docTemplate.BindModel("ds", new[] { "Item1", "Item2", "Item3" });
             var result = docTemplate.Process();
             docTemplate.Validate();
-            Assert.IsNotNull(result);
+            Assert.That(result, Is.Not.Null);
             // check result text
             var document = WordprocessingDocument.Open(result, false);
             var body = document.MainDocumentPart.Document.Body;
@@ -413,7 +413,7 @@ namespace DocxTemplater.Test
             docTemplate.BindModel("ds4", new { MyBool = false });
             var result = docTemplate.Process();
             docTemplate.Validate();
-            Assert.IsNotNull(result);
+            Assert.That(result, Is.Not.Null);
             result.Position = 0;
             result.SaveAsFileAndOpenInWord();
             result.Position = 0;
@@ -456,7 +456,7 @@ namespace DocxTemplater.Test
 
             var result = docTemplate.Process();
             docTemplate.Validate();
-            Assert.IsNotNull(result);
+            Assert.That(result, Is.Not.Null);
             result.Position = 0;
 
             var document = WordprocessingDocument.Open(result, false);
@@ -482,7 +482,7 @@ namespace DocxTemplater.Test
             docTemplate.BindModel("Property1", "Replaced");
             var result = docTemplate.Process();
             docTemplate.Validate();
-            Assert.IsNotNull(result);
+            Assert.That(result, Is.Not.Null);
             result.Position = 0;
 
             var document = WordprocessingDocument.Open((Stream)result, false);
@@ -511,7 +511,7 @@ namespace DocxTemplater.Test
             docTemplate.BindModel("var", value);
             var result = docTemplate.Process();
             docTemplate.Validate();
-            Assert.IsNotNull(result);
+            Assert.That(result, Is.Not.Null);
             result.Position = 0;
 
             var document = WordprocessingDocument.Open(result, false);
@@ -585,7 +585,7 @@ namespace DocxTemplater.Test
             docTemplate.BindModel("company", new { Name = "X" });
             var result = docTemplate.Process();
             docTemplate.Validate();
-            Assert.IsNotNull(result);
+            Assert.That(result, Is.Not.Null);
             result.Position = 0;
 
             var document = WordprocessingDocument.Open(result, false);
@@ -655,7 +655,7 @@ namespace DocxTemplater.Test
                 });
             var result = docTemplate.Process();
             docTemplate.Validate();
-            Assert.IsNotNull(result);
+            Assert.That(result, Is.Not.Null);
             result.Position = 0;
             //  result.SaveAsFileAndOpenInWord();
             var document = WordprocessingDocument.Open(result, false);

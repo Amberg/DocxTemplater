@@ -46,6 +46,7 @@ namespace DocxTemplater.Test
             yield return new TestCaseData("{{ds.foo.var}:F(d)}").Returns(new[] { PatternType.Variable }).SetName("Variable with dot");
             yield return new TestCaseData("{{ds.foo_blubb.var}:F(d)}").Returns(new[] { PatternType.Variable }).SetName("Variable with underscore");
             yield return new TestCaseData("{{var}:toupper}").Returns(new[] { PatternType.Variable });
+            yield return new TestCaseData("{{var}:f(MM/dd/yyy)}").Returns(new[] { PatternType.Variable }).SetName("Slash in pattern");
             yield return new TestCaseData("{{else}}").Returns(new[] { PatternType.ConditionElse });
             yield return new TestCaseData("{{  else  }}").Returns(new[] { PatternType.ConditionElse });
             yield return new TestCaseData("{{  :  }}").Returns(new[] { PatternType.ConditionElse });
@@ -78,6 +79,8 @@ namespace DocxTemplater.Test
             yield return new TestCaseData("{{Foo}}").Returns(Array.Empty<string>());
             yield return new TestCaseData("{{Foo}:format}").Returns(Array.Empty<string>());
             yield return new TestCaseData("{{Foo}:format()}").Returns(Array.Empty<string>());
+            yield return new TestCaseData("{{Foo}:format('MM/dd/yyyy')}").Returns(new[] { "MM/dd/yyyy" });
+            yield return new TestCaseData("{{Foo}:format(MM/dd/yyyy)}").Returns(new[] { "MM/dd/yyyy" });
             yield return new TestCaseData("{{Foo}:format('')}").Returns(new[] { string.Empty });
             yield return new TestCaseData("{{Foo}:format(a)}").Returns(new[] { "a" });
             yield return new TestCaseData("{{Foo}:format(param)}").Returns(new[] { "param" });
