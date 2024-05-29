@@ -1,4 +1,6 @@
-﻿using DocumentFormat.OpenXml;
+﻿using System.Diagnostics;
+using System.Linq;
+using DocumentFormat.OpenXml;
 using DocxTemplater.Formatter;
 
 namespace DocxTemplater.Blocks
@@ -7,7 +9,6 @@ namespace DocxTemplater.Blocks
     {
         private readonly string m_condition;
         private readonly ScriptCompiler m_scriptCompiler;
-        private ContentBlock m_elseBlock;
 
         public ConditionalBlock(string condition, VariableReplacer variableReplacer, ScriptCompiler scriptCompiler)
             : base(variableReplacer)
@@ -16,7 +17,7 @@ namespace DocxTemplater.Blocks
             m_scriptCompiler = scriptCompiler;
         }
 
-        public override void Expand(ModelLookup models, OpenXmlElement parentNode)
+        public override void Expand(ModelLookup models, OpenXmlElement parentNode, bool insertBeforeInsertionPoint = false)
         {
             bool conditionResult = false;
             bool removeBlock = true;
@@ -28,26 +29,22 @@ namespace DocxTemplater.Blocks
             {
                 removeBlock = false;
             }
+            var cloned = m_content.Select(x => x.CloneNode(true)).ToList();
+            InsertContent(parentNode, cloned, insertBeforeInsertionPoint);
+            Debug.Assert(m_childBlocks.Count is 1 or 2);
             if (conditionResult)
             {
-                base.Expand(models, parentNode);
+                m_childBlocks[0].Expand(models, parentNode);
             }
-            else
+            else if (m_childBlocks.Count > 1)
             {
-                m_elseBlock?.Expand(models, parentNode);
+                m_childBlocks[1].Expand(models, parentNode);
             }
-
             if (removeBlock)
             {
                 var element = m_insertionPoint.GetElement(parentNode);
                 element.Remove();
             }
-
-        }
-
-        public void SetElseBlock(ContentBlock elseBlock)
-        {
-            m_elseBlock = elseBlock;
         }
 
         public override string ToString()

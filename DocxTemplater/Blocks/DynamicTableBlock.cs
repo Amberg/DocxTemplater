@@ -16,7 +16,7 @@ namespace DocxTemplater.Blocks
             m_tablenName = tablenName;
         }
 
-        public override void Expand(ModelLookup models, OpenXmlElement parentNode)
+        public override void Expand(ModelLookup models, OpenXmlElement parentNode, bool insertBeforeInsertionPoint = false)
         {
             var model = models.GetValue(m_tablenName);
             if (model is IDynamicTable dynamicTable)
@@ -55,7 +55,7 @@ namespace DocxTemplater.Blocks
 
                 // write data
                 var lastRow = dataRow;
-                var cellInsertionPoint = InsertionPoint.CreateForElement(dataCell);
+                var cellInsertionPoint = InsertionPoint.CreateForElement(dataCell, "dc");
                 foreach (var row in dynamicTable.Rows)
                 {
                     TableRow clonedRow = (TableRow)dataRow.CloneNode(true);

@@ -14,9 +14,14 @@ namespace DocxTemplater
             Id = id;
         }
 
-        public static InsertionPoint CreateForElement(OpenXmlElement element)
+        public static InsertionPoint CreateForElement(OpenXmlElement element, string name)
         {
-            var insertionPoint = new InsertionPoint(Guid.NewGuid().ToString("N"));
+            // element already marked return the existing insertion point
+            if (element.ExtendedAttributes.Any(a => a.LocalName == InsertionPointAttributeName))
+            {
+                return new InsertionPoint(element.GetAttribute(InsertionPointAttributeName, null).Value);
+            }
+            var insertionPoint = new InsertionPoint($"{name}_{Guid.NewGuid():N}");
             element.SetAttribute(new OpenXmlAttribute(null, InsertionPointAttributeName, null, insertionPoint.Id));
             return insertionPoint;
         }
@@ -25,6 +30,11 @@ namespace DocxTemplater
         {
             foreach (var element in root.Descendants().Where(x => x.ExtendedAttributes.Any(a => a.LocalName == InsertionPointAttributeName)))
             {
+                if (!element.HasChildren)
+                {
+                    element.Remove();
+                    continue;
+                }
                 element.RemoveAttribute(InsertionPointAttributeName, null);
             }
         }

@@ -13,10 +13,8 @@ namespace DocxTemplater.Blocks
         protected readonly List<ContentBlock> m_childBlocks;
         protected readonly VariableReplacer m_variableReplacer;
 
-        public ContentBlock(VariableReplacer variableReplacer, ContentBlock rootBlock = null, InsertionPoint insertionPoint = null)
+        public ContentBlock(VariableReplacer variableReplacer)
         {
-            m_insertionPoint = insertionPoint;
-            RootBlock = rootBlock ?? this;
             m_content = new List<OpenXmlElement>();
             m_childBlocks = new List<ContentBlock>();
             m_variableReplacer = variableReplacer;
@@ -24,15 +22,10 @@ namespace DocxTemplater.Blocks
 
         public IReadOnlyCollection<ContentBlock> ChildBlocks => m_childBlocks;
 
-        public ContentBlock RootBlock
-        {
-            get;
-        }
-
-        public virtual void Expand(ModelLookup models, OpenXmlElement parentNode)
+        public virtual void Expand(ModelLookup models, OpenXmlElement parentNode, bool insertBeforeInsertionPoint = false)
         {
             var cloned = m_content.Select(x => x.CloneNode(true)).ToList();
-            InsertContent(parentNode, cloned);
+            InsertContent(parentNode, cloned, insertBeforeInsertionPoint);
             m_variableReplacer.ReplaceVariables(cloned);
             ExpandChildBlocks(models, parentNode);
         }
@@ -45,20 +38,28 @@ namespace DocxTemplater.Blocks
             }
         }
 
-        protected void InsertContent(OpenXmlElement parentNode, IEnumerable<OpenXmlElement> paragraphs)
+        protected void InsertContent(OpenXmlElement parentNode, IEnumerable<OpenXmlElement> paragraphs, bool insertBeforeInsertionPoint = false)
         {
-            var element = m_insertionPoint.GetElement(parentNode);
-            if (element == null)
+            var element = m_insertionPoint.GetElement(parentNode) ?? throw new OpenXmlTemplateException($"Insertion point {m_insertionPoint.Id} not found");
+            if (insertBeforeInsertionPoint)
             {
-                Console.WriteLine(parentNode.ToPrettyPrintXml());
-                throw new OpenXmlTemplateException($"Insertion point {m_insertionPoint.Id} not found");
+                element.InsertBeforeSelf(paragraphs);
             }
-            element.InsertAfterSelf(paragraphs);
+            else
+            {
+                element.InsertAfterSelf(paragraphs);
+            }
+        }
+
+        public void RemoveAnchor(OpenXmlElement parentNode)
+        {
+            var element = m_insertionPoint.GetElement(parentNode) ?? throw new OpenXmlTemplateException($"Insertion point {m_insertionPoint.Id} not found");
+            element.Remove();
         }
 
         public override string ToString()
         {
-            return m_insertionPoint?.Id ?? "RootBlock";
+            return m_insertionPoint?.Id ?? GetType().Name;
         }
 
         public virtual void SetContent(InsertionPoint insertionPoint, IReadOnlyCollection<OpenXmlElement> blockContent)
@@ -67,9 +68,22 @@ namespace DocxTemplater.Blocks
             m_content = blockContent;
         }
 
-        public void AddInnerBlock(ContentBlock block)
+        public virtual void AddInnerBlock(ContentBlock block)
         {
             m_childBlocks.Add(block);
+        }
+
+        public void Print(int i)
+        {
+            Console.WriteLine(new string('-', i+1) + ToString());
+            foreach (var content in m_content)
+            {
+                Console.WriteLine(content.ToPrettyPrintXml());
+            }
+            foreach (var block in m_childBlocks)
+            {
+                block.Print(i + 2);
+            }
         }
     }
 }

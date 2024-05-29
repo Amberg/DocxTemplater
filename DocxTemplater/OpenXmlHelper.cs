@@ -292,7 +292,7 @@ namespace DocxTemplater
 
         public static string ToPrettyPrintXml(this OpenXmlElement element)
         {
-            var xmldoc = XDocument.Parse("<root>" + element.InnerXml + "</root>");
+            var xmldoc = XDocument.Parse(element.OuterXml);
             return xmldoc.ToString();
         }
 

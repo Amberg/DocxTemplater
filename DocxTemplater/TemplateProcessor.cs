@@ -1,11 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using DocumentFormat.OpenXml;
+﻿using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Drawing.Wordprocessing;
 using DocumentFormat.OpenXml.Wordprocessing;
 using DocxTemplater.Blocks;
 using DocxTemplater.Formatter;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace DocxTemplater
 {
@@ -144,100 +143,9 @@ namespace DocxTemplater
 
         private IReadOnlyCollection<ContentBlock> ExpandLoops(OpenXmlCompositeElement element)
         {
-
-            // TODO: store metadata for tag in cache
-            var blockStack = new Stack<(ContentBlock Block, PatternType type, Text MatchedTextNode)>();
-            blockStack.Push((new ContentBlock(m_variableReplacer), PatternType.None, null)); // dummy block for root
-            // find all begin or end markers
-            foreach (var text in element.Descendants<Text>().ToList().Where(x => x.IsMarked()))
-            {
-                var value = text.GetMarker();
-                if (value is PatternType.CollectionStart)
-                {
-                    var match = PatternMatcher.FindSyntaxPatterns(text.Text).Single();
-                    if (match.Formatter.Equals("dyntable", StringComparison.InvariantCultureIgnoreCase))
-                    {
-                        blockStack.Push((new DynamicTableBlock(match.Variable, m_variableReplacer), value, text));
-                    }
-                    else
-                    {
-                        blockStack.Push((new LoopBlock(match.Variable, m_variableReplacer), value, text));
-                    }
-                }
-                else if (value == PatternType.CollectionSeparator)
-                {
-                    var (block, _, matchedTextNode) = blockStack.Pop();
-                    if (block is not LoopBlock collectionStartBlock)
-                    {
-                        throw new OpenXmlTemplateException($"Separator in '{block}' is invalid");
-                    }
-
-                    var loopContent = ExtractBlockContent(matchedTextNode, text, out var leadingPart);
-                    var insertPoint = InsertionPoint.CreateForElement(leadingPart);
-                    collectionStartBlock.SetContent(insertPoint, loopContent);
-                    var separatorBlock = new ContentBlock(m_variableReplacer, collectionStartBlock, insertPoint);
-                    collectionStartBlock.SetSeparatorBlock(separatorBlock);
-                    blockStack.Push((separatorBlock, value, text));
-                }
-                else if (value == PatternType.CollectionEnd)
-                {
-                    var (block, startType, matchedTextNode) = blockStack.Pop();
-                    if (startType is not PatternType.CollectionStart and not PatternType.CollectionSeparator)
-                    {
-                        throw new OpenXmlTemplateException(
-                            $"'{text.InnerText}' is missing collection start: {text.ElementBeforeInDocument<Text>()?.InnerText} >> {text.InnerText} << {text.ElementAfterInDocument<Text>()?.InnerText}");
-                    }
-
-                    var loopContent = ExtractBlockContent(matchedTextNode, text, out var leadingPart);
-                    block.SetContent(InsertionPoint.CreateForElement(leadingPart), loopContent);
-                    blockStack.Peek().Block.AddInnerBlock(block.RootBlock);
-                }
-                else if (value == PatternType.Condition)
-                {
-                    var match = PatternMatcher.FindSyntaxPatterns(text.Text).Single();
-                    blockStack.Push((new ConditionalBlock(match.Condition, m_variableReplacer, m_scriptCompiler), value,
-                        text));
-                }
-                else if (value == PatternType.ConditionElse)
-                {
-                    var (block, startType, matchedTextNode) = blockStack.Pop();
-                    if (block is not ConditionalBlock conditionalBlock)
-                    {
-                        throw new OpenXmlTemplateException($"else block in '{block}' is invalid");
-                    }
-
-                    var loopContent = ExtractBlockContent(matchedTextNode, text, out var leadingPart);
-                    var insertPoint = InsertionPoint.CreateForElement(leadingPart);
-                    conditionalBlock.SetContent(insertPoint, loopContent);
-                    var elseBlock = new ContentBlock(m_variableReplacer, conditionalBlock, insertPoint);
-                    conditionalBlock.SetElseBlock(elseBlock);
-                    blockStack.Push((elseBlock, value, text)); // push else block on stack but with other text element
-
-                }
-                else if (value == PatternType.ConditionEnd)
-                {
-                    var (block, startType, matchedTextNode) = blockStack.Pop();
-                    if (startType is not PatternType.Condition and not PatternType.ConditionElse)
-                    {
-                        throw new OpenXmlTemplateException(
-                            $"'{text.InnerText}' is missing condition start: {text.ElementBeforeInDocument<Text>()?.InnerText} >> {text.InnerText} << {text.ElementAfterInDocument<Text>()?.InnerText}");
-                    }
-
-                    var loopContent = ExtractBlockContent(matchedTextNode, text, out var leadingPart);
-                    var insertPoint = InsertionPoint.CreateForElement(leadingPart);
-                    block.SetContent(insertPoint, loopContent);
-                    blockStack.Peek().Block.AddInnerBlock(block.RootBlock);
-                }
-            }
-
-            if (blockStack.Count != 1)
-            {
-                var notClosedBlocks = blockStack.Reverse().Select(x => x.Block).Skip(1).ToList();
-                throw new OpenXmlTemplateException($"Not all blocks are closed: {string.Join(", ", notClosedBlocks)}");
-            }
-
-            var (contentBlock, _, _) = blockStack.Pop();
-            return contentBlock.ChildBlocks;
+            var syntaxTree = SyntaxTree.Build(element, m_variableReplacer, m_scriptCompiler);
+            
+            return syntaxTree.Roots;
         }
 
         internal static IReadOnlyCollection<OpenXmlElement> ExtractBlockContent(OpenXmlElement startText,

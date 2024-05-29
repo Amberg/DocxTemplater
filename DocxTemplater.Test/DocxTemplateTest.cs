@@ -718,7 +718,7 @@ namespace DocxTemplater.Test
             docTemplate.Validate();
             Assert.That(result, Is.Not.Null);
             result.Position = 0;
-            //  result.SaveAsFileAndOpenInWord();
+            result.SaveAsFileAndOpenInWord();
             var document = WordprocessingDocument.Open(result, false);
             var body = document.MainDocumentPart.Document.Body;
             var table = body.Descendants<Table>().First();
