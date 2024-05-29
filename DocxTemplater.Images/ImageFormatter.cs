@@ -28,7 +28,7 @@ namespace DocxTemplater.Images
 
         public void ApplyFormat(FormatterContext context, Text target)
         {
-            // TODO: handle oter ppi values than default 96
+            // TODO: handle other ppi values than default 96
             // see https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.wordprocessing.pixelsperinch?view=openxml-2.8.1#remarks
             if (context.Value is not byte[] imageBytes)
             {

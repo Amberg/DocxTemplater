@@ -38,9 +38,9 @@ namespace DocxTemplater
                                                                 (?:\(
                                                                     (?:
                                                                        (?:
-                                                                           '(?<arg>(?:(?:\\('))|[\w\s-\\/:,""])*?)' # quoted string can contain , or whitespace or can be empty
+                                                                           '(?<arg>(?:(?:\\('))|[\w\s-\\/:,""\.])*?)' # quoted string can contain , or whitespace or can be empty
                                                                             |
-                                                                            (?<arg>[\w\s-\\/:'""]+) # unquoted string
+                                                                            (?<arg>[\w\s-\\/:'""\.]+) # unquoted string
                                                                         )(?:\s*,\s*)? # starting and leading whitespaces are ignored
                                                                     )*
                                                                     \))?

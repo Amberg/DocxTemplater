@@ -6,6 +6,7 @@ using System.Collections;
 using System.Dynamic;
 using System.Globalization;
 using Bold = DocumentFormat.OpenXml.Wordprocessing.Bold;
+using Break = DocumentFormat.OpenXml.Drawing.Break;
 using Paragraph = DocumentFormat.OpenXml.Wordprocessing.Paragraph;
 using Run = DocumentFormat.OpenXml.Wordprocessing.Run;
 using RunProperties = DocumentFormat.OpenXml.Wordprocessing.RunProperties;
@@ -596,6 +597,66 @@ namespace DocxTemplater.Test
                                                    "InnerValue2 I'm here if if this is not the case Value2  InnerItem2a  InnerValue2b " +
                                                    "I'm only here if NumericValue is greater than 0 -  INNERVALUE2B will be replaced X"));
         }
+
+
+        [Test]
+        public void SupTemplateTest()
+        {
+            var template = @"<w:p xmlns:w=""http://schemas.openxmlformats.org/wordprocessingml/2006/main"">
+                              <w:pPr>
+                                <w:pBdr>
+                                  <w:bottom w:val=""double"" w:sz=""6"" w:space=""1"" w:color=""auto""/>
+                                </w:pBdr>
+                              </w:pPr>
+                              <w:r>
+                                <w:t>Test {{ds.Name}} {{ds.Number}}</w:t>
+                              </w:r>
+                            </w:p>";
+
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(
+                new Paragraph(
+                    new Run(new Text("Start of Document")),
+                    new Break(),
+                    new Run(new Text("{{#ds.Items}}"))
+                ),
+            new Paragraph(
+                    new Run(new Text("{{.Name}}")),
+                    new Run(new Text("{{.}:T('ds.Template')}"))
+                ),
+            new Paragraph(
+                new Run(new Text("{{/ds.Items}}"))
+            )
+            ));
+            wpDocument.Save();
+            memStream.Position = 0;
+            var docTemplate = new DocxTemplate(memStream);
+            docTemplate.BindModel("ds",
+                new
+                {
+                    Template = template,
+                    Items = new[]
+                        {
+                            new {Name = "Item1 ", Number = 55 },
+                            new {Name = "Item2 ", Number = 96 }
+                        }
+                });
+            var result = docTemplate.Process();
+            //docTemplate.Validate();
+            Assert.That(result, Is.Not.Null);
+            result.Position = 0;
+
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            //check values have been replaced
+            Assert.That(body.InnerText, Is.EqualTo("Start of DocumentItem1 Test Item1  55Item2 Test Item2  96"));
+
+
+        }
+
 
         [Test]
         public void BindCollectionToTable()

@@ -87,6 +87,8 @@ namespace DocxTemplater.Test
             yield return new TestCaseData("{{Foo}:format('param')}").Returns(new[] { "param" });
             yield return new TestCaseData("{{Foo}:format(a,b)}").Returns(new[] { "a", "b" });
             yield return new TestCaseData("{{Foo}:format(a,b,c)}").Returns(new[] { "a", "b", "c" });
+            yield return new TestCaseData("{{Foo}:format(a.b, c.d)}").Returns(new[] { "a.b", "c.d" });
+            yield return new TestCaseData("{{Foo}:format('a.b', c.d)}").Returns(new[] { "a.b", "c.d" });
             yield return new TestCaseData("{{Foo}:format(a,'a b',c)}").Returns(new[] { "a", "a b", "c" });
             yield return new TestCaseData("{{Foo}:format(a,b,'YYYY_MMM/DD FF',d)}").Returns(new[] { "a", "b", "YYYY_MMM/DD FF", "d" });
             yield return new TestCaseData("{{Foo}:format(a,'John Doe','YYYY_MMM/DD FF',d)}").Returns(new[] { "a", "John Doe", "YYYY_MMM/DD FF", "d" });
