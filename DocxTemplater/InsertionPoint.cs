@@ -39,9 +39,18 @@ namespace DocxTemplater
             }
         }
 
+        public bool IsForElement(OpenXmlElement element)
+        {
+            return element.ExtendedAttributes.Any(a => a.LocalName == InsertionPointAttributeName && a.Value == Id);
+        }
+
         public OpenXmlElement GetElement(OpenXmlElement root)
         {
+#if DEBUG
+            return root.Descendants<OpenXmlElement>().SingleOrDefault(x => x.ExtendedAttributes.Any(a => a.LocalName == InsertionPointAttributeName && a.Value == Id));
+#else
             return root.Descendants<OpenXmlElement>().FirstOrDefault(x => x.ExtendedAttributes.Any(a => a.LocalName == InsertionPointAttributeName && a.Value == Id));
+#endif
         }
 
     }

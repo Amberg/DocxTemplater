@@ -818,6 +818,87 @@ namespace DocxTemplater.Test
             result.SaveAsFileAndOpenInWord();
         }
 
+
+        [Test]
+        public void ConditionalTableTest()
+        {
+            var model = new
+            {
+                Positions = new[]
+                {
+                    new { Type = 1, Index = 1, Description = "Description", Tax = 20.5, Count = 55, Price = 55.20, TotalPrice = 20.9 },
+                    new { Type = 2, Index = 2, Description = "Description1", Tax = 20.5, Count = 55, Price = 55.20, TotalPrice = 20.9 },
+                    new { Type = 1, Index = 3, Description = "Description2", Tax = 200.5, Count = 550, Price = 550.20, TotalPrice = 200.9 },
+                }
+            };
+
+            var xml = @"<w:tbl xmlns:w=""http://schemas.openxmlformats.org/wordprocessingml/2006/main"">  
+                      <w:tblPr>  
+                        <w:tblW w:w=""5000"" w:type=""pct""/>  
+                        <w:tblBorders>  
+                          <w:top w:val=""single"" w:sz=""4"" w:space=""0"" w:color=""auto""/>  
+                          <w:left w:val=""single"" w:sz=""4"" w:space=""0"" w:color=""auto""/>  
+                          <w:bottom w:val=""single"" w:sz=""4"" w:space=""0"" w:color=""auto""/>  
+                          <w:right w:val=""single"" w:sz=""4"" w:space=""0"" w:color=""auto""/>  
+                        </w:tblBorders>  
+                      </w:tblPr>  
+                      <w:tblGrid>  
+                        <w:gridCol w:w=""10296""/>  
+                      </w:tblGrid>
+                       <w:tr>  
+                        <w:tc>  
+                          <w:p><w:r><w:t>Header Col 1</w:t></w:r></w:p>  
+                        </w:tc>
+                        <w:tc>  
+                          <w:p><w:r><w:t>Header Col 2</w:t></w:r></w:p>  
+                        </w:tc>  
+                      </w:tr>  
+                      <w:tr>  
+                        <w:tc>  
+                          <w:tcPr>  
+                            <w:tcW w:w=""0"" w:type=""auto""/>  
+                          </w:tcPr>  
+                          <w:p><w:r><w:t>{{#Positions}}{?{.Type == 1}}</w:t><w:t>{{.Index}}</w:t></w:r></w:p>  
+                        </w:tc>
+                        <w:tc>  
+                          <w:tcPr>  
+                            <w:tcW w:w=""0"" w:type=""auto""/>  
+                          </w:tcPr>  
+                          <w:p><w:r><w:t>{{.Description}}{{/}}</w:t></w:r></w:p>  
+                        </w:tc>  
+                      </w:tr>
+                      <w:tr>  
+                        <w:tc>  
+                          <w:tcPr>  
+                            <w:tcW w:w=""0"" w:type=""auto""/>  
+                          </w:tcPr>  
+                          <w:p><w:r><w:t>{?{.Type == 2}}{{.Tax}} Other Row</w:t></w:r></w:p>  
+                        </w:tc>
+                        <w:tc>  
+                          <w:tcPr>  
+                            <w:tcW w:w=""0"" w:type=""auto""/>  
+                          </w:tcPr>  
+                          <w:p><w:r><w:t>{{.Count}} Other Row  Col 2{{/}}{{/Positions}}</w:t></w:r></w:p>  
+                        </w:tc>  
+                      </w:tr>  
+                    </w:tbl>";
+
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(new Table(xml)));
+            wpDocument.Save();
+            memStream.Position = 0;
+            var docTemplate = new DocxTemplate(memStream);
+
+
+            docTemplate.BindModel("ds", model);
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            result.Position = 0;
+            result.SaveAsFileAndOpenInWord();
+        }
+
         private static DriveStudentOverviewReportingModel CrateBillTemplate2Model()
         {
             DriveStudentOverviewReportingModel model = new()

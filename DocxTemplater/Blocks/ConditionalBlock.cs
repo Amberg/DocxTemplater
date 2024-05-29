@@ -31,7 +31,8 @@ namespace DocxTemplater.Blocks
             }
             var cloned = m_content.Select(x => x.CloneNode(true)).ToList();
             InsertContent(parentNode, cloned, insertBeforeInsertionPoint);
-            Debug.Assert(m_childBlocks.Count is 1 or 2);
+            m_variableReplacer.ReplaceVariables(cloned);
+            Debug.Assert(m_childBlocks.Count is 1 or 2); 
             if (conditionResult)
             {
                 m_childBlocks[0].Expand(models, parentNode);
