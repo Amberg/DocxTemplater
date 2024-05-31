@@ -75,7 +75,7 @@ namespace DocxTemplater.Blocks
 
         public void Print(int i)
         {
-            Console.WriteLine(new string('-', i+1) + ToString());
+            Console.WriteLine(new string('-', i + 1) + ToString());
             foreach (var content in m_content)
             {
                 Console.WriteLine(content.ToPrettyPrintXml());

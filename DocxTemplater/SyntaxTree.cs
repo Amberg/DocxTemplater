@@ -35,7 +35,7 @@ namespace DocxTemplater
 
         private void Build()
         {
-            m_blockStack.Push(new SyntaxBlock() { PatternType = PatternType.None, ContentBlock = new ContentBlock(m_variableReplacer)}); // dummy block for root
+            m_blockStack.Push(new SyntaxBlock() { PatternType = PatternType.None, ContentBlock = new ContentBlock(m_variableReplacer) }); // dummy block for root
             foreach (var text in m_element.Descendants<Text>().ToList().Where(x => x.IsMarked()))
             {
                 var value = text.GetMarker();
@@ -131,17 +131,17 @@ namespace DocxTemplater
 
             OpenXmlElement anchorElement;
             block.ContentBlock = CreateContentBlock(block);
-            List<OpenXmlElement> blockContent = new List<OpenXmlElement>();
+            List<OpenXmlElement> blockContent = new();
 
             if (commonParent is TableRow)
             {
                 anchorElement = commonParent.InsertBeforeSelf(new TableRow());
                 blockContent.Add(commonParent);
             }
-            else if(commonParent is Table)
+            else if (commonParent is Table)
             {
-                var firstRow = commonParent.Elements<TableRow>().First(r => block.StartTextNode.IsChildOf(r));
-                var lastRow = commonParent.Elements<TableRow>().First(r => block.EndTextNode.IsChildOf(r));
+                var firstRow = commonParent.Elements<TableRow>().First(block.StartTextNode.IsChildOf);
+                var lastRow = commonParent.Elements<TableRow>().First(block.EndTextNode.IsChildOf);
                 anchorElement = firstRow.InsertBeforeSelf(new TableRow());
                 blockContent.Add(firstRow);
                 blockContent.AddRange(commonParent.ChildsBetween(firstRow, lastRow));

@@ -144,7 +144,7 @@ namespace DocxTemplater
         private IReadOnlyCollection<ContentBlock> ExpandLoops(OpenXmlCompositeElement element)
         {
             var syntaxTree = SyntaxTree.Build(element, m_variableReplacer, m_scriptCompiler);
-            
+
             return syntaxTree.Roots;
         }
 
