@@ -1,4 +1,7 @@
-﻿using DocumentFormat.OpenXml;
+﻿#if DEBUG
+using System;
+#endif
+using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Drawing.Wordprocessing;
 using DocumentFormat.OpenXml.Wordprocessing;
 using DocxTemplater.Blocks;

@@ -28,7 +28,7 @@ namespace DocxTemplater
 
         public static void RemoveAll(OpenXmlElement root)
         {
-            foreach (var element in root.Descendants().Where(x => x.ExtendedAttributes.Any(a => a.LocalName == InsertionPointAttributeName)))
+            foreach (var element in root.Descendants().Where(x => x.ExtendedAttributes.Any(a => a.LocalName == InsertionPointAttributeName)).ToList())
             {
                 if (!element.HasChildren)
                 {
