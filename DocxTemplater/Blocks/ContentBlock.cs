@@ -18,8 +18,11 @@ namespace DocxTemplater.Blocks
 #pragma warning restore IDE0052
 
         public ContentBlock()
-            : this(null, PatternType.None, null, null)
-        { }
+        {
+            PatternType = PatternType.None;
+            m_content = new List<OpenXmlElement>();
+            m_childBlocks = new List<ContentBlock>();
+        }
 
         public ContentBlock(VariableReplacer variableReplacer, PatternType patternType, Text startTextNode, PatternMatch startMatch)
         {
@@ -27,8 +30,8 @@ namespace DocxTemplater.Blocks
             m_childBlocks = new List<ContentBlock>();
             m_variableReplacer = variableReplacer;
             PatternType = patternType;
-            StartTextNode = startTextNode;
-            StartMatch = startMatch;
+            StartTextNode = startTextNode ?? throw new ArgumentNullException(nameof(startTextNode));
+            StartMatch = startMatch ?? throw new ArgumentNullException(nameof(startMatch));
         }
 
         public static ContentBlock Crate(

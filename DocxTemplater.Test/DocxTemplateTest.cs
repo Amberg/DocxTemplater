@@ -819,9 +819,40 @@ namespace DocxTemplater.Test
             result.SaveAsFileAndOpenInWord();
         }
 
+        private enum RowType
+        {
+            Normal = 1,
+            Underscore = 2,
+            Red = 3
+        }
 
         [Test]
-        public void ConditionalTableTest()
+        public void ConditionalTableRowsExtended()
+        {
+            // TODO: allow usage of enums in template
+            using var fileStream = File.OpenRead("Resources/ConditionalTableRows.docx");
+            var docTemplate = new DocxTemplate(fileStream);
+            var model = new
+            {
+                Positions = new[]
+                {
+                    new { Type = (int)RowType.Normal, Description = "Description1", Tax = 20.5, Count = 55, Price = 55.20, TotalPrice = 20.9 },
+                    new { Type = (int)RowType.Underscore, Description = "Underscore 2", Tax = 20.5, Count = 55, Price = 55.20, TotalPrice = 20.9 },
+                    new { Type = (int)RowType.Normal, Description = "Description3", Tax = 200.5, Count = 550, Price = 550.20, TotalPrice = 200.9 },
+                    new { Type = (int)RowType.Red, Description = "Description4", Tax = 200.5, Count = 550, Price = 550.20, TotalPrice = 200.9 },
+                    new { Type = (int)RowType.Normal, Description = "Description5", Tax = 200.5, Count = 550, Price = 550.20, TotalPrice = 200.9 },
+                }
+            };
+            docTemplate.BindModel("ds", model);
+            docTemplate.BindModel("RowType", Enum.GetValues<RowType>().ToDictionary(x => x.ToString(), x => (int)x));
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            result.Position = 0;
+            result.SaveAsFileAndOpenInWord();
+        }
+
+        [Test]
+        public void ConditionalTableRows()
         {
             var model = new
             {
@@ -858,6 +889,9 @@ namespace DocxTemplater.Test
                         <w:tc>  
                           <w:tcPr>  
                             <w:tcW w:w=""0"" w:type=""auto""/>  
+                            <w:tcBorders>
+                                <w:top w:val=""single"" w:color=""auto"" w:sz=""4"" w:space=""0"" />
+                            </w:tcBorders>
                           </w:tcPr>  
                           <w:p><w:r><w:t>{{#Positions}}{?{.Type == 1}}</w:t><w:t>{{.Index}}</w:t></w:r></w:p>  
                         </w:tc>

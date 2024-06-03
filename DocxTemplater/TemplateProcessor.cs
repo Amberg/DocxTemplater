@@ -172,7 +172,7 @@ namespace DocxTemplater
             }
             if (blockStack.Count != 1)
             {
-                var notClosedBlocks = blockStack.Reverse().Select(x => x.StartMatch.Match.Value).Skip(1).ToList();
+                var notClosedBlocks = blockStack.Reverse().Skip(1).Select(x => x.StartMatch.Match.Value).Skip(1).ToList();
                 throw new OpenXmlTemplateException($"Not all blocks are closed: {string.Join(", ", notClosedBlocks)}");
             }
 
@@ -212,6 +212,10 @@ namespace DocxTemplater
 
         private static void CloseBlock(Stack<ContentBlock> blockStack, PatternMatch match, Text text)
         {
+            if (blockStack.Count == 1)
+            {
+                throw new OpenXmlTemplateException($"Block was not open {text.InnerText}");
+            }
             var closedBlock = blockStack.Pop();
             closedBlock.CloseBlock(text, match);
         }

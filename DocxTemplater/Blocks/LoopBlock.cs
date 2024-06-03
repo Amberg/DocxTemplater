@@ -28,7 +28,7 @@ namespace DocxTemplater.Blocks
                 {
                     using var loopScope = models.OpenScope();
                     loopScope.AddVariable(m_collectionName, item);
-                    loopScope.AddVariable($"{m_collectionName}._Count", counter);
+                    loopScope.AddVariable($"{m_collectionName}._Idx", counter);
                     loopScope.AddVariable($"{m_collectionName}._Length", items.Count);
                     base.Expand(models, parentNode);
                     counter--;
