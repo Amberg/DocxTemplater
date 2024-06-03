@@ -99,8 +99,6 @@ namespace DocxTemplater.Blocks
         {
             var cloned = m_content.Select(x => x.CloneNode(true)).ToList();
             InsertContent(parentNode, cloned);
-            Console.WriteLine($"-------------------- After Insert Content {this} -----------------");
-            Console.WriteLine(parentNode.ToPrettyPrintXml());
             m_variableReplacer.ReplaceVariables(cloned);
         }
 
@@ -122,20 +120,12 @@ namespace DocxTemplater.Blocks
 
         protected virtual void InsertContent(OpenXmlElement parentNode, IEnumerable<OpenXmlElement> paragraphs)
         {
-            if (m_insertionPoint.Id == "Condition_4")
-            {
-                Console.WriteLine("adding");
-            }
             var element = m_insertionPoint.GetElement(parentNode) ?? throw new OpenXmlTemplateException($"Insertion point {m_insertionPoint.Id} not found");
             element.InsertAfterSelf(paragraphs);
         }
 
         public void RemoveAnchor(OpenXmlElement parentNode)
         {
-            if (m_insertionPoint.Id == "Condition_4")
-            {
-                Console.WriteLine("Removing anchor");
-            }
             var element = m_insertionPoint.GetElement(parentNode) ?? throw new OpenXmlTemplateException($"Insertion point {m_insertionPoint.Id} not found");
             element.Remove();
         }
