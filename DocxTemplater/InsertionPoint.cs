@@ -9,6 +9,8 @@ namespace DocxTemplater
         private const string InsertionPointAttributeName = "IpId";
         public string Id { get; }
 
+        private static int Counter = 0;
+
         private InsertionPoint(string id)
         {
             Id = id;
@@ -21,7 +23,7 @@ namespace DocxTemplater
             {
                 return new InsertionPoint(element.GetAttribute(InsertionPointAttributeName, null).Value);
             }
-            var insertionPoint = new InsertionPoint($"{name}_{Guid.NewGuid():N}");
+            var insertionPoint = new InsertionPoint($"{name}_{Counter++}");
             element.SetAttribute(new OpenXmlAttribute(null, InsertionPointAttributeName, null, insertionPoint.Id));
             return insertionPoint;
         }
@@ -39,6 +41,11 @@ namespace DocxTemplater
             }
         }
 
+        public static bool HasAlreadyInsertionPointMarker(OpenXmlElement element)
+        {
+            return element.ExtendedAttributes.Any(a => a.LocalName == InsertionPointAttributeName);
+        }
+
         public bool IsForElement(OpenXmlElement element)
         {
             return element.ExtendedAttributes.Any(a => a.LocalName == InsertionPointAttributeName && a.Value == Id);
@@ -47,11 +54,20 @@ namespace DocxTemplater
         public OpenXmlElement GetElement(OpenXmlElement root)
         {
 #if DEBUG
-            return root.Descendants<OpenXmlElement>().SingleOrDefault(x => x.ExtendedAttributes.Any(a => a.LocalName == InsertionPointAttributeName && a.Value == Id));
+            var elements = root.Descendants<OpenXmlElement>().Where(x => x.ExtendedAttributes.Any(a => a.LocalName == InsertionPointAttributeName && a.Value == Id)).ToList();
+            if (elements.Count > 1)
+            {
+                throw new OpenXmlTemplateException($"Multiple elements with the same insertion point id {Id}");
+            }
+            return elements.FirstOrDefault();
 #else
             return root.Descendants<OpenXmlElement>().FirstOrDefault(x => x.ExtendedAttributes.Any(a => a.LocalName == InsertionPointAttributeName && a.Value == Id));
 #endif
         }
 
+        public override string ToString()
+        {
+            return $"IP_{Id}";
+        }
     }
 }

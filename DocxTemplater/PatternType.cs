@@ -6,6 +6,7 @@
         Condition,
         ConditionEnd,
         CollectionStart,
+        DynamicTable,
         CollectionSeparator,
         CollectionEnd,
         Variable,

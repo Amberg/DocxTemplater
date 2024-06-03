@@ -10,13 +10,13 @@ namespace DocxTemplater.Blocks
     {
         private readonly string m_tablenName;
 
-        public DynamicTableBlock(string tablenName, VariableReplacer variableReplacer)
-            : base(variableReplacer)
+        public DynamicTableBlock(VariableReplacer variableReplacer, PatternType patternType, Text startTextNode, PatternMatch startMatch)
+            : base(variableReplacer, patternType, startTextNode, startMatch)
         {
-            m_tablenName = tablenName;
+            m_tablenName = startMatch.Variable;
         }
 
-        public override void Expand(ModelLookup models, OpenXmlElement parentNode, bool insertBeforeInsertionPoint = false)
+        public override void Expand(ModelLookup models, OpenXmlElement parentNode)
         {
             var model = models.GetValue(m_tablenName);
             if (model is IDynamicTable dynamicTable)
@@ -29,7 +29,11 @@ namespace DocxTemplater.Blocks
                 var headersName = $"{m_tablenName}.{nameof(IDynamicTable.Headers)}";
                 var columnsName = $"{m_tablenName}.{nameof(IDynamicTable.Rows)}";
 
-                var table = m_content.OfType<Table>().FirstOrDefault();
+                // kind of a hack to get the table from the child block
+                // TODO: refactor this to create wrapper block as ContentBlock and DynamicTableBlock as child
+                var child = m_childBlocks.Single();
+                var childContent = m_childBlocks.Single().Content;
+                var table = childContent.OfType<Table>().FirstOrDefault();
                 var headerRow = table?.Elements<TableRow>().FirstOrDefault(row => row.Descendants<Text>().Any(d => d.HasMarker(PatternType.Variable) && d.Text.Contains($"{{{{{headersName}")));
                 var headerCell = headerRow?.Elements<TableCell>().FirstOrDefault();
 
@@ -48,7 +52,7 @@ namespace DocxTemplater.Blocks
                     var clonedCell = headerCell.CloneNode(true);
                     headerCell.InsertAfterSelf(clonedCell);
                     m_variableReplacer.ReplaceVariables(clonedCell);
-                    ExpandChildBlocks(models, parentNode);
+                    child.ExpandChildBlocks(models, parentNode);
                 }
                 // remove header cell
                 headerCell.Remove();
@@ -70,7 +74,7 @@ namespace DocxTemplater.Blocks
                         var clonedCell = dataCell.CloneNode(true);
                         insertion.InsertAfterSelf(clonedCell);
                         m_variableReplacer.ReplaceVariables(clonedCell);
-                        ExpandChildBlocks(models, parentNode);
+                        child.ExpandChildBlocks(models, parentNode);
                     }
                     insertion.Remove();
                 }
@@ -98,14 +102,13 @@ namespace DocxTemplater.Blocks
             }
         }
 
-        public override void SetContent(InsertionPoint insertionPoint, IReadOnlyCollection<OpenXmlElement> blockContent)
+        public override void Validate()
         {
-            var tables = blockContent.OfType<Table>().ToList();
-            if (tables.Count != 1)
+            base.Validate();
+            if (m_childBlocks.Count != 1)
             {
-                throw new OpenXmlTemplateException($"Dynamic table block must contain exactly one table, but found {tables.Count}");
+                throw new OpenXmlTemplateException($"Dynamic table block must contain exactly one child block");
             }
-            base.SetContent(insertionPoint, tables);
         }
 
         public override string ToString()

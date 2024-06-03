@@ -290,6 +290,29 @@ namespace DocxTemplater
             return newElement;
         }
 
+        public static string ToPrettyPrintXml(this IEnumerable<OpenXmlElement> elements)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("<root>");
+            foreach (var element in elements)
+            {
+                sb.AppendLine(element.InnerXml);
+            }
+            sb.AppendLine("</root>");
+            var xmldoc = XDocument.Parse(sb.ToString());
+            // remove all xmlns attributes
+            foreach (var e in xmldoc.Descendants())
+            {
+                e.Attributes().Where(a => a.IsNamespaceDeclaration).Remove();
+            }
+
+            foreach (var elem in xmldoc.Descendants())
+            {
+                elem.Name = elem.Name.LocalName;
+            }
+            return xmldoc.ToString();
+        }
+
         public static string ToPrettyPrintXml(this OpenXmlElement element)
         {
             var xmldoc = XDocument.Parse(element.OuterXml);

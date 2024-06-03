@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Linq;
 using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Wordprocessing;
 using DocxTemplater.Formatter;
 
 namespace DocxTemplater.Blocks
@@ -10,42 +11,41 @@ namespace DocxTemplater.Blocks
         private readonly string m_condition;
         private readonly ScriptCompiler m_scriptCompiler;
 
-        public ConditionalBlock(string condition, VariableReplacer variableReplacer, ScriptCompiler scriptCompiler)
-            : base(variableReplacer)
+
+        public ConditionalBlock(VariableReplacer variableReplacer, ScriptCompiler scriptCompiler, PatternType patternType, Text startTextNode, PatternMatch startMatch)
+            : base(variableReplacer, patternType, startTextNode, startMatch)
         {
-            m_condition = condition;
+            m_condition = startMatch.Condition;
             m_scriptCompiler = scriptCompiler;
         }
 
-        public override void Expand(ModelLookup models, OpenXmlElement parentNode, bool insertBeforeInsertionPoint = false)
+        public override void Expand(ModelLookup models, OpenXmlElement parentNode)
         {
             bool conditionResult = false;
-            bool removeBlock = true;
             try
             {
                 conditionResult = m_scriptCompiler.CompileScript(m_condition)();
             }
             catch (OpenXmlTemplateException) when (m_scriptCompiler.ProcessSettings.BindingErrorHandling != BindingErrorHandling.ThrowException)
             {
-                removeBlock = false;
             }
             var cloned = m_content.Select(x => x.CloneNode(true)).ToList();
-            InsertContent(parentNode, cloned, insertBeforeInsertionPoint);
+            InsertContent(parentNode, cloned);
             m_variableReplacer.ReplaceVariables(cloned);
-            Debug.Assert(m_childBlocks.Count is 1 or 2); 
+            Debug.Assert(m_childBlocks.Count is 1 or 2);
+
+            var elseBlock = m_childBlocks.Count > 1 ? m_childBlocks[1] : null;
+            var conditionBlock = m_childBlocks[0];
             if (conditionResult)
             {
-                m_childBlocks[0].Expand(models, parentNode);
+                conditionBlock.Expand(models, parentNode);
             }
             else if (m_childBlocks.Count > 1)
             {
-                m_childBlocks[1].Expand(models, parentNode);
+                elseBlock?.Expand(models, parentNode);
             }
-            if (removeBlock)
-            {
-                var element = m_insertionPoint.GetElement(parentNode);
-                element.Remove();
-            }
+            conditionBlock.RemoveAnchor(parentNode);
+            elseBlock?.RemoveAnchor(parentNode);
         }
 
         public override string ToString()

@@ -146,9 +146,74 @@ namespace DocxTemplater
 
         private IReadOnlyCollection<ContentBlock> ExpandLoops(OpenXmlCompositeElement element)
         {
-            var syntaxTree = SyntaxTree.Build(element, m_variableReplacer, m_scriptCompiler);
+            Stack<ContentBlock> blockStack = new ();
+            blockStack.Push(new ContentBlock()); // dummy block for root
+            foreach (var text in element.Descendants<Text>().ToList().Where(x => x.IsMarked()))
+            {
+                var value = text.GetMarker();
+                var match = PatternMatcher.FindSyntaxPatterns(text.Text).Single();
 
-            return syntaxTree.Roots;
+
+                if (value is PatternType.Condition or PatternType.CollectionStart)
+                {
+                    StartBlock(blockStack, match, value, text);
+                    StartBlock(blockStack, match, PatternType.None, text);
+                }
+                else if (value is PatternType.ConditionElse or PatternType.CollectionSeparator)
+                {
+                    CloseBlock(blockStack, match, text);
+                    StartBlock(blockStack, match, value, text);
+                }
+                if (value is PatternType.ConditionEnd or PatternType.CollectionEnd)
+                {
+                    CloseBlock(blockStack, match, text);
+                    CloseBlock(blockStack, match, text);
+                }
+            }
+            if (blockStack.Count != 1)
+            {
+                var notClosedBlocks = blockStack.Reverse().Select(x => x.StartMatch.Match.Value).Skip(1).ToList();
+                throw new OpenXmlTemplateException($"Not all blocks are closed: {string.Join(", ", notClosedBlocks)}");
+            }
+
+            var rootBlock = blockStack.Peek();
+            var rootChilds = rootBlock.ChildBlocks;
+
+            foreach (var block in rootChilds)
+            {
+                block.AddInsertionPointsRecursively();
+            }
+#if DEBUG
+            Console.WriteLine("--------- Assigned Insertion Points --------");
+            Console.WriteLine(element.ToPrettyPrintXml());
+#endif
+
+            foreach (var block in rootChilds)
+            {
+                block.ExtractContentRecursively();
+            }
+
+#if DEBUG
+            foreach (var block in rootChilds)
+            {
+                block.Validate();
+            }
+#endif
+
+            return rootChilds;
+        }
+
+        private void CloseBlock(Stack<ContentBlock> m_blockStack, PatternMatch match, Text text)
+        {
+            var closedBlock = m_blockStack.Pop();
+            closedBlock.CloseBlock(text, match);
+        }
+
+        private void StartBlock(Stack<ContentBlock> m_blockStack, PatternMatch match, PatternType value, Text text)
+        {
+            var newBlock = ContentBlock.Crate(m_variableReplacer, m_scriptCompiler, value, text, match);
+            m_blockStack.Peek().AddChildBlock(newBlock);
+            m_blockStack.Push(newBlock);
         }
 
         internal static IReadOnlyCollection<OpenXmlElement> ExtractBlockContent(OpenXmlElement startText,
