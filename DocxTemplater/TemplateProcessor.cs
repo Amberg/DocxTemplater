@@ -146,7 +146,7 @@ namespace DocxTemplater
 
         private IReadOnlyCollection<ContentBlock> ExpandLoops(OpenXmlCompositeElement element)
         {
-            Stack<ContentBlock> blockStack = new ();
+            Stack<ContentBlock> blockStack = new();
             blockStack.Push(new ContentBlock()); // dummy block for root
             foreach (var text in element.Descendants<Text>().ToList().Where(x => x.IsMarked()))
             {
@@ -203,17 +203,17 @@ namespace DocxTemplater
             return rootChilds;
         }
 
-        private void CloseBlock(Stack<ContentBlock> m_blockStack, PatternMatch match, Text text)
-        {
-            var closedBlock = m_blockStack.Pop();
-            closedBlock.CloseBlock(text, match);
-        }
-
-        private void StartBlock(Stack<ContentBlock> m_blockStack, PatternMatch match, PatternType value, Text text)
+        private void StartBlock(Stack<ContentBlock> blockStack, PatternMatch match, PatternType value, Text text)
         {
             var newBlock = ContentBlock.Crate(m_variableReplacer, m_scriptCompiler, value, text, match);
-            m_blockStack.Peek().AddChildBlock(newBlock);
-            m_blockStack.Push(newBlock);
+            blockStack.Peek().AddChildBlock(newBlock);
+            blockStack.Push(newBlock);
+        }
+
+        private static void CloseBlock(Stack<ContentBlock> blockStack, PatternMatch match, Text text)
+        {
+            var closedBlock = blockStack.Pop();
+            closedBlock.CloseBlock(text, match);
         }
 
         internal static IReadOnlyCollection<OpenXmlElement> ExtractBlockContent(OpenXmlElement startText,

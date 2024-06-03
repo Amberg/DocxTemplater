@@ -3,7 +3,6 @@ using DocumentFormat.OpenXml.Wordprocessing;
 using DocxTemplater.Formatter;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.Metrics;
 using System.Linq;
 
 namespace DocxTemplater.Blocks
@@ -14,11 +13,13 @@ namespace DocxTemplater.Blocks
         protected IReadOnlyCollection<OpenXmlElement> m_content;
         protected readonly List<ContentBlock> m_childBlocks;
         protected readonly VariableReplacer m_variableReplacer;
+#pragma warning disable IDE0052
         private InsertionPoint m_lastElementMarker;
+#pragma warning restore IDE0052
 
         public ContentBlock()
-            :this(null, PatternType.None, null, null)
-        {}
+            : this(null, PatternType.None, null, null)
+        { }
 
         public ContentBlock(VariableReplacer variableReplacer, PatternType patternType, Text startTextNode, PatternMatch startMatch)
         {

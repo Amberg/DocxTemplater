@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics.Metrics;
 using System.Linq;
 using DocumentFormat.OpenXml;
 using DocxTemplater.Formatter;

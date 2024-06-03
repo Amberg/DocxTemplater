@@ -1,5 +1,4 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using DocumentFormat.OpenXml;
 
 namespace DocxTemplater
@@ -9,7 +8,7 @@ namespace DocxTemplater
         private const string InsertionPointAttributeName = "IpId";
         public string Id { get; }
 
-        private static int Counter = 0;
+        private static int s_counter;
 
         private InsertionPoint(string id)
         {
@@ -23,7 +22,7 @@ namespace DocxTemplater
             {
                 return new InsertionPoint(element.GetAttribute(InsertionPointAttributeName, null).Value);
             }
-            var insertionPoint = new InsertionPoint($"{name}_{Counter++}");
+            var insertionPoint = new InsertionPoint($"{name}_{s_counter++}");
             element.SetAttribute(new OpenXmlAttribute(null, InsertionPointAttributeName, null, insertionPoint.Id));
             return insertionPoint;
         }
