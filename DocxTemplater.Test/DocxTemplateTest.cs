@@ -823,7 +823,8 @@ namespace DocxTemplater.Test
         {
             Normal = 1,
             Underscore = 2,
-            Red = 3
+            Red = 3,
+            FromTemplate = 4,
         }
 
         [Test]
@@ -834,6 +835,7 @@ namespace DocxTemplater.Test
             var docTemplate = new DocxTemplate(fileStream);
             var model = new
             {
+                RowTemplate = File.ReadAllBytes("Resources/RowTemplate.docx"),
                 Positions = new[]
                 {
                     new { Type = (int)RowType.Normal, Description = "Description1", Tax = 20.5, Count = 55, Price = 55.20, TotalPrice = 20.9 },
@@ -841,6 +843,8 @@ namespace DocxTemplater.Test
                     new { Type = (int)RowType.Normal, Description = "Description3", Tax = 200.5, Count = 550, Price = 550.20, TotalPrice = 200.9 },
                     new { Type = (int)RowType.Red, Description = "Description4", Tax = 200.5, Count = 550, Price = 550.20, TotalPrice = 200.9 },
                     new { Type = (int)RowType.Normal, Description = "Description5", Tax = 200.5, Count = 550, Price = 550.20, TotalPrice = 200.9 },
+                    new { Type = (int)RowType.FromTemplate, Description = "Description 6", Tax = 200.5, Count = 550, Price = 550.20, TotalPrice = 200.9 },
+                    new { Type = (int)RowType.FromTemplate, Description = "Description 7", Tax = 200.5, Count = 550, Price = 550.20, TotalPrice = 200.9 },
                 }
             };
             docTemplate.BindModel("ds", model);
