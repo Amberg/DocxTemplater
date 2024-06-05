@@ -6,7 +6,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Xml;
 using System.Xml.Linq;
+using Run = DocumentFormat.OpenXml.Wordprocessing.Run;
+using RunProperties = DocumentFormat.OpenXml.Wordprocessing.RunProperties;
+using Table = DocumentFormat.OpenXml.Wordprocessing.Table;
+using Text = DocumentFormat.OpenXml.Wordprocessing.Text;
 
 namespace DocxTemplater
 {
@@ -285,9 +290,32 @@ namespace DocxTemplater
             return newElement;
         }
 
+        public static string ToPrettyPrintXml(this IEnumerable<OpenXmlElement> elements)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("<root>");
+            foreach (var element in elements)
+            {
+                sb.AppendLine(element.InnerXml);
+            }
+            sb.AppendLine("</root>");
+            var xmldoc = XDocument.Parse(sb.ToString());
+            // remove all xmlns attributes
+            foreach (var e in xmldoc.Descendants())
+            {
+                e.Attributes().Where(a => a.IsNamespaceDeclaration).Remove();
+            }
+
+            foreach (var elem in xmldoc.Descendants())
+            {
+                elem.Name = elem.Name.LocalName;
+            }
+            return xmldoc.ToString();
+        }
+
         public static string ToPrettyPrintXml(this OpenXmlElement element)
         {
-            var xmldoc = XDocument.Parse("<root>" + element.InnerXml + "</root>");
+            var xmldoc = XDocument.Parse(element.OuterXml);
             return xmldoc.ToString();
         }
 
@@ -389,5 +417,40 @@ namespace DocxTemplater
                 .Descendants<DocProperties>()
                 .Max(x => (uint?)x.Id) ?? 0;
         }
+
+        public static OpenXmlElement ParseOpenXmlString(string openXmlString)
+        {
+            XmlDocument xmlDoc = new();
+            xmlDoc.LoadXml(openXmlString);
+            var localName = xmlDoc.DocumentElement.LocalName;
+            OpenXmlElement element = null;
+            switch (localName)
+            {
+                case "p":
+                    element = new Paragraph(openXmlString);
+                    break;
+                case "r":
+                    element = new Run(openXmlString);
+                    break;
+                case "t":
+                    element = new Text(openXmlString);
+                    break;
+                case "tbl":
+                    element = new Table(openXmlString);
+                    break;
+                case "tr":
+                    element = new TableRow(openXmlString);
+                    break;
+                case "tc":
+                    element = new TableCell(openXmlString);
+                    break;
+            }
+            if (element == null)
+            {
+                throw new InvalidOperationException("Unsupported OpenXml element: " + localName);
+            }
+            return element;
+        }
+
     }
 }

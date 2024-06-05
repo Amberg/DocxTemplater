@@ -3,6 +3,10 @@
 		<WarningsNotAsErrors>CS1030</WarningsNotAsErrors>
 	</PropertyGroup>
 
+	<PropertyGroup>
+		<TargetFrameworks>net6.0;net7.0;net8.0</TargetFrameworks>
+	</PropertyGroup>
+
 	<!--Code Analysis-->
 	<PropertyGroup>
 		<AnalysisLevelDocumentation>latest-minimum</AnalysisLevelDocumentation>
@@ -28,7 +32,7 @@
 		<RepositoryType>git</RepositoryType>
 		<Authors>Amberg</Authors>
 		<Company>Orphis AG</Company>
-		<PackageDescription>Bind data models to you word templates</PackageDescription>
+		<PackageDescription>Easily bind data models to word templates</PackageDescription>
 		<RepositoryUrl>https://github.com/Amberg/DocxTemplater</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>

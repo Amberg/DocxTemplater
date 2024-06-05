@@ -3,18 +3,18 @@ using System.Collections.Generic;
 using System.Linq;
 using DocumentFormat.OpenXml;
 using DocxTemplater.Formatter;
+using Text = DocumentFormat.OpenXml.Wordprocessing.Text;
 
 namespace DocxTemplater.Blocks
 {
     internal class LoopBlock : ContentBlock
     {
         private readonly string m_collectionName;
-        private ContentBlock m_separatorBlock;
 
-        public LoopBlock(string collectionName, VariableReplacer variableReplacer)
-            : base(variableReplacer)
+        public LoopBlock(VariableReplacer variableReplacer, PatternType patternType, Text startTextNode, PatternMatch startMatch)
+            : base(variableReplacer, patternType, startTextNode, startMatch)
         {
-            m_collectionName = collectionName;
+            m_collectionName = startMatch.Variable;
         }
 
         public override void Expand(ModelLookup models, OpenXmlElement parentNode)
@@ -23,31 +23,21 @@ namespace DocxTemplater.Blocks
             if (model is IEnumerable<object> enumerable)
             {
                 var items = enumerable.Reverse().ToList();
-                int counter = 0;
+                int counter = items.Count;
                 foreach (var item in items)
                 {
-                    counter++;
                     using var loopScope = models.OpenScope();
                     loopScope.AddVariable(m_collectionName, item);
-                    var cloned = m_content.Select(x => x.CloneNode(true)).ToList();
-                    InsertContent(parentNode, cloned);
-                    m_variableReplacer.ReplaceVariables(cloned);
-                    ExpandChildBlocks(models, parentNode);
-                    if (counter < items.Count && m_separatorBlock != null)
-                    {
-                        m_separatorBlock.Expand(models, parentNode);
-                    }
+                    loopScope.AddVariable($"{m_collectionName}._Idx", counter);
+                    loopScope.AddVariable($"{m_collectionName}._Length", items.Count);
+                    base.Expand(models, parentNode);
+                    counter--;
                 }
             }
             else if (model != null)
             {
                 throw new OpenXmlTemplateException($"Value of {m_collectionName} is not enumerable - it is of type {model.GetType().FullName}");
             }
-        }
-
-        public void SetSeparatorBlock(ContentBlock separatorBlock)
-        {
-            m_separatorBlock = separatorBlock;
         }
 
         public override string ToString()

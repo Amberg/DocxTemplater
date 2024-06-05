@@ -6,6 +6,7 @@ using System.Collections;
 using System.Dynamic;
 using System.Globalization;
 using Bold = DocumentFormat.OpenXml.Wordprocessing.Bold;
+using Break = DocumentFormat.OpenXml.Drawing.Break;
 using Paragraph = DocumentFormat.OpenXml.Wordprocessing.Paragraph;
 using Run = DocumentFormat.OpenXml.Wordprocessing.Run;
 using RunProperties = DocumentFormat.OpenXml.Wordprocessing.RunProperties;
@@ -597,6 +598,67 @@ namespace DocxTemplater.Test
                                                    "I'm only here if NumericValue is greater than 0 -  INNERVALUE2B will be replaced X"));
         }
 
+
+
+        [Test]
+        public void SupTemplateTest()
+        {
+            var template = @"<w:p xmlns:w=""http://schemas.openxmlformats.org/wordprocessingml/2006/main"">
+                              <w:pPr>
+                                <w:pBdr>
+                                  <w:bottom w:val=""double"" w:sz=""6"" w:space=""1"" w:color=""auto""/>
+                                </w:pBdr>
+                              </w:pPr>
+                              <w:r>
+                                <w:t>Test {{ds.Name}} {{ds.Number}}</w:t>
+                              </w:r>
+                            </w:p>";
+
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(
+                new Paragraph(
+                    new Run(new Text("Start of Document")),
+                    new Break(),
+                    new Run(new Text("{{#ds.Items}}"))
+                ),
+            new Paragraph(
+                    new Run(new Text("{{.Name}}")),
+                    new Run(new Text("{{.}:T('ds.Template')}"))
+                ),
+            new Paragraph(
+                new Run(new Text("{{/ds.Items}}"))
+            )
+            ));
+            wpDocument.Save();
+            memStream.Position = 0;
+            var docTemplate = new DocxTemplate(memStream);
+            docTemplate.BindModel("ds",
+                new
+                {
+                    Template = template,
+                    Items = new[]
+                        {
+                            new {Name = "Item1 ", Number = 55 },
+                            new {Name = "Item2 ", Number = 96 }
+                        }
+                });
+            var result = docTemplate.Process();
+            //docTemplate.Validate();
+            Assert.That(result, Is.Not.Null);
+            result.Position = 0;
+
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            //check values have been replaced
+            Assert.That(body.InnerText, Is.EqualTo("Start of DocumentItem1 Test Item1  55Item2 Test Item2  96"));
+
+
+        }
+
+
         [Test]
         public void BindCollectionToTable()
         {
@@ -657,7 +719,7 @@ namespace DocxTemplater.Test
             docTemplate.Validate();
             Assert.That(result, Is.Not.Null);
             result.Position = 0;
-            //  result.SaveAsFileAndOpenInWord();
+            result.SaveAsFileAndOpenInWord();
             var document = WordprocessingDocument.Open(result, false);
             var body = document.MainDocumentPart.Document.Body;
             var table = body.Descendants<Table>().First();
@@ -751,6 +813,125 @@ namespace DocxTemplater.Test
             docTemplate.BindModel("ds", model);
             docTemplate.BindModel("company", new { Logo = imageBytes });
 
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            result.Position = 0;
+            result.SaveAsFileAndOpenInWord();
+        }
+
+        private enum RowType
+        {
+            Normal = 1,
+            Underscore = 2,
+            Red = 3,
+            FromTemplate = 4,
+        }
+
+        [Test]
+        public void ConditionalTableRowsExtended()
+        {
+            // TODO: allow usage of enums in template
+            using var fileStream = File.OpenRead("Resources/ConditionalTableRows.docx");
+            var docTemplate = new DocxTemplate(fileStream);
+            var model = new
+            {
+                RowTemplate = File.ReadAllBytes("Resources/RowTemplate.docx"),
+                Positions = new[]
+                {
+                    new { Type = (int)RowType.Normal, Description = "Description1", Tax = 20.5, Count = 55, Price = 55.20, TotalPrice = 20.9 },
+                    new { Type = (int)RowType.Underscore, Description = "Underscore 2", Tax = 20.5, Count = 55, Price = 55.20, TotalPrice = 20.9 },
+                    new { Type = (int)RowType.Normal, Description = "Description3", Tax = 200.5, Count = 550, Price = 550.20, TotalPrice = 200.9 },
+                    new { Type = (int)RowType.Red, Description = "Description4", Tax = 200.5, Count = 550, Price = 550.20, TotalPrice = 200.9 },
+                    new { Type = (int)RowType.Normal, Description = "Description5", Tax = 200.5, Count = 550, Price = 550.20, TotalPrice = 200.9 },
+                    new { Type = (int)RowType.FromTemplate, Description = "Description 6", Tax = 200.5, Count = 550, Price = 550.20, TotalPrice = 200.9 },
+                    new { Type = (int)RowType.FromTemplate, Description = "Description 7", Tax = 200.5, Count = 550, Price = 550.20, TotalPrice = 200.9 },
+                }
+            };
+            docTemplate.BindModel("ds", model);
+            docTemplate.BindModel("RowType", Enum.GetValues<RowType>().ToDictionary(x => x.ToString(), x => (int)x));
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            result.Position = 0;
+            result.SaveAsFileAndOpenInWord();
+        }
+
+        [Test]
+        public void ConditionalTableRows()
+        {
+            var model = new
+            {
+                Positions = new[]
+                {
+                    new { Type = 1, Index = 1, Description = "Description", Tax = 20.5, Count = 55, Price = 55.20, TotalPrice = 20.9 },
+                    new { Type = 2, Index = 2, Description = "Description1", Tax = 20.5, Count = 55, Price = 55.20, TotalPrice = 20.9 },
+                    new { Type = 1, Index = 3, Description = "Description2", Tax = 200.5, Count = 550, Price = 550.20, TotalPrice = 200.9 },
+                }
+            };
+
+            var xml = @"<w:tbl xmlns:w=""http://schemas.openxmlformats.org/wordprocessingml/2006/main"">  
+                      <w:tblPr>  
+                        <w:tblW w:w=""5000"" w:type=""pct""/>  
+                        <w:tblBorders>  
+                          <w:top w:val=""single"" w:sz=""4"" w:space=""0"" w:color=""auto""/>  
+                          <w:left w:val=""single"" w:sz=""4"" w:space=""0"" w:color=""auto""/>  
+                          <w:bottom w:val=""single"" w:sz=""4"" w:space=""0"" w:color=""auto""/>  
+                          <w:right w:val=""single"" w:sz=""4"" w:space=""0"" w:color=""auto""/>  
+                        </w:tblBorders>  
+                      </w:tblPr>  
+                      <w:tblGrid>  
+                        <w:gridCol w:w=""10296""/>  
+                      </w:tblGrid>
+                       <w:tr>  
+                        <w:tc>  
+                          <w:p><w:r><w:t>Header Col 1</w:t></w:r></w:p>  
+                        </w:tc>
+                        <w:tc>  
+                          <w:p><w:r><w:t>Header Col 2</w:t></w:r></w:p>  
+                        </w:tc>  
+                      </w:tr>  
+                      <w:tr>  
+                        <w:tc>  
+                          <w:tcPr>  
+                            <w:tcW w:w=""0"" w:type=""auto""/>  
+                            <w:tcBorders>
+                                <w:top w:val=""single"" w:color=""auto"" w:sz=""4"" w:space=""0"" />
+                            </w:tcBorders>
+                          </w:tcPr>  
+                          <w:p><w:r><w:t>{{#Positions}}{?{.Type == 1}}</w:t><w:t>{{.Index}}</w:t></w:r></w:p>  
+                        </w:tc>
+                        <w:tc>  
+                          <w:tcPr>  
+                            <w:tcW w:w=""0"" w:type=""auto""/>  
+                          </w:tcPr>  
+                          <w:p><w:r><w:t>{{.Description}}{{/}}</w:t></w:r></w:p>  
+                        </w:tc>  
+                      </w:tr>
+                      <w:tr>  
+                        <w:tc>  
+                          <w:tcPr>  
+                            <w:tcW w:w=""0"" w:type=""auto""/>  
+                          </w:tcPr>  
+                          <w:p><w:r><w:t>{?{.Type == 2}}{{.Tax}} Other Row</w:t></w:r></w:p>  
+                        </w:tc>
+                        <w:tc>  
+                          <w:tcPr>  
+                            <w:tcW w:w=""0"" w:type=""auto""/>  
+                          </w:tcPr>  
+                          <w:p><w:r><w:t>{{.Count}} Other Row  Col 2{{/}}{{/Positions}}</w:t></w:r></w:p>  
+                        </w:tc>  
+                      </w:tr>  
+                    </w:tbl>";
+
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(new Table(xml)));
+            wpDocument.Save();
+            memStream.Position = 0;
+            var docTemplate = new DocxTemplate(memStream);
+
+
+            docTemplate.BindModel("ds", model);
             var result = docTemplate.Process();
             docTemplate.Validate();
             result.Position = 0;
