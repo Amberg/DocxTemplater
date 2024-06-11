@@ -10,6 +10,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="AutoBogus" Version="2.13.1" />
+    <PackageReference Include="JetBrains.DotMemoryUnit" Version="3.2.20220510" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
     <PackageReference Include="NUnit" Version="4.1.0" />
     <PackageReference Include="NUnit3TestAdapter" Version="4.5.0" />
@@ -24,6 +25,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DocxTemplater.Images\DocxTemplater.Images.csproj" />
+    <ProjectReference Include="..\DocxTemplater.Markdown\DocxTemplater.Markdown.csproj" />
     <ProjectReference Include="..\DocxTemplater\DocxTemplater.csproj" />
   </ItemGroup>
   <ItemGroup>
@@ -48,6 +50,9 @@
     <None Update="Resources\ImageFormatterTest.docx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="Resources\MarkdownTestTemplate.docx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Resources\MultipleRowsBoundToCollection.docx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -61,6 +66,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Resources\testImage.jpg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Resources\TestMarkDown.md">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
