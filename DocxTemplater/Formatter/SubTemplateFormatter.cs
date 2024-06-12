@@ -12,11 +12,12 @@ namespace DocxTemplater.Formatter
     /// Arguments:
     /// 
     /// </summary>
-    internal class SubTemplateFormatter : IFormatter
+    internal class SubTemplateFormatter : IFormatter, IFormatterInitialization
     {
 
         private readonly ModelLookup m_modelLookup;
         private readonly ProcessSettings m_settings;
+        private MainDocumentPart m_mainDocumentPart;
 
         public SubTemplateFormatter(
             ModelLookup modelLookup,
@@ -61,7 +62,7 @@ namespace DocxTemplater.Formatter
             }
             var variableReplacer = new VariableReplacer(templateModelLookup, m_settings);
             var scriptCompiler = new ScriptCompiler(templateModelLookup, m_settings);
-            var processor = new XmlNodeTemplate(templateElement, m_settings, templateModelLookup, variableReplacer, scriptCompiler);
+            var processor = new XmlNodeTemplate(templateElement, m_settings, templateModelLookup, variableReplacer, scriptCompiler, m_mainDocumentPart);
             processor.Process();
 
             if (templateElement is Body body)
@@ -165,6 +166,12 @@ namespace DocxTemplater.Formatter
                 return body;
             }
             return null;
+        }
+
+        public void Initialize(IModelLookup modelLookup, IScriptCompiler scriptCompiler, IVariableReplacer variableReplacer,
+            ProcessSettings processSettings, MainDocumentPart mainDocumentPart)
+        {
+            m_mainDocumentPart = mainDocumentPart;
         }
     }
 }

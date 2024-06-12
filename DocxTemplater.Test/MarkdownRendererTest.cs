@@ -267,7 +267,9 @@ namespace DocxTemplater.Test
             {
                 markdown = File.ReadAllText("Resources/TestMarkDown.md"),
                 markdownInTable = sb.ToString(),
-                markdownInTableList = sb2.ToString()
+                markdownInTableList = sb2.ToString(),
+                footer = "_Footer_",
+                header = "**Header**"
             };
             docTemplate.RegisterFormatter(new DocxTemplater.Markdown.MarkdownFormatter(new MarkDownFormatterConfiguration()
             {

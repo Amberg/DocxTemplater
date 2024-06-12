@@ -112,5 +112,10 @@ namespace DocxTemplater
             m_stream?.Dispose();
             m_wpDocument?.Dispose();
         }
+
+        protected override MainDocumentPart GetMainDocumentPart()
+        {
+            return m_wpDocument.MainDocumentPart;
+        }
     }
 }

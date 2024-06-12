@@ -1,4 +1,6 @@
-﻿namespace DocxTemplater.Formatter
+﻿using DocumentFormat.OpenXml.Packaging;
+
+namespace DocxTemplater.Formatter
 {
 
     /// <summary>
@@ -6,6 +8,6 @@
     /// </summary>
     public interface IFormatterInitialization
     {
-        void Initialize(IModelLookup modelLookup, IScriptCompiler scriptCompiler, IVariableReplacer variableReplacer, ProcessSettings processSettings);
+        void Initialize(IModelLookup modelLookup, IScriptCompiler scriptCompiler, IVariableReplacer variableReplacer, ProcessSettings processSettings, MainDocumentPart mainDocumentPart);
     }
 }
