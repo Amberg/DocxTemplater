@@ -10,13 +10,13 @@ namespace DocxTemplater.Blocks
     {
         private readonly string m_tablenName;
 
-        public DynamicTableBlock(VariableReplacer variableReplacer, PatternType patternType, Text startTextNode, PatternMatch startMatch)
+        public DynamicTableBlock(IVariableReplacer variableReplacer, PatternType patternType, Text startTextNode, PatternMatch startMatch)
             : base(variableReplacer, patternType, startTextNode, startMatch)
         {
             m_tablenName = startMatch.Variable;
         }
 
-        public override void Expand(ModelLookup models, OpenXmlElement parentNode)
+        public override void Expand(IModelLookup models, OpenXmlElement parentNode)
         {
             var model = models.GetValue(m_tablenName);
             if (model is IDynamicTable dynamicTable)

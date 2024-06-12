@@ -2,7 +2,7 @@
 
 namespace DocxTemplater
 {
-    internal interface IVariableScope : IDisposable
+    public interface IVariableScope : IDisposable
     {
         void AddVariable(string name, object value);
     }

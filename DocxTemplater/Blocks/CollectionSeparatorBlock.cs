@@ -7,13 +7,13 @@ namespace DocxTemplater.Blocks
 {
     internal class CollectionSeparatorBlock : ContentBlock
     {
-        public CollectionSeparatorBlock(VariableReplacer variableReplacer, PatternType patternType, Text startTextNode,
+        public CollectionSeparatorBlock(IVariableReplacer variableReplacer, PatternType patternType, Text startTextNode,
             PatternMatch startMatch)
             : base(variableReplacer, patternType, startTextNode, startMatch)
         {
         }
 
-        public override void Expand(ModelLookup models, OpenXmlElement parentNode)
+        public override void Expand(IModelLookup models, OpenXmlElement parentNode)
         {
             int count = (int)models.GetValue($"{ParentBlock.StartMatch.Variable}._Idx");
             int length = (int)models.GetValue($"{ParentBlock.StartMatch.Variable}._Length");

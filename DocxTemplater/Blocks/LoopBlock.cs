@@ -11,13 +11,13 @@ namespace DocxTemplater.Blocks
     {
         private readonly string m_collectionName;
 
-        public LoopBlock(VariableReplacer variableReplacer, PatternType patternType, Text startTextNode, PatternMatch startMatch)
+        public LoopBlock(IVariableReplacer variableReplacer, PatternType patternType, Text startTextNode, PatternMatch startMatch)
             : base(variableReplacer, patternType, startTextNode, startMatch)
         {
             m_collectionName = startMatch.Variable;
         }
 
-        public override void Expand(ModelLookup models, OpenXmlElement parentNode)
+        public override void Expand(IModelLookup models, OpenXmlElement parentNode)
         {
             var model = models.GetValue(m_collectionName);
             if (model is IEnumerable<object> enumerable)

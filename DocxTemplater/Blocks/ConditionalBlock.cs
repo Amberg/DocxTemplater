@@ -9,17 +9,17 @@ namespace DocxTemplater.Blocks
     internal class ConditionalBlock : ContentBlock
     {
         private readonly string m_condition;
-        private readonly ScriptCompiler m_scriptCompiler;
+        private readonly IScriptCompiler m_scriptCompiler;
 
 
-        public ConditionalBlock(VariableReplacer variableReplacer, ScriptCompiler scriptCompiler, PatternType patternType, Text startTextNode, PatternMatch startMatch)
+        public ConditionalBlock(IVariableReplacer variableReplacer, IScriptCompiler scriptCompiler, PatternType patternType, Text startTextNode, PatternMatch startMatch)
             : base(variableReplacer, patternType, startTextNode, startMatch)
         {
             m_condition = startMatch.Condition;
             m_scriptCompiler = scriptCompiler;
         }
 
-        public override void Expand(ModelLookup models, OpenXmlElement parentNode)
+        public override void Expand(IModelLookup models, OpenXmlElement parentNode)
         {
             bool conditionResult = false;
             try
