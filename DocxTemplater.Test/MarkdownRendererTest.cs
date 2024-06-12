@@ -20,6 +20,7 @@ namespace DocxTemplater.Test
             Assert.That(firstParagraphSecondLine.Text, Is.EqualTo("Second Line"));
             var secondParagraph = body.Descendants<Text>().Last();
             Assert.That(secondParagraph.Text, Is.EqualTo("Second Paragraph First Line"));
+            Assert.That(body.Descendants<Paragraph>().Count(), Is.EqualTo(2));
         }
 
 
@@ -108,8 +109,7 @@ namespace DocxTemplater.Test
             Assert.That(body.InnerXml, Is.EqualTo("<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:r><w:t>Dorothy" +
                                                   " followed her through many of the beautiful rooms in her castle.</w:t></w:r></w:p><w:p xmlns:w=" +
                                                   "\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:r><w:t>The Witch bade her clean" +
-                                                  " the pots and kettles and sweep the floor and keep the fire fed with wood.</w:t></w:r></w:p><w:p x" +
-                                                  "mlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" />"));
+                                                  " the pots and kettles and sweep the floor and keep the fire fed with wood.</w:t></w:r></w:p>"));
         }
 
         [Test]
@@ -202,7 +202,13 @@ namespace DocxTemplater.Test
             sb.AppendLine("| Row 1 Col 1 | Row 1 Col 2 |");
             sb.AppendLine("| Row 2 Col 1 | Row 2 Col 2 |");
             var body = CreateTemplateWithMarkdownAndReturnBody(sb.ToString());
-            Assert.That(body.InnerXml, Is.EqualTo("<w:tbl xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:tblPr><w:tblW w:w=\"5000\" w:type=\"pct\" /></w:tblPr><w:tblGrid><w:gridCol /><w:gridCol /><w:gridCol /></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Header 1</w:t></w:r></w:p><w:p /></w:tc><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Header 2</w:t></w:r></w:p><w:p /></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Row 1 Col 1</w:t></w:r></w:p><w:p /></w:tc><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Row 1 Col 2</w:t></w:r></w:p><w:p /></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Row 2 Col 1</w:t></w:r></w:p><w:p /></w:tc><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Row 2 Col 2</w:t></w:r></w:p><w:p /></w:tc></w:tr></w:tbl><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" />"));
+            Assert.That(body.InnerXml, Is.EqualTo("<w:tbl xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:tblPr><w:tblW w:w=\"5000\" w:type=\"pct\" />" +
+                                                  "</w:tblPr><w:tblGrid><w:gridCol /><w:gridCol /><w:gridCol /></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr>" +
+                                                  "<w:p><w:r><w:t>Header 1</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Header 2</w:t>" +
+                                                  "</w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Row 1 Col 1</w:t></w:r></w:p>" +
+                                                  "</w:tc><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Row 1 Col 2</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc>" +
+                                                  "<w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Row 2 Col 1</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:type=\"auto\" />" +
+                                                  "</w:tcPr><w:p><w:r><w:t>Row 2 Col 2</w:t></w:r></w:p></w:tc></w:tr></w:tbl><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" />"));
         }
 
         [Test]
