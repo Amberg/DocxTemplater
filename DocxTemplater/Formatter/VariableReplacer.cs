@@ -31,20 +31,22 @@ namespace DocxTemplater.Formatter
         /// <summary>
         /// the formatter string is the leading formatter prefix, e.g. "FORMAT" followed by the formatter arguments ae image(100,200)
         /// </summary>
-        private void ApplyFormatter(PatternMatch patternMatch, object value, Text target)
+        private void ApplyFormatter(PatternMatch patternMatch, ValueWithMetadata valueWithMetadata, Text target)
         {
+            var value = valueWithMetadata.Value;
             if (value == null)
             {
                 target.Text = string.Empty;
                 return;
             }
-            if (!string.IsNullOrWhiteSpace(patternMatch.Formatter))
+            var formatterText = GetFormatterText(patternMatch, valueWithMetadata);
+            if (!string.IsNullOrWhiteSpace(formatterText))
             {
                 foreach (var formatter in m_formatters)
                 {
-                    if (formatter.CanHandle(value.GetType(), patternMatch.Formatter))
+                    if (formatter.CanHandle(value.GetType(), formatterText))
                     {
-                        var context = new FormatterContext(patternMatch.Variable, patternMatch.Formatter, patternMatch.Arguments, value, m_processSettings.Culture);
+                        var context = new FormatterContext(patternMatch.Variable, formatterText, patternMatch.Arguments, value, m_processSettings.Culture);
                         formatter.ApplyFormat(context, target);
                         return;
                     }
@@ -75,8 +77,8 @@ namespace DocxTemplater.Formatter
                 var variableMatch = PatternMatcher.FindSyntaxPatterns(text.Text).FirstOrDefault() ?? throw new OpenXmlTemplateException($"Invalid variable syntax '{text.Text}'");
                 try
                 {
-                    var value = m_models.GetValue(variableMatch.Variable);
-                    ApplyFormatter(variableMatch, value, text);
+                    var valueWithMetadata = m_models.GetValueWithMetadata(variableMatch.Variable);
+                    ApplyFormatter(variableMatch, valueWithMetadata, text);
                     VariableReplacer.SplitNewLinesInText(text);
                 }
                 catch (Exception e) when (e is OpenXmlTemplateException or FormatException)
@@ -91,6 +93,21 @@ namespace DocxTemplater.Formatter
                     }
                 }
             }
+        }
+
+
+        /// <summary>
+        /// Use the formatter from the template, if not available use the default formatter from the metadata
+        /// set through <see cref="ModelPropertyAttribute"/>
+        /// </summary>
+        private static string GetFormatterText(PatternMatch patternMatch, ValueWithMetadata valueWithMetadata)
+        {
+            var formatterText = patternMatch.Formatter;
+            if (string.IsNullOrWhiteSpace(formatterText))
+            {
+                formatterText = valueWithMetadata.Metadata.DefaultFormatter;
+            }
+            return formatterText;
         }
 
         /// <summary>
