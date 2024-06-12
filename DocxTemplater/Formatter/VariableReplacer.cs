@@ -39,14 +39,14 @@ namespace DocxTemplater.Formatter
                 target.Text = string.Empty;
                 return;
             }
-            var formatterText = GetFormatterText(patternMatch, valueWithMetadata);
+            var formatterText = GetFormatterText(patternMatch, valueWithMetadata, out string[] formaterArguments);
             if (!string.IsNullOrWhiteSpace(formatterText))
             {
                 foreach (var formatter in m_formatters)
                 {
                     if (formatter.CanHandle(value.GetType(), formatterText))
                     {
-                        var context = new FormatterContext(patternMatch.Variable, formatterText, patternMatch.Arguments, value, m_processSettings.Culture);
+                        var context = new FormatterContext(patternMatch.Variable, formatterText, formaterArguments, value, m_processSettings.Culture);
                         formatter.ApplyFormat(context, target);
                         return;
                     }
@@ -100,12 +100,22 @@ namespace DocxTemplater.Formatter
         /// Use the formatter from the template, if not available use the default formatter from the metadata
         /// set through <see cref="ModelPropertyAttribute"/>
         /// </summary>
-        private static string GetFormatterText(PatternMatch patternMatch, ValueWithMetadata valueWithMetadata)
+        private static string GetFormatterText(PatternMatch patternMatch, ValueWithMetadata valueWithMetadata, out string[] formatterArguments)
         {
+            formatterArguments = patternMatch.Arguments;
             var formatterText = patternMatch.Formatter;
             if (string.IsNullOrWhiteSpace(formatterText))
             {
-                formatterText = valueWithMetadata.Metadata.DefaultFormatter;
+                if (!string.IsNullOrWhiteSpace(valueWithMetadata.Metadata.DefaultFormatter))
+                {
+                    // try to parse default formatter from metadata
+                    var found = PatternMatcher.FindSyntaxPatterns("{{x}:" + valueWithMetadata.Metadata.DefaultFormatter + "}").FirstOrDefault();
+                    if (found != null && !string.IsNullOrWhiteSpace(found.Formatter))
+                    {
+                        formatterText = found.Formatter;
+                        formatterArguments = found.Arguments;
+                    }
+                }
             }
             return formatterText;
         }
