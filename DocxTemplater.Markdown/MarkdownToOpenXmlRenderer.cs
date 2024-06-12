@@ -42,7 +42,6 @@ namespace DocxTemplater.Markdown
         public bool ExplicitParagraph { get; set; }
 
         public Paragraph CurrentParagraph => m_parentElement as Paragraph;
-        
         public MarkdownToOpenXmlRenderer Write(ref StringSlice slice)
         {
             Write(slice.AsSpan());
@@ -53,7 +52,12 @@ namespace DocxTemplater.Markdown
         {
             if (!content.IsEmpty)
             {
-                var newRun = new Run(new Text(content.ToString()){ Space = SpaceProcessingModeValues.Preserve });
+                var text = new Text(content.ToString());
+                if (string.IsNullOrWhiteSpace(text.Text))
+                {
+                    text.Space = SpaceProcessingModeValues.Preserve;
+                }
+                var newRun = new Run(text);
                 var format = m_formatStack.Peek();
                 if (format.Bold || format.Italic || format.Style != null)
                 {
@@ -102,11 +106,6 @@ namespace DocxTemplater.Markdown
             bold ??= currentStyle.Bold;
             italic ??= currentStyle.Italic;
             return new FormatScope(m_formatStack, bold.Value, italic.Value, currentStyle.Style);
-        }
-
-        public IDisposable PushStyle(string style)
-        {
-            return new FormatScope(m_formatStack, m_formatStack.Peek().Bold, m_formatStack.Peek().Italic, style);
         }
 
         public void NewLine()
