@@ -7,7 +7,7 @@ namespace DocxTemplater
     {
         private readonly OpenXmlCompositeElement m_openXmlElement;
 
-        internal XmlNodeTemplate(OpenXmlCompositeElement openXmlElement, ProcessSettings settings, ModelLookup modelLookup, VariableReplacer variableReplacer, ScriptCompiler scriptCompiler)
+        internal XmlNodeTemplate(OpenXmlCompositeElement openXmlElement, ProcessSettings settings, IModelLookup modelLookup, IVariableReplacer variableReplacer, IScriptCompiler scriptCompiler)
             : base(settings, modelLookup, variableReplacer, scriptCompiler)
         {
             m_openXmlElement = openXmlElement;

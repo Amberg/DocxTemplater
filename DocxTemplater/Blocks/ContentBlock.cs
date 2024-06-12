@@ -12,7 +12,7 @@ namespace DocxTemplater.Blocks
         protected InsertionPoint m_insertionPoint;
         protected IReadOnlyCollection<OpenXmlElement> m_content;
         protected readonly List<ContentBlock> m_childBlocks;
-        protected readonly VariableReplacer m_variableReplacer;
+        protected readonly IVariableReplacer m_variableReplacer;
 #pragma warning disable IDE0052
         private InsertionPoint m_lastElementMarker;
 #pragma warning restore IDE0052
@@ -24,7 +24,7 @@ namespace DocxTemplater.Blocks
             m_childBlocks = new List<ContentBlock>();
         }
 
-        public ContentBlock(VariableReplacer variableReplacer, PatternType patternType, Text startTextNode, PatternMatch startMatch)
+        public ContentBlock(IVariableReplacer variableReplacer, PatternType patternType, Text startTextNode, PatternMatch startMatch)
         {
             m_content = new List<OpenXmlElement>();
             m_childBlocks = new List<ContentBlock>();
@@ -35,8 +35,8 @@ namespace DocxTemplater.Blocks
         }
 
         public static ContentBlock Crate(
-            VariableReplacer variableReplacer,
-            ScriptCompiler scriptCompiler,
+            IVariableReplacer variableReplacer,
+            IScriptCompiler scriptCompiler,
             PatternType patternType,
             Text startTextNode,
             PatternMatch matchedStartNode)
@@ -91,21 +91,21 @@ namespace DocxTemplater.Blocks
 
         public IReadOnlyCollection<ContentBlock> ChildBlocks => m_childBlocks;
 
-        public virtual void Expand(ModelLookup models, OpenXmlElement parentNode)
+        public virtual void Expand(IModelLookup models, OpenXmlElement parentNode)
         {
             InsertContentAndReplaceVariables(models, parentNode);
             ExpandChildBlocks(models, parentNode);
             RemoveChildBlockInsertionPoints(parentNode);
         }
 
-        protected virtual void InsertContentAndReplaceVariables(ModelLookup models, OpenXmlElement parentNode)
+        protected virtual void InsertContentAndReplaceVariables(IModelLookup models, OpenXmlElement parentNode)
         {
             var cloned = m_content.Select(x => x.CloneNode(true)).ToList();
             InsertContent(parentNode, cloned);
             m_variableReplacer.ReplaceVariables(cloned);
         }
 
-        public virtual void ExpandChildBlocks(ModelLookup models, OpenXmlElement parentNode)
+        public virtual void ExpandChildBlocks(IModelLookup models, OpenXmlElement parentNode)
         {
             foreach (var child in m_childBlocks)
             {

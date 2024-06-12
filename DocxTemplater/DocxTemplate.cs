@@ -42,6 +42,7 @@ namespace DocxTemplater
             };
             m_wpDocument = WordprocessingDocument.Open(m_stream, true, openSettings);
             Processed = false;
+            RegisterFormatter(new SubTemplateFormatter(modelLookup, settings));
         }
 
         public static DocxTemplate Open(string pathToTemplate, ProcessSettings settings = null)

@@ -6,13 +6,13 @@ using System.Linq;
 
 namespace DocxTemplater.Formatter
 {
-    internal class VariableReplacer
+    internal class VariableReplacer : IVariableReplacer
     {
-        private readonly ModelLookup m_models;
+        private readonly IModelLookup m_models;
         private readonly ProcessSettings m_processSettings;
         private readonly List<IFormatter> m_formatters;
 
-        public VariableReplacer(ModelLookup models, ProcessSettings processSettings)
+        public VariableReplacer(IModelLookup models, ProcessSettings processSettings)
         {
             m_models = models;
             m_processSettings = processSettings;
@@ -31,7 +31,7 @@ namespace DocxTemplater.Formatter
         /// <summary>
         /// the formatter string is the leading formatter prefix, e.g. "FORMAT" followed by the formatter arguments ae image(100,200)
         /// </summary>
-        public void ApplyFormatter(PatternMatch patternMatch, object value, Text target)
+        private void ApplyFormatter(PatternMatch patternMatch, object value, Text target)
         {
             if (value == null)
             {

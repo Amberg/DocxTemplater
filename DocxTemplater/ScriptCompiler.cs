@@ -5,12 +5,12 @@ using System.Text.RegularExpressions;
 
 namespace DocxTemplater
 {
-    internal class ScriptCompiler
+    internal class ScriptCompiler : IScriptCompiler
     {
-        private readonly ModelLookup m_modelDictionary;
+        private readonly IModelLookup m_modelDictionary;
         private static readonly Regex RegexWordStartingWithDot = new(@"^(\.+)([a-zA-z0-9_]+)", RegexOptions.Compiled);
 
-        public ScriptCompiler(ModelLookup modelDictionary, ProcessSettings processSettings)
+        public ScriptCompiler(IModelLookup modelDictionary, ProcessSettings processSettings)
         {
             this.m_modelDictionary = modelDictionary;
             ProcessSettings = processSettings;
@@ -57,10 +57,10 @@ namespace DocxTemplater
 
         private class ModelVariable : DynamicObject
         {
-            private readonly ModelLookup m_modelDictionary;
+            private readonly IModelLookup m_modelDictionary;
             private readonly string m_rootName;
 
-            public ModelVariable(ModelLookup modelDictionary, string rootName)
+            public ModelVariable(IModelLookup modelDictionary, string rootName)
             {
                 m_modelDictionary = modelDictionary;
                 m_rootName = rootName;

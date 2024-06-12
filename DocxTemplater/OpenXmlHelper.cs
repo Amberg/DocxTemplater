@@ -1,5 +1,4 @@
 ﻿using DocumentFormat.OpenXml;
-using DocumentFormat.OpenXml.Drawing.Wordprocessing;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using System;
@@ -8,10 +7,8 @@ using System.Linq;
 using System.Text;
 using System.Xml;
 using System.Xml.Linq;
-using Run = DocumentFormat.OpenXml.Wordprocessing.Run;
-using RunProperties = DocumentFormat.OpenXml.Wordprocessing.RunProperties;
-using Table = DocumentFormat.OpenXml.Wordprocessing.Table;
-using Text = DocumentFormat.OpenXml.Wordprocessing.Text;
+using DocumentFormat.OpenXml.Drawing.Wordprocessing;
+
 
 namespace DocxTemplater
 {
@@ -33,6 +30,16 @@ namespace DocxTemplater
                 current = current.Parent;
             }
             return false;
+        }
+
+        public static Style FindTableStyleByName(this MainDocumentPart mainDocumentPart, string name)
+        {
+            var part = mainDocumentPart.StyleDefinitionsPart;
+            if (part == null)
+            {
+                return null;
+            }
+            return part.Styles?.Elements<Style>().FirstOrDefault(x => x.StyleId == name);
         }
 
 
@@ -73,6 +80,45 @@ namespace DocxTemplater
             }
             return null;
         }
+
+        public static AbstractNum CreateNewAbstractNumbering(this Numbering numbering)
+        {
+            var abstractNum = new AbstractNum()
+            {
+                MultiLevelType = new MultiLevelType() { Val = MultiLevelValues.HybridMultilevel }
+            };
+            int bulletAbstractNumId = numbering.Elements<AbstractNum>()
+                .Where(x => x.AbstractNumberId != null)
+                .Select(x => x.AbstractNumberId.Value).DefaultIfEmpty(0).Max() + 1;
+            abstractNum.AbstractNumberId = bulletAbstractNumId;
+
+            return numbering.InsertAfterLastChildOfSameType(abstractNum);
+        }
+
+        public static NumberingInstance CreateNewNumberingInstance(this Numbering numbering, int abstractNumberingId)
+        {
+            var numberIngInstance = new NumberingInstance(new AbstractNumId() { Val = abstractNumberingId })
+            {
+                NumberID = numbering.Elements<NumberingInstance>().Count() + 1
+            };
+            return numbering.InsertAfterLastChildOfSameType(numberIngInstance);
+        }
+
+        public static T InsertAfterLastChildOfSameType<T>(this OpenXmlCompositeElement parent, T newChild)
+            where T : OpenXmlElement
+        {
+            var lastChild = parent.ChildElements.LastOrDefault(x => x.GetType() == newChild.GetType());
+            if (lastChild != null)
+            {
+                parent.InsertAfter(newChild, lastChild);
+            }
+            else
+            {
+                parent.AppendChild(newChild);
+            }
+            return newChild;
+        }
+
 
         public static OpenXmlElement FindCommonParent(this OpenXmlElement element, OpenXmlElement otherElement)
         {

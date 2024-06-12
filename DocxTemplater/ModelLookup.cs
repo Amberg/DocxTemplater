@@ -6,7 +6,7 @@ using System.Reflection;
 
 namespace DocxTemplater
 {
-    internal class ModelLookup
+    internal class ModelLookup : IModelLookup
     {
         private readonly Dictionary<string, object> m_rootScope;
         private readonly Stack<Dictionary<string, object>> m_blockScopes;

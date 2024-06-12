@@ -13,23 +13,22 @@ namespace DocxTemplater
 {
     public abstract class TemplateProcessor
     {
-        private readonly ModelLookup m_models;
-        private readonly VariableReplacer m_variableReplacer;
-        private readonly ScriptCompiler m_scriptCompiler;
+        private readonly IModelLookup m_models;
+        private readonly IVariableReplacer m_variableReplacer;
+        private readonly IScriptCompiler m_scriptCompiler;
 
         public ProcessSettings Settings { get; }
 
         private protected TemplateProcessor(
             ProcessSettings settings,
-            ModelLookup modelLookup,
-            VariableReplacer variableReplacer,
-            ScriptCompiler scriptCompiler)
+            IModelLookup modelLookup,
+            IVariableReplacer variableReplacer,
+            IScriptCompiler scriptCompiler)
         {
             Settings = settings;
             m_models = modelLookup;
             m_variableReplacer = variableReplacer;
             m_scriptCompiler = scriptCompiler;
-            m_variableReplacer.RegisterFormatter(new SubTemplateFormatter(modelLookup, settings));
         }
 
         public IReadOnlyDictionary<string, object> Models => m_models.Models;
@@ -275,6 +274,10 @@ namespace DocxTemplater
 
         public void RegisterFormatter(IFormatter formatter)
         {
+            if (formatter is IFormatterInitialization formatterInitialization)
+            {
+                formatterInitialization.Initialize(m_models, m_scriptCompiler, m_variableReplacer, Settings);
+            }
             m_variableReplacer.RegisterFormatter(formatter);
         }
     }

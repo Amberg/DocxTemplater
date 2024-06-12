@@ -40,6 +40,7 @@ namespace DocxTemplater.Test
             yield return new TestCaseData("{?{!MyBool}}").Returns(new[] { PatternType.Condition });
             yield return new TestCaseData("{ ? { MyBool}}").Returns(new[] { PatternType.Condition });
             yield return new TestCaseData("{?{  a / 20 >= 12 }}").Returns(new[] { PatternType.Condition });
+            yield return new TestCaseData("{?{  a / 20 >= 12 && a.b == true || !b.c }}").Returns(new[] { PatternType.Condition });
             yield return new TestCaseData("{{var}:F(d)}").Returns(new[] { PatternType.Variable });
             yield return new TestCaseData("{{ds.foo.var}:f('HH : mm : s')}").Returns(new[] { PatternType.Variable }).SetName("Format with date pattern");
             yield return new TestCaseData("{{ds.foo.var}:f(HH:mm)}").Returns(new[] { PatternType.Variable }).SetName("Format with date pattern");
