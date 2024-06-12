@@ -5,6 +5,7 @@ using DocxTemplater.Formatter;
 using Markdig;
 using Markdig.Parsers;
 using System;
+using System.Linq;
 
 namespace DocxTemplater.Markdown
 {
@@ -47,7 +48,12 @@ namespace DocxTemplater.Markdown
             {
                 var pipeline = new MarkdownPipelineBuilder().UsePipeTables().Build();
                 var markdownDocument = MarkdownParser.Parse(mdText, pipeline);
-                var renderer = new MarkdownToOpenXmlRenderer(target, m_mainDocumentPart, m_configuration);
+
+                var parentParagraph = target.GetFirstAncestor<Paragraph>();
+                // split the paragraph at the target
+                var paragraph = (Paragraph)parentParagraph.SplitAfterElement(target).First();
+
+                var renderer = new MarkdownToOpenXmlRenderer(paragraph, target, m_mainDocumentPart, m_configuration);
                 var firstParagraph = renderer.CurrentParagraph;
                 renderer.Render(markdownDocument);
                 var lastParagraph = renderer.CurrentParagraph;

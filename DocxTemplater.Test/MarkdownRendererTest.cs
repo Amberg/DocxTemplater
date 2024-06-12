@@ -27,7 +27,7 @@ namespace DocxTemplater.Test
         [Test]
         public void MarkdownWithPlaceholderReplacement()
         {
-            var markdown = "_Hello_ **{{ds.Name}:ToUpper}**";
+            var markdown = "_Hello_ **{{ds.Name}:ToUpper}** Doe";
             using var memStream = new MemoryStream();
             using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
             MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
@@ -53,7 +53,7 @@ namespace DocxTemplater.Test
             var body = document.MainDocumentPart.Document.Body;
 
             // {{ds.markdown}:md} --> "_Hello_ **{{ds:Name}}**" --> "Hello John"
-            Assert.That(body.InnerText, Is.EqualTo("Hello JOHN"));
+            Assert.That(body.InnerText, Is.EqualTo("Hello JOHN Doe"));
         }
 
         [TestCase("**Hello**")]
@@ -269,7 +269,8 @@ namespace DocxTemplater.Test
                 markdownInTable = sb.ToString(),
                 markdownInTableList = sb2.ToString(),
                 footer = "_Footer_",
-                header = "**Header**"
+                header = "**Header**",
+                bold = "**Bold**",
             };
             docTemplate.RegisterFormatter(new DocxTemplater.Markdown.MarkdownFormatter(new MarkDownFormatterConfiguration()
             {
