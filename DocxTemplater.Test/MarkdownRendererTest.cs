@@ -283,6 +283,28 @@ namespace DocxTemplater.Test
             result.SaveAsFileAndOpenInWord();
         }
 
+        [Test]
+        public void CustomListStyleInTemplate()
+        {
+            using var fileStream = File.OpenRead("Resources/CustomMarkdownListStyleInTemplate.docx");
+            var docTemplate = new DocxTemplate(fileStream);
+            var sb = new StringBuilder();
+            sb.AppendLine("* First");
+            sb.AppendLine("* Second");
+            sb.AppendLine("  * First First");
+            sb.AppendLine("  * First Second");
+            sb.AppendLine("    * First Second First");
+            sb.AppendLine("    * First Second Second");
+            sb.AppendLine("  * First Third");
+            sb.AppendLine("* Third");
+            docTemplate.RegisterFormatter(new MarkdownFormatter());
+            docTemplate.BindModel("ds", sb.ToString());
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.That(result, Is.Not.Null);
+            result.SaveAsFileAndOpenInWord();
+        }
+
         private Body CreateTemplateWithMarkdownAndReturnBody(string markdown)
         {
             using var memStream = new MemoryStream();

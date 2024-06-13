@@ -40,7 +40,13 @@ namespace DocxTemplater.Markdown.Renderer
                 if (m_tableStyle == null)
                 {
                     m_tableStyle ??= m_mainDocument.FindTableStyleByName(m_markDownFormatterConfiguration.TableStyle);
-                    tableProperties.TableStyle = new WP.TableStyle { Val = m_markDownFormatterConfiguration.TableStyle };
+                    if (m_tableStyle != null)
+                    {
+                        tableProperties.TableStyle = new WP.TableStyle
+                        {
+                            Val = m_tableStyle.StyleId
+                        };
+                    }
                 }
             }
 
