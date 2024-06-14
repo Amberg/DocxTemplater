@@ -75,15 +75,19 @@ namespace DocxTemplater
             }
 
             PropertyInfo lastProperty = null;
+            ValueMetadata? lastValueMetadata = null;
             for (int i = partIndex; i < parts.Length; i++)
             {
+                lastValueMetadata = null;
                 var propertyName = parts[i];
                 if (model is ITemplateModel templateModel)
                 {
-                    if (!templateModel.TryGetPropertyValue(propertyName, out model))
+                    if (!templateModel.TryGetPropertyValue(propertyName, out ValueWithMetadata valWithMetadata))
                     {
                         throw new OpenXmlTemplateException($"Property {propertyName} not found in {modelRootPath}");
                     }
+                    model = valWithMetadata.Value;
+                    lastValueMetadata = valWithMetadata.Metadata;
                 }
                 else if (model is IDictionary<string, object> dict)
                 {
@@ -123,7 +127,7 @@ namespace DocxTemplater
                 var metadata = lastProperty.GetCustomAttribute<ModelPropertyAttribute>();
                 return new ValueWithMetadata(model, new ValueMetadata(metadata?.DefaultFormatter));
             }
-            return new ValueWithMetadata(model, new ValueMetadata());
+            return new ValueWithMetadata(model, lastValueMetadata ?? new ValueMetadata());
         }
 
         private object SearchLongestPathInLookup(string[] parts, out string modelRootPath, out int partIndex, int startScopeIndex)

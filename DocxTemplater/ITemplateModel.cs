@@ -5,6 +5,6 @@
     /// </summary>
     public interface ITemplateModel
     {
-        bool TryGetPropertyValue(string propertyName, out object value);
+        bool TryGetPropertyValue(string propertyName, out ValueWithMetadata value);
     }
 }

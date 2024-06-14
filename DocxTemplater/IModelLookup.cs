@@ -4,7 +4,12 @@ namespace DocxTemplater
 {
     public record struct ValueMetadata(string DefaultFormatter);
 
-    public record struct ValueWithMetadata(object Value, ValueMetadata Metadata);
+    public record struct ValueWithMetadata(object Value, ValueMetadata Metadata)
+    {
+        public ValueWithMetadata(object value) : this(value, new ValueMetadata(null))
+        {
+        }
+    }
 
     public interface IModelLookup
     {

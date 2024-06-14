@@ -1062,9 +1062,15 @@ namespace DocxTemplater.Test
                 m_dict.Add(key, value);
             }
 
-            public bool TryGetPropertyValue(string propertyName, out object value)
+            public bool TryGetPropertyValue(string propertyName, out ValueWithMetadata value)
             {
-                return m_dict.TryGetValue(propertyName, out value);
+                if (m_dict.TryGetValue(propertyName, out var val))
+                {
+                    value = new ValueWithMetadata(val);
+                    return true;
+                }
+                value = new ValueWithMetadata();
+                return false;
             }
         }
     }
