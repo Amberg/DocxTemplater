@@ -101,6 +101,7 @@ namespace DocxTemplater.Test
             yield return new TestCaseData("{{Foo}:f(' whitespacequoted ',   white space not quoted  )}").Returns(new[] { " whitespacequoted ", "white space not quoted  " });
             yield return new TestCaseData("{{Foo}:f('foo', 'this is \\'quoted\\' end')}").Returns(new[] { "foo", "this is 'quoted' end" });
             yield return new TestCaseData("{{Foo}:f('äöü', 'Foo \"blubb\" Test', \")}").Returns(new[] { "äöü", "Foo \"blubb\" Test", "\"" });
+            yield return new TestCaseData("{{Foo}:f({{ds}:img(w:14cm, h:15cm, r:90)").Returns(new[] { "w:14cm", "h:15cm", "r:90" });
 
         }
 
