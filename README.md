@@ -11,6 +11,7 @@ It supports placeholder **replacement** and **loops** and **images**_
 * Collections - Bind to collections
 * Conditional Blocks
 * Dynamic Tables - Columns are defined by the datasource
+* Markdown Support - Converts Markdown to OpenXML
 * HTML Snippets - Replace placeholder with HTML Content
 * Images - Replace placeholder with Image data
 
