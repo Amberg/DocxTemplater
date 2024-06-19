@@ -59,8 +59,21 @@ namespace DocxTemplater.Markdown
         }
 
         /// <summary>
+        /// Name of a list style in the template document applied to lists.
+        /// If this style is not found, a style is created based on <see cref="UnorderedListLevelConfiguration"/>
+        /// </summary>
+        public string UnorderedListStyle { get; set; } = "md_ListStyle";
+
+        /// <summary>
+        /// Name of a list style in the template document applied to lists.
+        /// If this style is not found, a style is created based on <see cref="OrderedListLevelConfiguration"/>
+        /// </summary>
+        public string OrderedListStyle { get; set; } = "md_OrderedListStyle";
+
+
+        /// <summary>
         /// Name of a table style in the template document applied to tables.
         /// </summary>
-        public string TableStyle { get; set; }
+        public string TableStyle { get; set; } = "md_TableStyle";
     }
 }

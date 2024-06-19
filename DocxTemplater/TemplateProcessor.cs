@@ -8,6 +8,7 @@ using DocxTemplater.Blocks;
 using DocxTemplater.Formatter;
 using System.Collections.Generic;
 using System.Linq;
+using DocumentFormat.OpenXml.Packaging;
 
 namespace DocxTemplater
 {
@@ -276,9 +277,11 @@ namespace DocxTemplater
         {
             if (formatter is IFormatterInitialization formatterInitialization)
             {
-                formatterInitialization.Initialize(m_models, m_scriptCompiler, m_variableReplacer, Settings);
+                formatterInitialization.Initialize(m_models, m_scriptCompiler, m_variableReplacer, Settings, GetMainDocumentPart());
             }
             m_variableReplacer.RegisterFormatter(formatter);
         }
+
+        protected abstract MainDocumentPart GetMainDocumentPart();
     }
 }

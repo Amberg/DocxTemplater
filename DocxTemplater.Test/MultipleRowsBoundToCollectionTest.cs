@@ -41,9 +41,9 @@ namespace DocxTemplater.Test
 
         public class StringLocalizerDummyModel : ITemplateModel
         {
-            public bool TryGetPropertyValue(string propertyName, out object value)
+            public bool TryGetPropertyValue(string propertyName, out ValueWithMetadata value)
             {
-                value = propertyName;
+                value = new ValueWithMetadata(propertyName);
                 return true;
             }
         }

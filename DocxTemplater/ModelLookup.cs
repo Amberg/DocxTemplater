@@ -30,7 +30,13 @@ namespace DocxTemplater
             return new VariableScope(m_blockScopes);
         }
 
+
         public object GetValue(string variableName)
+        {
+            return GetValueWithMetadata(variableName).Value;
+        }
+
+        public ValueWithMetadata GetValueWithMetadata(string variableName)
         {
             var leadingDotsCount = variableName.TakeWhile(x => x == '.').Count();
             variableName = variableName[leadingDotsCount..];
@@ -60,7 +66,7 @@ namespace DocxTemplater
                 model = m_blockScopes.ElementAt(leadingDotsCount - 1).Values.FirstOrDefault();
                 if (parts.Length == 1 && string.IsNullOrWhiteSpace(parts[0]))
                 {
-                    return model;
+                    return new ValueWithMetadata(model, new ValueMetadata());
                 }
             }
             if (model == null)
@@ -68,19 +74,24 @@ namespace DocxTemplater
                 throw new OpenXmlTemplateException($"Model {variableName} not found");
             }
 
+            PropertyInfo lastProperty = null;
+            ValueMetadata? lastValueMetadata = null;
             for (int i = partIndex; i < parts.Length; i++)
             {
+                lastValueMetadata = null;
                 var propertyName = parts[i];
                 if (model is ITemplateModel templateModel)
                 {
-                    if (!templateModel.TryGetPropertyValue(propertyName, out model))
+                    if (!templateModel.TryGetPropertyValue(propertyName, out ValueWithMetadata valWithMetadata))
                     {
                         throw new OpenXmlTemplateException($"Property {propertyName} not found in {modelRootPath}");
                     }
+                    model = valWithMetadata.Value;
+                    lastValueMetadata = valWithMetadata.Metadata;
                 }
                 else if (model is IDictionary<string, object> dict)
                 {
-                    if (!dict.TryGetValue(parts[i], out model))
+                    if (!dict.TryGetValue(propertyName, out model))
                     {
                         throw new OpenXmlTemplateException($"Property {propertyName} not found in {modelRootPath}");
                     }
@@ -88,6 +99,7 @@ namespace DocxTemplater
                 else
                 {
                     var property = model.GetType().GetProperty(propertyName, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.GetProperty | BindingFlags.Instance);
+                    lastProperty = property;
                     if (property != null)
                     {
                         model = property.GetValue(model);
@@ -96,7 +108,7 @@ namespace DocxTemplater
                             // if a property is null, we can't continue searching
                             //same behavior as null propagation in C#
                             // ae A.B.C.D --> A?.B?.C?.D
-                            return null;
+                            return new ValueWithMetadata(null, new ValueMetadata());
                         }
                     }
                     else if (model is ICollection)
@@ -109,7 +121,13 @@ namespace DocxTemplater
                     }
                 }
             }
-            return model;
+
+            if (lastProperty != null)
+            {
+                var metadata = lastProperty.GetCustomAttribute<ModelPropertyAttribute>();
+                return new ValueWithMetadata(model, new ValueMetadata(metadata?.DefaultFormatter));
+            }
+            return new ValueWithMetadata(model, lastValueMetadata ?? new ValueMetadata());
         }
 
         private object SearchLongestPathInLookup(string[] parts, out string modelRootPath, out int partIndex, int startScopeIndex)

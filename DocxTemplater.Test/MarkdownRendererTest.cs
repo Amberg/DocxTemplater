@@ -20,13 +20,14 @@ namespace DocxTemplater.Test
             Assert.That(firstParagraphSecondLine.Text, Is.EqualTo("Second Line"));
             var secondParagraph = body.Descendants<Text>().Last();
             Assert.That(secondParagraph.Text, Is.EqualTo("Second Paragraph First Line"));
+            Assert.That(body.Descendants<Paragraph>().Count(), Is.EqualTo(2));
         }
 
 
         [Test]
         public void MarkdownWithPlaceholderReplacement()
         {
-            var markdown = "_Hello_ **{{ds.Name}:ToUpper}**";
+            var markdown = "_Hello_ **{{ds.Name}:ToUpper}** Doe";
             using var memStream = new MemoryStream();
             using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
             MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
@@ -52,7 +53,7 @@ namespace DocxTemplater.Test
             var body = document.MainDocumentPart.Document.Body;
 
             // {{ds.markdown}:md} --> "_Hello_ **{{ds:Name}}**" --> "Hello John"
-            Assert.That(body.InnerText, Is.EqualTo("Hello JOHN"));
+            Assert.That(body.InnerText, Is.EqualTo("Hello JOHN Doe"));
         }
 
         [TestCase("**Hello**")]
@@ -108,8 +109,7 @@ namespace DocxTemplater.Test
             Assert.That(body.InnerXml, Is.EqualTo("<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:r><w:t>Dorothy" +
                                                   " followed her through many of the beautiful rooms in her castle.</w:t></w:r></w:p><w:p xmlns:w=" +
                                                   "\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:r><w:t>The Witch bade her clean" +
-                                                  " the pots and kettles and sweep the floor and keep the fire fed with wood.</w:t></w:r></w:p><w:p x" +
-                                                  "mlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" />"));
+                                                  " the pots and kettles and sweep the floor and keep the fire fed with wood.</w:t></w:r></w:p>"));
         }
 
         [Test]
@@ -202,7 +202,13 @@ namespace DocxTemplater.Test
             sb.AppendLine("| Row 1 Col 1 | Row 1 Col 2 |");
             sb.AppendLine("| Row 2 Col 1 | Row 2 Col 2 |");
             var body = CreateTemplateWithMarkdownAndReturnBody(sb.ToString());
-            Assert.That(body.InnerXml, Is.EqualTo("<w:tbl xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:tblPr><w:tblW w:w=\"5000\" w:type=\"pct\" /></w:tblPr><w:tblGrid><w:gridCol /><w:gridCol /><w:gridCol /></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Header 1</w:t></w:r></w:p><w:p /></w:tc><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Header 2</w:t></w:r></w:p><w:p /></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Row 1 Col 1</w:t></w:r></w:p><w:p /></w:tc><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Row 1 Col 2</w:t></w:r></w:p><w:p /></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Row 2 Col 1</w:t></w:r></w:p><w:p /></w:tc><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Row 2 Col 2</w:t></w:r></w:p><w:p /></w:tc></w:tr></w:tbl><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" />"));
+            Assert.That(body.InnerXml, Is.EqualTo("<w:tbl xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:tblPr><w:tblW w:w=\"5000\" w:type=\"pct\" />" +
+                                                  "</w:tblPr><w:tblGrid><w:gridCol /><w:gridCol /><w:gridCol /></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr>" +
+                                                  "<w:p><w:r><w:t>Header 1</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Header 2</w:t>" +
+                                                  "</w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Row 1 Col 1</w:t></w:r></w:p>" +
+                                                  "</w:tc><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Row 1 Col 2</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc>" +
+                                                  "<w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Row 2 Col 1</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:type=\"auto\" />" +
+                                                  "</w:tcPr><w:p><w:r><w:t>Row 2 Col 2</w:t></w:r></w:p></w:tc></w:tr></w:tbl><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" />"));
         }
 
         [Test]
@@ -261,13 +267,38 @@ namespace DocxTemplater.Test
             {
                 markdown = File.ReadAllText("Resources/TestMarkDown.md"),
                 markdownInTable = sb.ToString(),
-                markdownInTableList = sb2.ToString()
+                markdownInTableList = sb2.ToString(),
+                footer = "_Footer_",
+                header = "**Header**",
+                bold = "**Bold**",
             };
             docTemplate.RegisterFormatter(new DocxTemplater.Markdown.MarkdownFormatter(new MarkDownFormatterConfiguration()
             {
                 TableStyle = "MarkDownTestTableStyle"
             }));
             docTemplate.BindModel("ds", model);
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.That(result, Is.Not.Null);
+            result.SaveAsFileAndOpenInWord();
+        }
+
+        [Test]
+        public void CustomListStyleInTemplate()
+        {
+            using var fileStream = File.OpenRead("Resources/CustomMarkdownListStyleInTemplate.docx");
+            var docTemplate = new DocxTemplate(fileStream);
+            var sb = new StringBuilder();
+            sb.AppendLine("* First");
+            sb.AppendLine("* Second");
+            sb.AppendLine("  * First First");
+            sb.AppendLine("  * First Second");
+            sb.AppendLine("    * First Second First");
+            sb.AppendLine("    * First Second Second");
+            sb.AppendLine("  * First Third");
+            sb.AppendLine("* Third");
+            docTemplate.RegisterFormatter(new MarkdownFormatter());
+            docTemplate.BindModel("ds", sb.ToString());
             var result = docTemplate.Process();
             docTemplate.Validate();
             Assert.That(result, Is.Not.Null);

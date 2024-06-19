@@ -12,7 +12,10 @@ namespace DocxTemplater.Markdown.Renderer
                 renderer.ExplicitParagraph = false;
                 return;
             }
-            renderer.AddParagraph();
+            if (!renderer.IsLastInContainer)
+            {
+                renderer.AddParagraph();
+            }
         }
     }
 }

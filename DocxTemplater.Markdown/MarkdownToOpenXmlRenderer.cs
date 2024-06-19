@@ -20,15 +20,19 @@ namespace DocxTemplater.Markdown
         private readonly Stack<Format> m_formatStack = new();
         private OpenXmlCompositeElement m_parentElement;
         private bool m_lastElemntWasNewLine;
+        private readonly RunProperties m_targetRunProperties;
 
         public MarkdownToOpenXmlRenderer(
-            Text previousOpenXmlNode,
+            Paragraph parentElement,
+            Text target,
             MainDocumentPart mainDocumentPart,
             MarkDownFormatterConfiguration configuration)
         {
+            // extract style from target run element
+            m_targetRunProperties = ((Run)target.Parent).RunProperties;
             m_lastElemntWasNewLine = true;
             m_formatStack.Push(new Format(false, false, null));
-            m_parentElement = previousOpenXmlNode.GetFirstAncestor<Paragraph>();
+            m_parentElement = parentElement;
             ObjectRenderers.Add(new LiteralInlineRenderer());
             ObjectRenderers.Add(new ParagraphRenderer());
             ObjectRenderers.Add(new LineBreakLineRenderer());
@@ -53,30 +57,35 @@ namespace DocxTemplater.Markdown
             if (!content.IsEmpty)
             {
                 var text = new Text(content.ToString());
-                if (string.IsNullOrWhiteSpace(text.Text))
+                if (char.IsWhiteSpace(content[^1]) || char.IsWhiteSpace(content[0]))
                 {
                     text.Space = SpaceProcessingModeValues.Preserve;
                 }
+
                 var newRun = new Run(text);
+                if (m_targetRunProperties != null)
+                {
+                    // we merge existing styles with styles from markdown
+                    newRun.RunProperties = (RunProperties)m_targetRunProperties.CloneNode(true);
+                }
                 var format = m_formatStack.Peek();
                 if (format.Bold || format.Italic || format.Style != null)
                 {
-                    RunProperties run1Properties = new();
-                    if (format.Bold)
-                    {
-                        run1Properties.Append(new Bold());
-                    }
-                    if (format.Italic)
-                    {
-                        run1Properties.Append(new Italic());
-                    }
-                    newRun.RunProperties = run1Properties;
+                    newRun.RunProperties ??= new RunProperties();
 
+                    if (format.Bold && newRun.RunProperties.Bold == null)
+                    {
+                        newRun.RunProperties.AddChild(new Bold());
+                    }
+                    if (format.Italic && newRun.RunProperties.Italic == null)
+                    {
+                        newRun.RunProperties.AddChild(new Italic());
+                    }
                     //add style
                     if (format.Style != null)
                     {
                         var runStyle = new RunStyle { Val = format.Style };
-                        newRun.RunProperties.Append(runStyle);
+                        newRun.RunProperties.AddChild(runStyle);
                     }
                 }
                 m_parentElement.Append(newRun);

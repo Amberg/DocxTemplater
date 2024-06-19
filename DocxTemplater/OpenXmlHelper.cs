@@ -498,5 +498,37 @@ namespace DocxTemplater
             return element;
         }
 
+        /* Conversion functions
+         // 914 400 EMUs = 1 inch
+        // 	2,54 cm = 1 inch
+        // 	360 000 EMUs = 1 cm
+        // we assume 96 DPI
+         */
+        public static int CmToEmu(int centimeter)
+        {
+            return centimeter * 360000;
+        }
+
+        public static int PixelsToEmu(int pixels)
+        {
+            return pixels * 9525;
+        }
+
+        public static int InchToEmu(int inch)
+        {
+            return inch * 914400;
+        }
+
+
+        public static int LengthToEmu(int value, string unit)
+        {
+            return unit switch
+            {
+                "cm" => CmToEmu(value),
+                "px" => PixelsToEmu(value),
+                "in" => InchToEmu(value),
+                _ => throw new ArgumentException("Unsupported unit: " + unit)
+            };
+        }
     }
 }
