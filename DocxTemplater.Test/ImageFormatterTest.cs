@@ -53,7 +53,7 @@ namespace DocxTemplater.Test
             using var memStream = new MemoryStream();
             using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
             MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
-            mainPart.Document = new Document(new Body(new Paragraph(new Run(new Text("{{ds}:img("+ argument +")}")))));
+            mainPart.Document = new Document(new Body(new Paragraph(new Run(new Text("{{ds}:img(" + argument + ")}")))));
             wpDocument.Save();
             memStream.Position = 0;
 
