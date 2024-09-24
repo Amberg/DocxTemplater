@@ -1,5 +1,0 @@
-- else blocks
-- expression caching
-- multiple process runs for a single template with different data
-- Optimize IsolateAndMergeTextTemplateMarkers
-- Refactor ExtractLoopContent - Simpler more generic solultion
