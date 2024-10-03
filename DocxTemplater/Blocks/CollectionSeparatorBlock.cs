@@ -15,8 +15,8 @@ namespace DocxTemplater.Blocks
 
         public override void Expand(IModelLookup models, OpenXmlElement parentNode)
         {
-            int count = (int)models.GetValue($"{ParentBlock.StartMatch.Variable}._Idx");
-            int length = (int)models.GetValue($"{ParentBlock.StartMatch.Variable}._Length");
+            int count = (int)models.GetValue($"{ParentBlock.StartMatch.Variable.TrimStart('.')}._Idx");
+            int length = (int)models.GetValue($"{ParentBlock.StartMatch.Variable.TrimStart('.')}._Length");
             // last element is rendered first - get length and count ot to not render the last separator
             if (length - count == 0)
             {
