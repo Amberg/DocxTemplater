@@ -938,6 +938,74 @@ namespace DocxTemplater.Test
             result.SaveAsFileAndOpenInWord();
         }
 
+
+        [Test]
+        public void TestWithNestedITemplateModel()
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(new Paragraph(new Run(new Text("Start {{Property}} {{AdditionalData.Value1}} End")))));
+            wpDocument.Save();
+            memStream.Position = 0;
+
+            var docTemplate = new DocxTemplate(memStream);
+            var additionalData = new DummyModel();
+            additionalData.Add("Value1", "Value1");
+            var model = new ModelWithNestedITemplateModel
+            {
+                Property = "Hi",
+                AdditionalData = additionalData
+            };
+            docTemplate.BindModel("ds", model);
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.That(result, Is.Not.Null);
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            Assert.That(body.InnerXml, Is.EqualTo("<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">" +
+                                                  "<w:r><w:t xml:space=\"preserve\">Start </w:t>" +
+                                                  "<w:t xml:space=\"preserve\">Hi</w:t>" +
+                                                  "<w:t xml:space=\"preserve\"> </w:t>" +
+                                                  "<w:t xml:space=\"preserve\">Value1</w:t>" +
+                                                  "<w:t xml:space=\"preserve\"> End</w:t>" +
+                                                  "</w:r></w:p>"));
+
+        }
+
+        [Test]
+        public void TestWithNestedITemplateModel_AdditionalDataIsNull()
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(new Paragraph(new Run(new Text("Start {{Property}} {{AdditionalData.Value1}} End")))));
+            wpDocument.Save();
+            memStream.Position = 0;
+
+            var docTemplate = new DocxTemplate(memStream);
+            var model = new ModelWithNestedITemplateModel
+            {
+                Property = "Hi",
+                AdditionalData = null
+            };
+            docTemplate.BindModel("ds", model);
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.That(result, Is.Not.Null);
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            Assert.That(body.InnerXml, Is.EqualTo("<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">" +
+                                                  "<w:r><w:t xml:space=\"preserve\">Start </w:t>" +
+                                                  "<w:t xml:space=\"preserve\">Hi</w:t>" +
+                                                  "<w:t xml:space=\"preserve\"> </w:t>" +
+                                                  "<w:t xml:space=\"preserve\" />" +
+                                                  "<w:t xml:space=\"preserve\"> End</w:t>" +
+                                                  "</w:r></w:p>"));
+
+        }
+
+
         private static DriveStudentOverviewReportingModel CrateBillTemplate2Model()
         {
             DriveStudentOverviewReportingModel model = new()
@@ -1042,6 +1110,21 @@ namespace DocxTemplater.Test
             }
 
             public decimal TotalPrice
+            {
+                get;
+                set;
+            }
+        }
+
+        private class ModelWithNestedITemplateModel
+        {
+            public string Property
+            {
+                get;
+                set;
+            }
+
+            public ITemplateModel AdditionalData
             {
                 get;
                 set;
