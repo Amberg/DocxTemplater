@@ -23,9 +23,11 @@ Create a docx template with placeholder syntax
 ```
 This Text: {{ds.Title}} - will be replaced
 ```
-Open the template, add a model and store the result to a file
+Open the template, add a model and store the result to a file.
 ```c#
    var template = DocxTemplate.Open("template.docx");
+   // to open the file from a stream use the constructor directly 
+   // var template = new DocxTemplate(stream);
    template.BindModel("ds", new { Title = "Some Text"});
    template.Save("generated.docx");
 ```
