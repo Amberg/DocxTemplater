@@ -17,6 +17,6 @@ namespace DocxTemplater
             set;
         } = BindingErrorHandling.ThrowException;
 
-        public static ProcessSettings Default { get; } = new ProcessSettings() { Culture = null }; // will use current ui culture
+        public static ProcessSettings Default { get; } = new();
     }
 }

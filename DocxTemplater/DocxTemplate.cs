@@ -47,6 +47,7 @@ namespace DocxTemplater
 
         public static DocxTemplate Open(string pathToTemplate, ProcessSettings settings = null)
         {
+            settings ??= ProcessSettings.Default;
             using var fileStream = new FileStream(pathToTemplate, FileMode.Open, FileAccess.Read);
             return new DocxTemplate(fileStream, settings);
         }

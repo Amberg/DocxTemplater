@@ -1005,7 +1005,6 @@ namespace DocxTemplater.Test
 
         }
 
-
         private static DriveStudentOverviewReportingModel CrateBillTemplate2Model()
         {
             DriveStudentOverviewReportingModel model = new()
