@@ -17,16 +17,13 @@ namespace DocxTemplater.Formatter
 
         public void ApplyFormat(FormatterContext context, Text target)
         {
-            if (context.Value is not string html)
+            if (context.Value is not string html || string.IsNullOrWhiteSpace(html))
             {
-                return;
-            }
-            if (string.IsNullOrWhiteSpace(html))
-            {
+                target.RemoveWithEmptyParent();
                 return;
             }
 
-            // fix html - ensure starts and ends with <html> and <body>
+            // fix html - ensure starts and ends with <html>
             if (!html.StartsWith("<html>", StringComparison.CurrentCultureIgnoreCase))
             {
                 html = "<html>" + html;
@@ -41,15 +38,15 @@ namespace DocxTemplater.Formatter
             {
                 if (openXmlPartRootElement.OpenXmlPart is HeaderPart headerPart)
                 {
-                    alternativeFormatImportPartId = HtmlFormatter.CreateAlternativeFormatImportPart(headerPart, html);
+                    alternativeFormatImportPartId = CreateAlternativeFormatImportPart(headerPart, html);
                 }
                 if (openXmlPartRootElement.OpenXmlPart is FooterPart footerPart)
                 {
-                    alternativeFormatImportPartId = HtmlFormatter.CreateAlternativeFormatImportPart(footerPart, html);
+                    alternativeFormatImportPartId = CreateAlternativeFormatImportPart(footerPart, html);
                 }
                 if (openXmlPartRootElement.OpenXmlPart is MainDocumentPart mainDocumentPart)
                 {
-                    alternativeFormatImportPartId = HtmlFormatter.CreateAlternativeFormatImportPart(mainDocumentPart, html);
+                    alternativeFormatImportPartId = CreateAlternativeFormatImportPart(mainDocumentPart, html);
                 }
             }
             if (alternativeFormatImportPartId == null)

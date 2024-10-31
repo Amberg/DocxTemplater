@@ -225,6 +225,33 @@ namespace DocxTemplater.Test
             // check html part contains html;
         }
 
+        [TestCase("")]
+        [TestCase(" ")]
+        public void HtmlIsAlwaysShouldRenderEmptyStrings(string html)
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(new Paragraph(new Run(new Text("This should render nothing {{ds}:html}")))));
+            wpDocument.Save();
+            memStream.Position = 0;
+            var docTemplate = new DocxTemplate(memStream);
+            docTemplate.BindModel("ds", html);
+
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.That(result, Is.Not.Null);
+            result.SaveAsFileAndOpenInWord();
+            result.Position = 0;
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            Assert.That(body.InnerXml, Is.EqualTo("<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">" +
+                                                  "<w:r>" +
+                                                  "<w:t xml:space=\"preserve\">This should render nothing </w:t>" +
+                                                  "</w:r>" +
+                                                  "</w:p>"));
+        }
+
         [Test]
         public void InsertHtmlInLoop()
         {
