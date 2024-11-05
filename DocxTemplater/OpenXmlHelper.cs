@@ -65,7 +65,7 @@ namespace DocxTemplater
             return null;
         }
 
-        public static OpenXmlElement ElementAfterInDocument<TElement>(this OpenXmlElement element)
+        public static TElement ElementAfterInDocument<TElement>(this OpenXmlElement element)
             where TElement : OpenXmlElement
         {
             var parent = element.Parent;
