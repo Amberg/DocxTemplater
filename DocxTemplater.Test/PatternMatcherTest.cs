@@ -57,6 +57,9 @@ namespace DocxTemplater.Test
             yield return new TestCaseData("{{var}:format(a,b)}").Returns(new[] { PatternType.Variable }).SetName("Multiple Arguments");
             yield return new TestCaseData("{{/}}").Returns(new[] { PatternType.ConditionEnd });
             yield return new TestCaseData("{ { / } }").Returns(new[] { PatternType.ConditionEnd });
+            yield return new TestCaseData("{?{ds.QrBills.idx == 2}}").Returns(new[] { PatternType.Condition });
+            yield return new TestCaseData("{?{ds.QrBills._Idx == 2}}").Returns(new[] { PatternType.Condition }).SetName("underscore in variable name");
+            yield return new TestCaseData("{?{ds.QrBills._Idx % 2 == 0}}").Returns(new[] { PatternType.Condition }).SetName("modulo in condition");
             yield return new TestCaseData(
                     "NumericValue is greater than 0 - {{ds.Items.InnerCollection.InnerValue}:toupper()}{{else}}" +
                     "I'm here if if this is not the case{{/}}{{/ds.Items.InnerCollection}}{{/Items}}")

@@ -106,16 +106,20 @@ namespace DocxTemplater
                 }
             }
 
-            // make all Bookmark ids unique
-            uint id = 0;
-            foreach (var bookmarkStart in element.Descendants<BookmarkStart>())
+            // remove all bookmarks -> not useful for generated documents and complex to handle
+            // because of special cases in tables see
+            // https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.wordprocessing.bookmarkstart?view=openxml-3.0.1#remarks
+            foreach (var bookmark in element.Descendants<BookmarkStart>().ToList())
             {
-                bookmarkStart.Id = $"{id++}";
-                bookmarkStart.NextSibling<BookmarkEnd>().Id = bookmarkStart.Id;
+                bookmark.RemoveWithEmptyParent();
+            }
+            foreach (var bookmark in element.Descendants<BookmarkEnd>().ToList())
+            {
+                bookmark.RemoveWithEmptyParent();
             }
 
             // make dock properties ids unique
-            id = 1;
+            uint id = 1;
             var dockProperties = element.Descendants<DocProperties>().ToList();
             var existingIds = new HashSet<uint>(dockProperties.Select(x => x.Id.Value).ToList());
             foreach (var docPropertiesWithSameId in dockProperties.GroupBy(x => x.Id).Where(x => x.Count() > 1))

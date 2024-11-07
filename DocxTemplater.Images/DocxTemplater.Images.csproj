@@ -7,7 +7,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.5" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="[3.1.5,4.0.0)" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DocxTemplater\DocxTemplater.csproj" />

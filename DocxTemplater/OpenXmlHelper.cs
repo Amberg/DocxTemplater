@@ -65,7 +65,7 @@ namespace DocxTemplater
             return null;
         }
 
-        public static OpenXmlElement ElementAfterInDocument<TElement>(this OpenXmlElement element)
+        public static TElement ElementAfterInDocument<TElement>(this OpenXmlElement element)
             where TElement : OpenXmlElement
         {
             var parent = element.Parent;
@@ -509,6 +509,11 @@ namespace DocxTemplater
             return centimeter * 360000;
         }
 
+        public static int MmToEmu(int millimeter)
+        {
+            return millimeter * 36000;
+        }
+
         public static int PixelsToEmu(int pixels)
         {
             return pixels * 9525;
@@ -525,6 +530,7 @@ namespace DocxTemplater
             return unit switch
             {
                 "cm" => CmToEmu(value),
+                "mm" => MmToEmu(value),
                 "px" => PixelsToEmu(value),
                 "in" => InchToEmu(value),
                 _ => throw new ArgumentException("Unsupported unit: " + unit)
