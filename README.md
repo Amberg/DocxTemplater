@@ -77,6 +77,7 @@ The syntax is case insensitive.
 | `{{SomeDate}:F('MM/dd/yyyy')}`      | Date variable with formatting - short syntax                   |
 | `{{SomeBytes}:img()}`               | Image Formatter for image data                                 |
 | `{{SomeHtmlString}:html()}`         | Inserts HTML string into the word document                     |
+| `{{#Items}}{?{Items._Idx % 2 == 0}}{{.}}{{/}}{{/Items}}`         | Renders every second item in a list                 |
 ---
 ### Collections
 
@@ -113,6 +114,11 @@ Will render a table row for each item in the collection:
 |-------|-----------|
 | John  | Developer |
 | Alice | CEO       |
+
+#### Accessing the Index of the Current Item
+
+To access the index of the current item, use the special variable `Items._Idx` In this example, the collection is called "Items".
+
 ---
 ### Separator
 
