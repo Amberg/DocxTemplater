@@ -30,11 +30,18 @@
 	<PropertyGroup>
 		<PackageId>$(MSBuildProjectName)</PackageId>
 		<RepositoryType>git</RepositoryType>
-		<Authors>Amberg</Authors>
+		<Authors>Orphis AG</Authors>
 		<Company>Orphis AG</Company>
-		<PackageDescription>Easily bind data models to word templates</PackageDescription>
+		<Description>
+			DocxTemplater is a powerful C# library for generating DOCX documents from customizable templates.
+			It enables seamless data binding to templates, making document creation accessible even for non-programmers.
+			Key features include placeholder replacement, loops, conditional blocks, dynamic tables, Markdown and HTML support,
+			and image embedding. Optional packages extend functionality with advanced image handling and Markdown support,
+			making DocxTemplater an ideal tool for automating complex document workflows.
+		</Description>
 		<RepositoryUrl>https://github.com/Amberg/DocxTemplater</RepositoryUrl>
-		<RepositoryType>git</RepositoryType>
+		<ProjectUrl>https://github.com/Amberg/DocxTemplater</ProjectUrl>
+		<PackageTags>docx;template;templating;document-generation;automation;placeholder;looping;conditional-blocks;markdown;html-to-docx;image-embedding;CSharp;OpenXML;data-binding</PackageTags>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 	</PropertyGroup>
 
