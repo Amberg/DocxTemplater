@@ -127,7 +127,6 @@ To access the outer item in a nested collection, use the dot notation `{{..}}` T
 {{#Items}} This text {{..SomePropertyFromTheOuterScope}} is rendered for each element in the items collection {{/Items}}
 ```
 
-
 #### Accessing the Index of the Current Item
 
 To access the index of the current item, use the special variable `Items._Idx` In this example, the collection is called "Items".
