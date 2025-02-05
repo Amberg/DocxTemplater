@@ -846,6 +846,25 @@ namespace DocxTemplater.Test
             result.SaveAsFileAndOpenInWord();
         }
 
+        [Test]
+        public void MixedMarkdownFormatterTemplateTest()
+        {
+            using var fileStream = File.OpenRead("Resources/MixedMarkdownFormatter.docx");
+            var docTemplate = new DocxTemplate(fileStream);
+            docTemplate.RegisterFormatter(new Markdown.MarkdownFormatter());
+
+            docTemplate.BindModel("ds", new JobDocumentModel()
+            {
+                Title = "Bill",
+                CustomerAddress = "Customer\r\n Street 22\r\n 9000 St.Gallen"
+            });
+
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            result.Position = 0;
+            result.SaveAsFileAndOpenInWord();
+        }
+
         private enum RowType
         {
             Normal = 1,
@@ -1151,6 +1170,22 @@ namespace DocxTemplater.Test
             }
 
             public ITemplateModel AdditionalData
+            {
+                get;
+                set;
+            }
+        }
+
+        private class JobDocumentModel
+        {
+            [ModelProperty(DefaultFormatter = "md")]
+            public string CustomerAddress
+            {
+                get;
+                set;
+            }
+
+            public string Title
             {
                 get;
                 set;
