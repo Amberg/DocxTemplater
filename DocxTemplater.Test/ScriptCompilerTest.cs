@@ -45,7 +45,7 @@
         public void StringCompareAndFunctions()
         {
             m_modelDictionary.Add("x", new { a = new { b = "hi", c = "hi there" } });
-            m_modelDictionary.Add("y", new {a = "there" });
+            m_modelDictionary.Add("y", new { a = "there" });
             Assert.That(m_scriptCompiler.CompileScript("x.a.b == \"hi\"")());
             Assert.That(m_scriptCompiler.CompileScript("x.a.b == 'by'")(), Is.False);
             Assert.That(m_scriptCompiler.CompileScript("x.a.b.Contains('hi')")());
