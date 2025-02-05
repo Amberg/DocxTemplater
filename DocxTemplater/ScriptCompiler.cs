@@ -20,6 +20,7 @@ namespace DocxTemplater
 
         public Func<bool> CompileScript(string scriptAsString)
         {
+            scriptAsString = scriptAsString.Trim().Replace('\'', '"');
             // replace replace leading dots (implicit scope) with variables
             var interpreter = new Interpreter();
             scriptAsString = RegexWordStartingWithDot.Replace(scriptAsString, (m) => OnVariableReplace(m, interpreter));
@@ -27,7 +28,7 @@ namespace DocxTemplater
             foreach (var identifier in identifiers.UnknownIdentifiers)
             {
                 var val = m_modelDictionary.GetValue(identifier);
-                if (val == null || val.GetType().IsPrimitive)
+                if (val == null || (val.GetType().IsPrimitive && val is not string))
                 {
                     interpreter.SetVariable(identifier, val);
                 }
@@ -72,7 +73,7 @@ namespace DocxTemplater
             {
                 var name = m_rootName + "." + binder.Name;
                 result = m_modelDictionary.GetValue(name);
-                if (result != null && !result.GetType().IsPrimitive)
+                if (result != null && !result.GetType().IsPrimitive && result is not string)
                 {
                     result = new ModelVariable(m_modelDictionary, name);
                 }

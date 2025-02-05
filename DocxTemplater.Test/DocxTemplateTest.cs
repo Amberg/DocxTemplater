@@ -549,7 +549,7 @@ namespace DocxTemplater.Test
 
         static IEnumerable CultureIsAppliedTest_Cases()
         {
-            yield return new TestCaseData("", new CultureInfo("en-us"), new DateTime(2024, 11, 1)).Returns("11/1/2024 12:00:00 AM");
+            yield return new TestCaseData("", new CultureInfo("en-us"), new DateTime(2024, 11, 1)).Returns(DateTime.Parse("11/1/2024 12:00:00 AM", new CultureInfo("en-us")).ToString(new CultureInfo("en-us")));
             yield return new TestCaseData("", new CultureInfo("de-ch"), new DateTime(2024, 11, 1)).Returns("01.11.2024 00:00:00");
             yield return new TestCaseData(":f(d)", new CultureInfo("en-us"), new DateTime(2024, 11, 1, 20, 22, 33)).Returns("11/1/2024");
             yield return new TestCaseData(":FORMAT(D)", new CultureInfo("en-us"), new DateTime(2024, 11, 1, 20, 22, 33)).Returns("Friday, November 1, 2024");
@@ -839,6 +839,25 @@ namespace DocxTemplater.Test
             var model = CrateBillTemplate2Model();
             docTemplate.BindModel("ds", model);
             docTemplate.BindModel("company", new { Logo = imageBytes });
+
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            result.Position = 0;
+            result.SaveAsFileAndOpenInWord();
+        }
+
+        [Test]
+        public void MixedMarkdownFormatterTemplateTest()
+        {
+            using var fileStream = File.OpenRead("Resources/MixedMarkdownFormatter.docx");
+            var docTemplate = new DocxTemplate(fileStream);
+            docTemplate.RegisterFormatter(new Markdown.MarkdownFormatter());
+
+            docTemplate.BindModel("ds", new JobDocumentModel()
+            {
+                Title = "Bill",
+                CustomerAddress = "Customer\r\n Street 22\r\n 9000 St.Gallen"
+            });
 
             var result = docTemplate.Process();
             docTemplate.Validate();
@@ -1151,6 +1170,22 @@ namespace DocxTemplater.Test
             }
 
             public ITemplateModel AdditionalData
+            {
+                get;
+                set;
+            }
+        }
+
+        private class JobDocumentModel
+        {
+            [ModelProperty(DefaultFormatter = "md")]
+            public string CustomerAddress
+            {
+                get;
+                set;
+            }
+
+            public string Title
             {
                 get;
                 set;
