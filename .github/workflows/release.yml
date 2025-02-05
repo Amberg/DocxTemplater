@@ -35,10 +35,7 @@ jobs:
 
     - name: Run tests
       run: dotnet test -c $BUILD_CONFIG --no-restore --no-build --verbosity normal
-      
-    - name: Setup NuGet
-      uses: NuGet/setup-nuget@v1.2.0
-      
+
     - name: Publish
       if: startsWith(github.ref, 'refs/tags/v') == true
-      run: nuget push **\*.nupkg -Source 'https://api.nuget.org/v3/index.json' -ApiKey ${{secrets.NUGET_API_KEY}}
+      run: dotnet nuget push **\*.nupkg -s 'https://api.nuget.org/v3/index.json' -k ${{secrets.NUGET_API_KEY}}
