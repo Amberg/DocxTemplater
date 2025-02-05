@@ -81,6 +81,10 @@ namespace DocxTemplater.Markdown
                     var processor = new XmlNodeTemplate(currentParagraph, m_processSettings, m_modelLookup, m_variableReplacer, m_scriptCompiler, m_mainDocumentPart);
                     processor.Process();
                 }
+                if (currentParagraph == lastParagraph)
+                {
+                    break;
+                }
                 currentParagraph = currentParagraph.NextSibling<Paragraph>();
                 if (currentParagraph == null)
                 {
