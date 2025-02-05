@@ -430,7 +430,9 @@ namespace DocxTemplater.Test
                 new Paragraph(new Run(new Text("{?{ ds2.Test > 5}}Test3{{else}}else3{{/}}"))),
                 new Paragraph(new Run(new Text("{?{ds3.MyBool}}Test4{{:}}else4{{/}}"))),
                 new Paragraph(new Run(new Text("{?{!ds4.MyBool}}Test5{{:}}else4{{/}}"))),
-                new Paragraph(new Run(new Text("{?{!ds3.MyBool}}NoElse{{/}}")))
+                new Paragraph(new Run(new Text("{?{!ds3.MyBool}}NoElse{{/}}"))),
+                new Paragraph(new Run(new Text("{?{ ds5.MyString.Contains('hi') }}TextThere{{/}}")))
+
                     ));
             wpDocument.Save();
             memStream.Position = 0;
@@ -439,6 +441,7 @@ namespace DocxTemplater.Test
             docTemplate.BindModel("ds2", new { Test = 6 });
             docTemplate.BindModel("ds3", new { MyBool = true });
             docTemplate.BindModel("ds4", new { MyBool = false });
+            docTemplate.BindModel("ds5", new { MyString = "hi there" });
             var result = docTemplate.Process();
             docTemplate.Validate();
             Assert.That(result, Is.Not.Null);
@@ -448,7 +451,7 @@ namespace DocxTemplater.Test
             // check result text
             var document = WordprocessingDocument.Open(result, false);
             var body = document.MainDocumentPart.Document.Body;
-            Assert.That(body.InnerText, Is.EqualTo("Test1Test2Test3Test4Test5"));
+            Assert.That(body.InnerText, Is.EqualTo("Test1Test2Test3Test4Test5TextThere"));
         }
 
         [Test]

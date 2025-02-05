@@ -94,6 +94,7 @@ namespace DocxTemplater.Blocks
         public virtual void Expand(IModelLookup models, OpenXmlElement parentNode)
         {
             InsertContentAndReplaceVariables(models, parentNode);
+
             ExpandChildBlocks(models, parentNode);
             RemoveChildBlockInsertionPoints(parentNode);
         }

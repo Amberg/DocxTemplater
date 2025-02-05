@@ -25,11 +25,15 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\DocxTemplater.Charts\DocxTemplater.Charts.csproj" />
     <ProjectReference Include="..\DocxTemplater.Images\DocxTemplater.Images.csproj" />
     <ProjectReference Include="..\DocxTemplater.Markdown\DocxTemplater.Markdown.csproj" />
     <ProjectReference Include="..\DocxTemplater\DocxTemplater.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <None Update="Resources\BarChart.docx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Resources\BillTemplate.docx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

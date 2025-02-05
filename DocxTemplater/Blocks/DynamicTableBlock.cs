@@ -8,17 +8,17 @@ namespace DocxTemplater.Blocks
 {
     internal class DynamicTableBlock : ContentBlock
     {
-        private readonly string m_tablenName;
+        private readonly string m_tableName;
 
         public DynamicTableBlock(IVariableReplacer variableReplacer, PatternType patternType, Text startTextNode, PatternMatch startMatch)
             : base(variableReplacer, patternType, startTextNode, startMatch)
         {
-            m_tablenName = startMatch.Variable;
+            m_tableName = startMatch.Variable;
         }
 
         public override void Expand(IModelLookup models, OpenXmlElement parentNode)
         {
-            var model = models.GetValue(m_tablenName);
+            var model = models.GetValue(m_tableName);
             if (model is IDynamicTable dynamicTable)
             {
                 if (!dynamicTable.Headers.Any())
@@ -26,8 +26,8 @@ namespace DocxTemplater.Blocks
                     return;
                 }
 
-                var headersName = $"{m_tablenName}.{nameof(IDynamicTable.Headers)}";
-                var columnsName = $"{m_tablenName}.{nameof(IDynamicTable.Rows)}";
+                var headersName = $"{m_tableName}.{nameof(IDynamicTable.Headers)}";
+                var columnsName = $"{m_tableName}.{nameof(IDynamicTable.Rows)}";
 
                 // kind of a hack to get the table from the child block
                 // TODO: refactor this to create wrapper block as ContentBlock and DynamicTableBlock as child
@@ -98,7 +98,7 @@ namespace DocxTemplater.Blocks
             }
             else
             {
-                throw new OpenXmlTemplateException($"Value of {m_tablenName} is not of type {typeof(IDynamicTable)}");
+                throw new OpenXmlTemplateException($"Value of {m_tableName} is not of type {typeof(IDynamicTable)}");
             }
         }
 
@@ -113,7 +113,7 @@ namespace DocxTemplater.Blocks
 
         public override string ToString()
         {
-            return $"Dynamic Table: {m_tablenName}";
+            return $"Dynamic Table: {m_tableName}";
         }
     }
 }

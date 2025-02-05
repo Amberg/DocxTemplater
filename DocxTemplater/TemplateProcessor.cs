@@ -17,6 +17,7 @@ namespace DocxTemplater
         private readonly IModelLookup m_models;
         private readonly IVariableReplacer m_variableReplacer;
         private readonly IScriptCompiler m_scriptCompiler;
+        private readonly IList<ITemplateProcessorExtension> m_extensions = new List<ITemplateProcessorExtension>();
 
         public ProcessSettings Settings { get; }
 
@@ -68,9 +69,13 @@ namespace DocxTemplater
 #endif
         }
 
-        private static void PreProcess(OpenXmlCompositeElement content)
+        private void PreProcess(OpenXmlCompositeElement content)
         {
             content.Descendants<ProofError>().ToList().ForEach(x => x.Remove());
+            foreach (var extension in m_extensions)
+            {
+                extension.PreProcess(content);
+            }
         }
 
         private static void IsolateAndMergeTextTemplateMarkers(OpenXmlCompositeElement content)
@@ -80,8 +85,8 @@ namespace DocxTemplater
             {
                 var firstChar = charMap[m.Index];
                 var lastChar = charMap[m.Index + m.Length - 1];
-                var firstText = (Text)firstChar.Element;
-                var lastText = (Text)lastChar.Element;
+                var firstText = (Text) firstChar.Element;
+                var lastText = (Text) lastChar.Element;
                 var mergedText = firstText.MergeText(firstChar.Index, lastText, m.Length);
                 mergedText.Mark(m.Type);
                 // TODO: Ist this possible without recreate charMap?
@@ -97,7 +102,6 @@ namespace DocxTemplater
                 var value = markedText.GetMarker();
                 if (removeEmptyElements && value is not PatternType.Variable)
                 {
-                    var parent = markedText.Parent;
                     markedText.RemoveWithEmptyParent();
                 }
                 else
@@ -113,6 +117,7 @@ namespace DocxTemplater
             {
                 bookmark.RemoveWithEmptyParent();
             }
+
             foreach (var bookmark in element.Descendants<BookmarkEnd>().ToList())
             {
                 bookmark.RemoveWithEmptyParent();
@@ -168,15 +173,18 @@ namespace DocxTemplater
                     CloseBlock(blockStack, match, text);
                     StartBlock(blockStack, match, value, text);
                 }
+
                 if (value is PatternType.ConditionEnd or PatternType.CollectionEnd)
                 {
                     CloseBlock(blockStack, match, text);
                     CloseBlock(blockStack, match, text);
                 }
             }
+
             if (blockStack.Count != 1)
             {
-                var notClosedBlocks = blockStack.Reverse().Skip(1).Select(x => x.StartMatch.Match.Value).Skip(1).ToList();
+                var notClosedBlocks =
+                    blockStack.Reverse().Skip(1).Select(x => x.StartMatch.Match.Value).Skip(1).ToList();
                 throw new OpenXmlTemplateException($"Not all blocks are closed: {string.Join(", ", notClosedBlocks)}");
             }
 
@@ -220,56 +228,9 @@ namespace DocxTemplater
             {
                 throw new OpenXmlTemplateException($"Block was not open {text.InnerText}");
             }
+
             var closedBlock = blockStack.Pop();
             closedBlock.CloseBlock(text, match);
-        }
-
-        internal static IReadOnlyCollection<OpenXmlElement> ExtractBlockContent(OpenXmlElement startText,
-            OpenXmlElement endText, out OpenXmlElement leadingPart)
-        {
-            var commonParent = startText.FindCommonParent(endText) ??
-                               throw new OpenXmlTemplateException("Start and end text are not in the same tree");
-            var result = new List<OpenXmlElement>();
-            if (commonParent is TableRow)
-            {
-                var previousRow = commonParent.PreviousSibling();
-                if (previousRow == null)
-                {
-                    commonParent.InsertBeforeSelf(new TableRow());
-                }
-
-                leadingPart = commonParent.PreviousSibling();
-                commonParent.Remove();
-                result.Add(commonParent);
-            }
-            else
-            {
-                // find childs of common parent that contains start and end text
-                var startChildOfCommonParent = commonParent.ChildElements.Single(c =>
-                    c == startText || c.Descendants<Text>().Any(d => d == startText));
-                var endChildOfCommonParent =
-                    commonParent.ChildElements.Single(c =>
-                        c == endText || c.Descendants<Text>().Any(d => d == endText));
-
-                var startSplit = startChildOfCommonParent.SplitAfterElement(startText);
-                leadingPart = startSplit.First();
-                if (startChildOfCommonParent == endChildOfCommonParent)
-                {
-                    result.AddRange(commonParent.ChildsBetween(startSplit.First(), endChildOfCommonParent).ToList());
-                }
-                else
-                {
-                    var endSplit = endChildOfCommonParent.SplitBeforeElement(endText);
-                    result.AddRange(commonParent.ChildsBetween(leadingPart, endSplit.Last()).ToList());
-                }
-
-                foreach (var element in result)
-                {
-                    element.Remove();
-                }
-            }
-
-            return result;
         }
 
         public void BindModel(string prefix, object model)
@@ -284,6 +245,19 @@ namespace DocxTemplater
                 formatterInitialization.Initialize(m_models, m_scriptCompiler, m_variableReplacer, Settings, GetMainDocumentPart());
             }
             m_variableReplacer.RegisterFormatter(formatter);
+        }
+
+
+        public void RegisterExtension(ITemplateProcessorExtension chartProcessor)
+        {
+            if (m_extensions.All(x => x.GetType() != chartProcessor.GetType()))
+            {
+                m_extensions.Add(chartProcessor);
+            }
+            else
+            {
+                throw new InvalidOperationException($"Extension of type {chartProcessor.GetType()} is already registered");
+            }
         }
 
         protected abstract MainDocumentPart GetMainDocumentPart();

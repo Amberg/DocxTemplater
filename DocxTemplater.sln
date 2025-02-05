@@ -24,6 +24,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DocxTemplater.Markdown", "DocxTemplater.Markdown\DocxTemplater.Markdown.csproj", "{D4CFD3BD-84B8-400C-A088-26FC15ADE80D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DocxTemplater.Charts", "DocxTemplater.Charts\DocxTemplater.Charts.csproj", "{FC6EEB99-2645-42A0-B295-551F8F312745}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -46,6 +48,10 @@ Global
 		{D4CFD3BD-84B8-400C-A088-26FC15ADE80D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D4CFD3BD-84B8-400C-A088-26FC15ADE80D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D4CFD3BD-84B8-400C-A088-26FC15ADE80D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FC6EEB99-2645-42A0-B295-551F8F312745}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FC6EEB99-2645-42A0-B295-551F8F312745}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FC6EEB99-2645-42A0-B295-551F8F312745}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FC6EEB99-2645-42A0-B295-551F8F312745}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

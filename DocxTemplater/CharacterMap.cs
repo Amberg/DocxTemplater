@@ -87,9 +87,8 @@ namespace DocxTemplater
                     m_textBuilder.Append((char)10);
                 }
 
-                if (child is Text)
+                if (child is Text t)
                 {
-                    var t = child as Text;
                     for (var i = 0; i < t.Text.Length; ++i)
                     {
                         m_map.Add(new Character
