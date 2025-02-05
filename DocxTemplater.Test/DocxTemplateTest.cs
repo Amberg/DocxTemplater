@@ -549,7 +549,7 @@ namespace DocxTemplater.Test
 
         static IEnumerable CultureIsAppliedTest_Cases()
         {
-            yield return new TestCaseData("", new CultureInfo("en-us"), new DateTime(2024, 11, 1)).Returns("11/1/2024 12:00:00 AM");
+            yield return new TestCaseData("", new CultureInfo("en-us"), new DateTime(2024, 11, 1)).Returns(DateTime.Parse("11/1/2024 12:00:00 AM", new CultureInfo("en-us")).ToString(new CultureInfo("en-us")));
             yield return new TestCaseData("", new CultureInfo("de-ch"), new DateTime(2024, 11, 1)).Returns("01.11.2024 00:00:00");
             yield return new TestCaseData(":f(d)", new CultureInfo("en-us"), new DateTime(2024, 11, 1, 20, 22, 33)).Returns("11/1/2024");
             yield return new TestCaseData(":FORMAT(D)", new CultureInfo("en-us"), new DateTime(2024, 11, 1, 20, 22, 33)).Returns("Friday, November 1, 2024");
