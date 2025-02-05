@@ -25,7 +25,7 @@ namespace DocxTemplater
                                                                     (?<separator>:\s*s\s*:) |
                                                                     (?<else>(?:else)|:) |
                                                                     (?(condMarker) # if condition marker is set, we expect a condition
-                                                                        (?<condition>[a-zA-Z0-9+\-*\/><=\s\.\!&\|_%]+)? #condition expression (without brackets)
+                                                                        (?<condition>[a-zA-Z0-9+\-*\/><=\s\.\!&\|_%\(\)']+)? #condition expression (without brackets)
                                                                         |
                                                                         (?:
                                                                             (?<prefix>[\/\#])?(?<varname>[a-zA-Z0-9\._]+)? #variable name

@@ -36,10 +36,27 @@
             {
                 b = 5
             });
-            Assert.That(m_scriptCompiler.CompileScript("10  / 2 == x.a.b"));
-            Assert.That(m_scriptCompiler.CompileScript("10  / 2 == y.items.b"));
+            Assert.That(m_scriptCompiler.CompileScript("10  / 2 == x.a.b")());
+            Assert.That(m_scriptCompiler.CompileScript("10  / 2 == y.items.b")());
 
         }
+
+        [Test]
+        public void StringCompareAndFunctions()
+        {
+            m_modelDictionary.Add("x", new { a = new { b = "hi", c = "hi there" } });
+            m_modelDictionary.Add("y", new {a = "there" });
+            Assert.That(m_scriptCompiler.CompileScript("x.a.b == \"hi\"")());
+            Assert.That(m_scriptCompiler.CompileScript("x.a.b == 'by'")(), Is.False);
+            Assert.That(m_scriptCompiler.CompileScript("x.a.b.Contains('hi')")());
+            Assert.That(m_scriptCompiler.CompileScript("x.a.b.Contains('by')")(), Is.False);
+            Assert.That(m_scriptCompiler.CompileScript("x.a.b.Contains('hi')")());
+            Assert.That(m_scriptCompiler.CompileScript("x.a.b.Contains('by')")(), Is.False);
+
+            Assert.That(m_scriptCompiler.CompileScript("x.a.c.Contains(y.a)")());
+
+        }
+
     }
 
 }
