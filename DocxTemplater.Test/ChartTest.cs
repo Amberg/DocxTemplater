@@ -1,5 +1,4 @@
 ﻿using DocxTemplater.Charts;
-using System.IO;
 
 namespace DocxTemplater.Test
 {
@@ -28,15 +27,11 @@ namespace DocxTemplater.Test
             };
 
             docTemplate.BindModel("ds", model);
-            docTemplate.Process();
-
             var result = docTemplate.Process();
             var fileName = "C:\\Work\\DocxTemplater\\DocxTemplater.Test\\Resources\\output.docx";
             File.Delete(fileName);
-            using (var outStream = File.OpenWrite(fileName))
-            {
-                result.CopyTo(outStream);
-            }
+            using var outStream = File.OpenWrite(fileName);
+            result.CopyTo(outStream);
         }
     }
 }

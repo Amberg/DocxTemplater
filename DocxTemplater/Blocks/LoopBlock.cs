@@ -11,8 +11,9 @@ namespace DocxTemplater.Blocks
     {
         private readonly string m_collectionName;
 
-        public LoopBlock(IVariableReplacer variableReplacer, PatternType patternType, Text startTextNode, PatternMatch startMatch)
-            : base(variableReplacer, patternType, startTextNode, startMatch)
+        public LoopBlock(IVariableReplacer variableReplacer, PatternType patternType, Text startTextNode,
+            PatternMatch startMatch, IReadOnlyCollection<ITemplateProcessorExtension> templateProcessorExtensions)
+            : base(variableReplacer, patternType, startTextNode, startMatch, templateProcessorExtensions)
         {
             m_collectionName = startMatch.Variable;
         }

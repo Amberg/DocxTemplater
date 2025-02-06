@@ -10,8 +10,9 @@ namespace DocxTemplater.Blocks
     {
         private readonly string m_tableName;
 
-        public DynamicTableBlock(IVariableReplacer variableReplacer, PatternType patternType, Text startTextNode, PatternMatch startMatch)
-            : base(variableReplacer, patternType, startTextNode, startMatch)
+        public DynamicTableBlock(IVariableReplacer variableReplacer, PatternType patternType, Text startTextNode,
+            PatternMatch startMatch, IReadOnlyCollection<ITemplateProcessorExtension> templateProcessorExtensions)
+            : base(variableReplacer, patternType, startTextNode, startMatch, templateProcessorExtensions)
         {
             m_tableName = startMatch.Variable;
         }

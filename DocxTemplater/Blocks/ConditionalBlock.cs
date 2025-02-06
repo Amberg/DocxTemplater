@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Wordprocessing;
@@ -12,8 +13,10 @@ namespace DocxTemplater.Blocks
         private readonly IScriptCompiler m_scriptCompiler;
 
 
-        public ConditionalBlock(IVariableReplacer variableReplacer, IScriptCompiler scriptCompiler, PatternType patternType, Text startTextNode, PatternMatch startMatch)
-            : base(variableReplacer, patternType, startTextNode, startMatch)
+        public ConditionalBlock(IVariableReplacer variableReplacer, IScriptCompiler scriptCompiler,
+            PatternType patternType, Text startTextNode, PatternMatch startMatch,
+            IReadOnlyCollection<ITemplateProcessorExtension> templateProcessorExtensions)
+            : base(variableReplacer, patternType, startTextNode, startMatch, templateProcessorExtensions)
         {
             m_condition = startMatch.Condition;
             m_scriptCompiler = scriptCompiler;
@@ -30,10 +33,8 @@ namespace DocxTemplater.Blocks
             {
             }
             var cloned = m_content.Select(x => x.CloneNode(true)).ToList();
-            InsertContent(parentNode, cloned);
-            m_variableReplacer.ReplaceVariables(cloned);
+            InsertContent(parentNode, cloned); // direct content the if else block are only markers for the later inserted if or else part --> no var replacement required 
             Debug.Assert(m_childBlocks.Count is 1 or 2);
-
             var elseBlock = m_childBlocks.Count > 1 ? m_childBlocks[1] : null;
             var conditionBlock = m_childBlocks[0];
             if (conditionResult)

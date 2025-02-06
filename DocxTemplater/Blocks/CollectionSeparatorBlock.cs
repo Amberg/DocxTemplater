@@ -8,8 +8,8 @@ namespace DocxTemplater.Blocks
     internal class CollectionSeparatorBlock : ContentBlock
     {
         public CollectionSeparatorBlock(IVariableReplacer variableReplacer, PatternType patternType, Text startTextNode,
-            PatternMatch startMatch)
-            : base(variableReplacer, patternType, startTextNode, startMatch)
+            PatternMatch startMatch, IReadOnlyCollection<ITemplateProcessorExtension> templateProcessorExtensions)
+            : base(variableReplacer, patternType, startTextNode, startMatch, templateProcessorExtensions)
         {
         }
 

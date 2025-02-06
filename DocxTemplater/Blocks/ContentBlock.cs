@@ -13,6 +13,7 @@ namespace DocxTemplater.Blocks
         protected IReadOnlyCollection<OpenXmlElement> m_content;
         protected readonly List<ContentBlock> m_childBlocks;
         protected readonly IVariableReplacer m_variableReplacer;
+        private readonly IReadOnlyCollection<ITemplateProcessorExtension> m_templateProcessorExtensions;
 #pragma warning disable IDE0052
         private InsertionPoint m_lastElementMarker;
 #pragma warning restore IDE0052
@@ -24,11 +25,13 @@ namespace DocxTemplater.Blocks
             m_childBlocks = new List<ContentBlock>();
         }
 
-        public ContentBlock(IVariableReplacer variableReplacer, PatternType patternType, Text startTextNode, PatternMatch startMatch)
+        public ContentBlock(IVariableReplacer variableReplacer, PatternType patternType, Text startTextNode,
+            PatternMatch startMatch, IReadOnlyCollection<ITemplateProcessorExtension> templateProcessorExtensions)
         {
             m_content = new List<OpenXmlElement>();
             m_childBlocks = new List<ContentBlock>();
             m_variableReplacer = variableReplacer;
+            m_templateProcessorExtensions = templateProcessorExtensions;
             PatternType = patternType;
             StartTextNode = startTextNode ?? throw new ArgumentNullException(nameof(startTextNode));
             StartMatch = startMatch ?? throw new ArgumentNullException(nameof(startMatch));
@@ -37,17 +40,18 @@ namespace DocxTemplater.Blocks
         public static ContentBlock Crate(
             IVariableReplacer variableReplacer,
             IScriptCompiler scriptCompiler,
+            IReadOnlyCollection<ITemplateProcessorExtension> templateProcessorExtensions,
             PatternType patternType,
             Text startTextNode,
             PatternMatch matchedStartNode)
         {
             return patternType switch
             {
-                PatternType.CollectionStart when matchedStartNode.Formatter.Equals("dyntable", StringComparison.InvariantCultureIgnoreCase) => new DynamicTableBlock(variableReplacer, patternType, startTextNode, matchedStartNode),
-                PatternType.CollectionStart => new LoopBlock(variableReplacer, patternType, startTextNode, matchedStartNode),
-                PatternType.CollectionSeparator => new CollectionSeparatorBlock(variableReplacer, patternType, startTextNode, matchedStartNode),
-                PatternType.Condition => new ConditionalBlock(variableReplacer, scriptCompiler, patternType, startTextNode, matchedStartNode),
-                _ => new ContentBlock(variableReplacer, patternType, startTextNode, matchedStartNode)
+                PatternType.CollectionStart when matchedStartNode.Formatter.Equals("dyntable", StringComparison.InvariantCultureIgnoreCase) => new DynamicTableBlock(variableReplacer, patternType, startTextNode, matchedStartNode, templateProcessorExtensions),
+                PatternType.CollectionStart => new LoopBlock(variableReplacer, patternType, startTextNode, matchedStartNode, templateProcessorExtensions),
+                PatternType.CollectionSeparator => new CollectionSeparatorBlock(variableReplacer, patternType, startTextNode, matchedStartNode, templateProcessorExtensions),
+                PatternType.Condition => new ConditionalBlock(variableReplacer, scriptCompiler, patternType, startTextNode, matchedStartNode, templateProcessorExtensions),
+                _ => new ContentBlock(variableReplacer, patternType, startTextNode, matchedStartNode, templateProcessorExtensions)
             };
         }
 
@@ -103,6 +107,10 @@ namespace DocxTemplater.Blocks
         {
             var cloned = m_content.Select(x => x.CloneNode(true)).ToList();
             InsertContent(parentNode, cloned);
+            foreach (var extensions in m_templateProcessorExtensions)
+            {
+                extensions.ReplaceVariables(m_variableReplacer, models, parentNode, cloned);
+            }
             m_variableReplacer.ReplaceVariables(cloned);
         }
 
@@ -162,13 +170,17 @@ namespace DocxTemplater.Blocks
             EndMatch = matchedEndNode;
         }
 
-        public virtual void ExtractContentRecursively()
+        public void ExtractContentRecursively()
         {
             foreach (var child in m_childBlocks)
             {
                 child.ExtractContentRecursively();
             }
             m_content = ParentNode.ChildsBetween(FirstElement, LastElement).ToList();
+            foreach (var extensions in m_templateProcessorExtensions)
+            {
+                extensions.BlockContentExtracted(m_content);
+            }
             foreach (var content in m_content)
             {
                 content.Remove();

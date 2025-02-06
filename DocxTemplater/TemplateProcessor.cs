@@ -1,6 +1,7 @@
 ﻿#if DEBUG
 using System;
 #endif
+using System;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Drawing.Wordprocessing;
 using DocumentFormat.OpenXml.Wordprocessing;
@@ -17,7 +18,7 @@ namespace DocxTemplater
         private readonly IModelLookup m_models;
         private readonly IVariableReplacer m_variableReplacer;
         private readonly IScriptCompiler m_scriptCompiler;
-        private readonly IList<ITemplateProcessorExtension> m_extensions = new List<ITemplateProcessorExtension>();
+        private readonly List<ITemplateProcessorExtension> m_extensions = new();
 
         public ProcessSettings Settings { get; }
 
@@ -85,8 +86,8 @@ namespace DocxTemplater
             {
                 var firstChar = charMap[m.Index];
                 var lastChar = charMap[m.Index + m.Length - 1];
-                var firstText = (Text) firstChar.Element;
-                var lastText = (Text) lastChar.Element;
+                var firstText = (Text)firstChar.Element;
+                var lastText = (Text)lastChar.Element;
                 var mergedText = firstText.MergeText(firstChar.Index, lastText, m.Length);
                 mergedText.Mark(m.Type);
                 // TODO: Ist this possible without recreate charMap?
@@ -166,7 +167,7 @@ namespace DocxTemplater
                 if (value is PatternType.Condition or PatternType.CollectionStart)
                 {
                     StartBlock(blockStack, match, value, text);
-                    StartBlock(blockStack, match, PatternType.None, text);
+                    StartBlock(blockStack, match, PatternType.None, text); // open the child content block of the loop or condition
                 }
                 else if (value is PatternType.ConditionElse or PatternType.CollectionSeparator)
                 {
@@ -215,9 +216,9 @@ namespace DocxTemplater
             return rootChilds;
         }
 
-        private void StartBlock(Stack<ContentBlock> blockStack, PatternMatch match, PatternType value, Text text)
+        private void StartBlock(Stack<ContentBlock> blockStack, PatternMatch match, PatternType patternType, Text text)
         {
-            var newBlock = ContentBlock.Crate(m_variableReplacer, m_scriptCompiler, value, text, match);
+            var newBlock = ContentBlock.Crate(m_variableReplacer, m_scriptCompiler, m_extensions, patternType, text, match);
             blockStack.Peek().AddChildBlock(newBlock);
             blockStack.Push(newBlock);
         }
