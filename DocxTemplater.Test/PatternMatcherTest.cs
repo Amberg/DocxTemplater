@@ -44,6 +44,7 @@ namespace DocxTemplater.Test
             yield return new TestCaseData("{{var}:F(d)}").Returns(new[] { PatternType.Variable });
             yield return new TestCaseData("{{ds.foo.var}:f('HH : mm : s')}").Returns(new[] { PatternType.Variable }).SetName("Format with date pattern");
             yield return new TestCaseData("{{ds.foo.var}:f(HH:mm)}").Returns(new[] { PatternType.Variable }).SetName("Format with date pattern");
+            yield return new TestCaseData("{{ds.foo.var}:f(0.##)}").Returns(new[] { PatternType.Variable });
             yield return new TestCaseData("{{ds.foo.var}:F(d)}").Returns(new[] { PatternType.Variable }).SetName("Variable with dot");
             yield return new TestCaseData("{{ds.foo_blubb.var}:F(d)}").Returns(new[] { PatternType.Variable }).SetName("Variable with underscore");
             yield return new TestCaseData("{{var}:toupper}").Returns(new[] { PatternType.Variable });
