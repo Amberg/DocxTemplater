@@ -8,7 +8,7 @@ namespace DocxTemplater
     internal class ScriptCompiler : IScriptCompiler
     {
         private readonly IModelLookup m_modelDictionary;
-        private static readonly Regex RegexWordStartingWithDot = new(@"^(\.+)([a-zA-z0-9_]+)", RegexOptions.Compiled);
+        private static readonly Regex RegexWordStartingWithDot = new(@"(?:^|\s+)(\.+)([\p{L}\p{N}_]*)", RegexOptions.Compiled);
 
         public ScriptCompiler(IModelLookup modelDictionary, ProcessSettings processSettings)
         {
@@ -21,6 +21,7 @@ namespace DocxTemplater
         public Func<bool> CompileScript(string scriptAsString)
         {
             scriptAsString = scriptAsString.Trim().Replace('\'', '"');
+
             // replace replace leading dots (implicit scope) with variables
             var interpreter = new Interpreter();
             scriptAsString = RegexWordStartingWithDot.Replace(scriptAsString, (m) => OnVariableReplace(m, interpreter));
@@ -53,8 +54,12 @@ namespace DocxTemplater
             var scope = m_modelDictionary.GetScopeParentLevel(dotCount - 1);
             var varName = $"__s{dotCount}_"; // choose a variable name that is unlikely to be used by the user
             interpreter.SetVariable(varName, scope);
-            return $"{varName}.{match.Groups[2].Value}";
-        }
+            if (!string.IsNullOrWhiteSpace(match.Groups[2].Value))
+            {
+	            varName += $".{match.Groups[2].Value}";
+            }
+	        return varName;
+		}
 
         private class ModelVariable : DynamicObject
         {

@@ -7,7 +7,7 @@ namespace DocxTemplater.Test
     {
         public static void SaveAsFileAndOpenInWord(this Stream stream, string extension = "docx")
         {
-#if RELEASE
+#if DEBUG
             return;
 #pragma warning disable CS0162
 #endif

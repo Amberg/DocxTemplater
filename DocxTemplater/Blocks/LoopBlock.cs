@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using DocumentFormat.OpenXml;
@@ -20,9 +21,9 @@ namespace DocxTemplater.Blocks
         public override void Expand(IModelLookup models, OpenXmlElement parentNode)
         {
             var model = models.GetValue(m_collectionName);
-            if (model is IEnumerable<object> enumerable)
+            if (model is IEnumerable enumerable)
             {
-                var items = enumerable.Reverse().ToList();
+	            var items = enumerable.Cast<object>().Reverse().ToList();
                 int counter = items.Count;
                 foreach (var item in items)
                 {
