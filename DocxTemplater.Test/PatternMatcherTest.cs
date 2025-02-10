@@ -44,6 +44,7 @@ namespace DocxTemplater.Test
             yield return new TestCaseData("{{var}:F(d)}").Returns(new[] { PatternType.Variable });
             yield return new TestCaseData("{{ds.foo.var}:f('HH : mm : s')}").Returns(new[] { PatternType.Variable }).SetName("Format with date pattern");
             yield return new TestCaseData("{{ds.foo.var}:f(HH:mm)}").Returns(new[] { PatternType.Variable }).SetName("Format with date pattern");
+            yield return new TestCaseData("{{ds.foo.var}:f(0.##)}").Returns(new[] { PatternType.Variable });
             yield return new TestCaseData("{{ds.foo.var}:F(d)}").Returns(new[] { PatternType.Variable }).SetName("Variable with dot");
             yield return new TestCaseData("{{ds.foo_blubb.var}:F(d)}").Returns(new[] { PatternType.Variable }).SetName("Variable with underscore");
             yield return new TestCaseData("{{var}:toupper}").Returns(new[] { PatternType.Variable });
@@ -62,6 +63,10 @@ namespace DocxTemplater.Test
             yield return new TestCaseData("{?{ds.QrBills._Idx % 2 == 0}}").Returns(new[] { PatternType.Condition }).SetName("modulo in condition");
             yield return new TestCaseData("{?{ds5.MyString.Contains('hi')}}").Returns(new[] { PatternType.Condition }).SetName("Text Contains");
             yield return new TestCaseData("{?{ds5 == 'hi'}}").Returns(new[] { PatternType.Condition }).SetName("Text Compare");
+            yield return new TestCaseData("{?{x1 == \"hi\"}}").Returns(new[] { PatternType.Condition }).SetName("Text Compare Quoted with ");
+            yield return new TestCaseData("{?{Ч1 == 'hi'}}").Returns(new[] { PatternType.Condition }).SetName("Text Compare Unicode");
+            yield return new TestCaseData("{{Ч1}}").Returns(new[] { PatternType.Variable });
+            yield return new TestCaseData("{{Ч1}:foo(Ч1)}").Returns(new[] { PatternType.Variable });
             yield return new TestCaseData(
                     "NumericValue is greater than 0 - {{ds.Items.InnerCollection.InnerValue}:toupper()}{{else}}" +
                     "I'm here if if this is not the case{{/}}{{/ds.Items.InnerCollection}}{{/Items}}")
@@ -87,6 +92,7 @@ namespace DocxTemplater.Test
             yield return new TestCaseData("{{Foo}:format()}").Returns(Array.Empty<string>());
             yield return new TestCaseData("{{Foo}:format('MM/dd/yyyy')}").Returns(new[] { "MM/dd/yyyy" });
             yield return new TestCaseData("{{Foo}:format(MM/dd/yyyy)}").Returns(new[] { "MM/dd/yyyy" });
+            yield return new TestCaseData("{{Foo}:format(\"MM/dd/yyyy\")}").Returns(new[] { "\"MM/dd/yyyy\"" });
             yield return new TestCaseData("{{Foo}:format('')}").Returns(new[] { string.Empty });
             yield return new TestCaseData("{{Foo}:format(a)}").Returns(new[] { "a" });
             yield return new TestCaseData("{{Foo}:format(param)}").Returns(new[] { "param" });
@@ -117,6 +123,15 @@ namespace DocxTemplater.Test
         {
             var match = PatternMatcher.FindSyntaxPatterns(syntax).First();
             return match.Variable;
+        }
+
+        [TestCase("{?{Items._Idx % 2 == 0}}", ExpectedResult = "Items._Idx % 2 == 0")]
+        [TestCase("{?{ds.QrBills._Idx % 2 == 0}}", ExpectedResult = "ds.QrBills._Idx % 2 == 0")]
+        [TestCase("{?{ds.QrBills._Idx}}", ExpectedResult = "ds.QrBills._Idx")]
+        public string TestConditionExpression(string syntax)
+        {
+            var match = PatternMatcher.FindSyntaxPatterns(syntax).First();
+            return match.Condition;
         }
     }
 }

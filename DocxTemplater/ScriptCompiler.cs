@@ -28,7 +28,7 @@ namespace DocxTemplater
             foreach (var identifier in identifiers.UnknownIdentifiers)
             {
                 var val = m_modelDictionary.GetValue(identifier);
-                if (val == null || (val.GetType().IsPrimitive && val is not string))
+                if (val == null || val.GetType().IsPrimitive)
                 {
                     interpreter.SetVariable(identifier, val);
                 }
