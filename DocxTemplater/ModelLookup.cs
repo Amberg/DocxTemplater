@@ -113,11 +113,11 @@ namespace DocxTemplater
                     }
                     else if (model is ICollection)
                     {
-                        throw new OpenXmlTemplateException($"Property {propertyName} on collection {modelRootPath} not found - is collection start missing? '#{variableName}'");
+                        throw new OpenXmlTemplateException($"Property '{variableName}' on collection of type '{model.GetType()}' not found");
                     }
                     else
                     {
-                        throw new OpenXmlTemplateException($"Property {propertyName} not found in {modelRootPath}");
+                        throw new OpenXmlTemplateException($"Property '{propertyName}' not found in '{variableName}' of type '{model.GetType()}'");
                     }
                 }
             }
