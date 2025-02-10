@@ -27,8 +27,8 @@
             {
                 items = new[]
                 {
-                    new { b = 5 },
-                    new { b = 6 }
+                    new {b = 5},
+                    new {b = 6}
                 }
             });
             var blockScope = m_modelDictionary.OpenScope();
@@ -46,6 +46,9 @@
         {
             m_modelDictionary.Add("x", new { a = new { b = "hi", c = "hi there" } });
             m_modelDictionary.Add("y", new { a = "there" });
+            m_modelDictionary.Add("c", "model is a string");
+            m_modelDictionary.Add("d", 4);
+
             Assert.That(m_scriptCompiler.CompileScript("x.a.b == \"hi\"")());
             Assert.That(m_scriptCompiler.CompileScript("x.a.b == 'by'")(), Is.False);
             Assert.That(m_scriptCompiler.CompileScript("x.a.b.Contains('hi')")());
@@ -54,9 +57,8 @@
             Assert.That(m_scriptCompiler.CompileScript("x.a.b.Contains('by')")(), Is.False);
 
             Assert.That(m_scriptCompiler.CompileScript("x.a.c.Contains(y.a)")());
-
+            Assert.That(m_scriptCompiler.CompileScript("y.a.Contains(\"there\")")());
+            Assert.That(m_scriptCompiler.CompileScript("d % 2 == 0")());
         }
-
     }
-
 }
