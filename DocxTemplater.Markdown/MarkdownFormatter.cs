@@ -43,31 +43,38 @@ namespace DocxTemplater.Markdown
             }
 
             m_nestingDepth++;
-            var root = target.GetRoot();
-            if (root is OpenXmlPartRootElement openXmlPartRootElement && openXmlPartRootElement.OpenXmlPart != null)
+            try
             {
-                var pipeline = new MarkdownPipelineBuilder().UsePipeTables().Build();
-                var markdownDocument = MarkdownParser.Parse(mdText, pipeline);
-
-                var parentParagraph = target.GetFirstAncestor<Paragraph>();
-                // split the paragraph at the target
-                var paragraph = (Paragraph)parentParagraph.SplitAfterElement(target).First();
-
-                var renderer = new MarkdownToOpenXmlRenderer(paragraph, target, m_mainDocumentPart, m_configuration);
-                var firstParagraph = renderer.CurrentParagraph;
-                renderer.Render(markdownDocument);
-                var lastParagraph = renderer.CurrentParagraph;
-                try
+                var root = target.GetRoot();
+                if (root is OpenXmlPartRootElement openXmlPartRootElement && openXmlPartRootElement.OpenXmlPart != null)
                 {
-                    target.RemoveWithEmptyParent();
-                    DoVariableReplacementInParagraphs(firstParagraph, lastParagraph);
-                }
-                catch (Exception e)
-                {
-                    throw new OpenXmlTemplateException("Variable Replacement in markdown failed", e);
+                    var pipeline = new MarkdownPipelineBuilder().UsePipeTables().Build();
+                    var markdownDocument = MarkdownParser.Parse(mdText, pipeline);
+
+                    var parentParagraph = target.GetFirstAncestor<Paragraph>();
+                    // split the paragraph at the target
+                    var paragraph = (Paragraph)parentParagraph.SplitAfterElement(target).First();
+
+                    var renderer =
+                        new MarkdownToOpenXmlRenderer(paragraph, target, m_mainDocumentPart, m_configuration);
+                    var firstParagraph = renderer.CurrentParagraph;
+                    renderer.Render(markdownDocument);
+                    var lastParagraph = renderer.CurrentParagraph;
+                    try
+                    {
+                        target.RemoveWithEmptyParent();
+                        DoVariableReplacementInParagraphs(firstParagraph, lastParagraph);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new OpenXmlTemplateException("Variable Replacement in markdown failed", e);
+                    }
                 }
             }
-            m_nestingDepth--;
+            finally
+            {
+                m_nestingDepth--;
+            }
             target.RemoveWithEmptyParent();
         }
 
