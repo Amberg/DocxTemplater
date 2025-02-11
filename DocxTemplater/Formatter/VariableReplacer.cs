@@ -9,22 +9,24 @@ namespace DocxTemplater.Formatter
     internal class VariableReplacer : IVariableReplacer
     {
         private readonly IModelLookup m_models;
-        private readonly ProcessSettings m_processSettings;
         private readonly List<IFormatter> m_formatters;
-        private readonly List<string> m_errors = new();
+        private readonly List<string> m_errors;
 
         public VariableReplacer(IModelLookup models, ProcessSettings processSettings)
         {
             m_models = models;
             m_errors = new List<string>();
-            m_processSettings = processSettings;
+            ProcessSettings = processSettings;
             m_formatters = new List<IFormatter>();
             m_formatters.Add(new FormatPatternFormatter());
             m_formatters.Add(new HtmlFormatter());
             m_formatters.Add(new CaseFormatter());
         }
 
-        public ProcessSettings ProcessSettings => m_processSettings;
+        public ProcessSettings ProcessSettings
+        {
+            get;
+        }
 
         public void WriteErrorMessages(OpenXmlCompositeElement rootElement)
         {
@@ -81,7 +83,7 @@ namespace DocxTemplater.Formatter
                     if (formatter.CanHandle(value.GetType(), formatterText))
                     {
                         var context = new FormatterContext(patternMatch.Variable, formatterText, formaterArguments,
-                            value, m_processSettings.Culture);
+                            value, ProcessSettings.Culture);
                         formatter.ApplyFormat(context, target);
                         return;
                     }
@@ -90,7 +92,7 @@ namespace DocxTemplater.Formatter
 
             if (value is IFormattable formattable)
             {
-                target.Text = formattable.ToString(null, m_processSettings.Culture);
+                target.Text = formattable.ToString(null, ProcessSettings.Culture);
                 return;
             }
 
@@ -121,11 +123,11 @@ namespace DocxTemplater.Formatter
                 }
                 catch (Exception e) when (e is OpenXmlTemplateException or FormatException)
                 {
-                    if (m_processSettings.BindingErrorHandling == BindingErrorHandling.SkipBindingAndRemoveContent)
+                    if (ProcessSettings.BindingErrorHandling == BindingErrorHandling.SkipBindingAndRemoveContent)
                     {
                         text.RemoveWithEmptyParent();
                     }
-                    else if (m_processSettings.BindingErrorHandling == BindingErrorHandling.HighlightErrorsInDocument)
+                    else if (ProcessSettings.BindingErrorHandling == BindingErrorHandling.HighlightErrorsInDocument)
                     {
                         MarkTextAssError(text);
                         AddError(e.Message);
