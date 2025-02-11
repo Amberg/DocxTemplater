@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
 using DocumentFormat.OpenXml;
 using DocxTemplater.Formatter;
@@ -23,7 +22,7 @@ namespace DocxTemplater.Blocks
             var model = models.GetValue(m_collectionName);
             if (model is IEnumerable enumerable)
             {
-	            var items = enumerable.Cast<object>().Reverse().ToList();
+                var items = enumerable.Cast<object>().Reverse().ToList();
                 int counter = items.Count;
                 foreach (var item in items)
                 {

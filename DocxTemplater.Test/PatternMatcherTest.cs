@@ -128,7 +128,7 @@ namespace DocxTemplater.Test
         [TestCase("{?{Items._Idx % 2 == 0}}", ExpectedResult = "Items._Idx % 2 == 0")]
         [TestCase("{?{ds.QrBills._Idx % 2 == 0}}", ExpectedResult = "ds.QrBills._Idx % 2 == 0")]
         [TestCase("{?{ds.QrBills._Idx % 2 == 0 || ds.QrBills._Idx > 3 && x.y < 2}}", ExpectedResult = "ds.QrBills._Idx % 2 == 0 || ds.QrBills._Idx > 3 && x.y < 2")]
-		[TestCase("{?{ds.QrBills._Idx}}", ExpectedResult = "ds.QrBills._Idx")]
+        [TestCase("{?{ds.QrBills._Idx}}", ExpectedResult = "ds.QrBills._Idx")]
         public string TestConditionExpression(string syntax)
         {
             var match = PatternMatcher.FindSyntaxPatterns(syntax).First();
