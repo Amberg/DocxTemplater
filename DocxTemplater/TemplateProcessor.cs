@@ -15,8 +15,8 @@ namespace DocxTemplater
     public abstract class TemplateProcessor
     {
         private readonly IModelLookup m_models;
-        protected readonly IVariableReplacer m_variableReplacer;
         private readonly IScriptCompiler m_scriptCompiler;
+        internal readonly IVariableReplacer m_variableReplacer;
 
         public ProcessSettings Settings { get; }
 
