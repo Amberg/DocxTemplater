@@ -3,6 +3,7 @@ using DocumentFormat.OpenXml.Wordprocessing;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using DocumentFormat.OpenXml.Packaging;
 
 namespace DocxTemplater.Formatter
 {
@@ -42,7 +43,7 @@ namespace DocxTemplater.Formatter
                 var paragraph = new Paragraph();
                 foreach (var error in m_errors)
                 {
-                    paragraph.AddChild(new Run(new RunProperties()
+                    paragraph.AppendChild(new Run(new RunProperties()
                     {
                         Color = new Color() { Val = "FF0000" },
                         Bold = new Bold()
