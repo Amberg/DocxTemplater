@@ -212,6 +212,24 @@ namespace DocxTemplater.Test
         }
 
         [Test]
+        public void TableInTable()
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("| Header 1 | Header 2 |");
+            sb.AppendLine("|----------|----------|");
+            sb.AppendLine("| Row 1 Col 1 | Row 1 Col 2 |");
+            sb.AppendLine("| Row 2 Col 1 | Row 2 Col 2 |");
+            var body = CreateTemplateWithMarkdownAndReturnBody(sb.ToString());
+            Assert.That(body.InnerXml, Is.EqualTo("<w:tbl xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:tblPr><w:tblW w:w=\"5000\" w:type=\"pct\" />" +
+                                                  "</w:tblPr><w:tblGrid><w:gridCol /><w:gridCol /><w:gridCol /></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr>" +
+                                                  "<w:p><w:r><w:t>Header 1</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Header 2</w:t>" +
+                                                  "</w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Row 1 Col 1</w:t></w:r></w:p>" +
+                                                  "</w:tc><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Row 1 Col 2</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc>" +
+                                                  "<w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Row 2 Col 1</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:type=\"auto\" />" +
+                                                  "</w:tcPr><w:p><w:r><w:t>Row 2 Col 2</w:t></w:r></w:p></w:tc></w:tr></w:tbl><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" />"));
+        }
+
+        [Test]
         public void Headings()
         {
 
@@ -265,6 +283,7 @@ namespace DocxTemplater.Test
 
             var model = new
             {
+                Numbers = new int[] { 1, 2, 3, 4, 5 },
                 markdown = File.ReadAllText("Resources/TestMarkDown.md"),
                 markdownInTable = sb.ToString(),
                 markdownInTableList = sb2.ToString(),
