@@ -3,6 +3,7 @@ using DocumentFormat.OpenXml.Wordprocessing;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using DocumentFormat.OpenXml.Packaging;
 
 namespace DocxTemplater.Formatter
 {
@@ -30,16 +31,15 @@ namespace DocxTemplater.Formatter
 
         public void WriteErrorMessages(OpenXmlCompositeElement rootElement)
         {
-            // add paragraph to the beginning of the document with all errors
-            // color red and bold
-            var body = rootElement.GetFirstChild<Body>();
-            if (body == null)
+
+            if (rootElement is Document document)
             {
-                return;
+                rootElement = document.Body;
             }
 
             if (m_errors.Count > 0)
             {
+                var firstParagraph = rootElement.GetFirstChild<Paragraph>();
                 var paragraph = new Paragraph();
                 foreach (var error in m_errors)
                 {
@@ -49,7 +49,14 @@ namespace DocxTemplater.Formatter
                         Bold = new Bold()
                     }, new Text(error)));
                 }
-                body.AddChild(paragraph);
+                if (firstParagraph != null)
+                {
+                    firstParagraph.InsertBeforeSelf(paragraph);
+                }
+                else
+                {
+                    rootElement.AddChild(paragraph);
+                }
             }
         }
 
@@ -129,7 +136,7 @@ namespace DocxTemplater.Formatter
                     }
                     else if (ProcessSettings.BindingErrorHandling == BindingErrorHandling.HighlightErrorsInDocument)
                     {
-                        MarkTextAssError(text);
+                        MarkTextAsError(text);
                         AddError(e.Message);
                     }
                     else
@@ -193,21 +200,33 @@ namespace DocxTemplater.Formatter
             }
         }
 
-        public static void MarkTextAssError(Text text)
+        public static void MarkTextAsError(Text text)
         {
             var run = text.GetFirstAncestor<Run>();
             if (run != null)
             {
-                // get the run properties
+                // Get or create run properties
                 var runProperties = run.GetFirstChild<RunProperties>();
                 if (runProperties == null)
                 {
                     runProperties = new RunProperties();
                     run.InsertAt(runProperties, 0);
                 }
-                runProperties.Color = new Color() { Val = "FF0000" };
+
+                // Set text color to black and background color to red
+                runProperties.Color = new Color() { Val = "000000" }; // Black text
                 runProperties.Bold = new Bold();
-                text.RemoveMark();
+
+                // Add red background
+                var shading = new Shading()
+                {
+                    Val = ShadingPatternValues.Clear,  // Background shading
+                    Color = "auto",                    // Automatic text color
+                    Fill = "FF0000"                     // Red background
+                };
+                runProperties.AddChild(shading);
+
+                text.RemoveMarker();
             }
         }
     }

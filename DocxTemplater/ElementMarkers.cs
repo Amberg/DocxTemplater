@@ -13,7 +13,7 @@ namespace DocxTemplater
             element.SetAttribute(new OpenXmlAttribute(null, MarkerAttribute, null, value.ToString()));
         }
 
-        public static void RemoveMark(this OpenXmlElement element)
+        public static void RemoveMarker(this OpenXmlElement element)
         {
             element.RemoveAttribute(MarkerAttribute, null);
         }
