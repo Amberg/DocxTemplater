@@ -51,17 +51,17 @@ namespace DocxTemplater
 
         private string OnVariableReplace(Match match, Interpreter interpreter)
         {
-	        string unary = match.Groups["unary"].Value; // Preserve unary operators if present
-	        string prop = match.Groups["prop"].Value;   // Preserve the word after dots
+            string unary = match.Groups["unary"].Value; // Preserve unary operators if present
+            string prop = match.Groups["prop"].Value;   // Preserve the word after dots
             var dots = match.Groups["dots"].Value;
 
-			var dotCount = dots.Length;
+            var dotCount = dots.Length;
             var scope = m_modelDictionary.GetScopeParentLevel(dotCount - 1);
             var varName = $"{unary}__s{dotCount}_"; // choose a variable name that is unlikely to be used by the user
             interpreter.SetVariable(varName, scope);
             if (!string.IsNullOrWhiteSpace(prop))
             {
-                varName += $".{match.Groups[2].Value}";
+                varName += $".{prop}";
             }
             return varName;
         }

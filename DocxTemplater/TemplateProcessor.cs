@@ -62,6 +62,9 @@ namespace DocxTemplater
             }
 
             Cleanup(rootElement, removeEmptyElements: true);
+
+            m_variableReplacer.WriteErrorMessages(rootElement);
+
 #if DEBUG
             Console.WriteLine("----------- Completed --------");
             Console.WriteLine(rootElement.ToPrettyPrintXml());

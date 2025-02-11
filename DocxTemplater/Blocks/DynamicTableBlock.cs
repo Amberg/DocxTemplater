@@ -98,7 +98,7 @@ namespace DocxTemplater.Blocks
             }
             else
             {
-                throw new OpenXmlTemplateException($"Value of {m_tablenName} is not of type {typeof(IDynamicTable)}");
+                throw new OpenXmlTemplateException($"'{m_tablenName}' is not of type {typeof(IDynamicTable)}");
             }
         }
 

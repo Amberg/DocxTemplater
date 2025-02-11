@@ -19,7 +19,21 @@ namespace DocxTemplater.Blocks
 
         public override void Expand(IModelLookup models, OpenXmlElement parentNode)
         {
-            var model = models.GetValue(m_collectionName);
+            object model = null;
+            try
+            {
+                model = models.GetValue(m_collectionName);
+            }
+            catch (OpenXmlTemplateException e) when (m_variableReplacer.ProcessSettings.BindingErrorHandling !=
+                                                     BindingErrorHandling.ThrowException)
+            {
+                if (m_variableReplacer.ProcessSettings.BindingErrorHandling ==
+                    BindingErrorHandling.HighlightErrorsInDocument)
+                {
+                    m_variableReplacer.AddError(e.Message);
+                }
+            }
+
             if (model is IEnumerable enumerable)
             {
                 var items = enumerable.Cast<object>().Reverse().ToList();
@@ -36,7 +50,16 @@ namespace DocxTemplater.Blocks
             }
             else if (model != null)
             {
-                throw new OpenXmlTemplateException($"Value of {m_collectionName} is not enumerable - it is of type {model.GetType().FullName}");
+                if (m_variableReplacer.ProcessSettings.BindingErrorHandling == BindingErrorHandling.ThrowException)
+                {
+                    throw new OpenXmlTemplateException(
+                        $"'{m_collectionName}' is not enumerable - it is of type {model.GetType().FullName}");
+                }
+                else
+                {
+                    m_variableReplacer.AddError(
+                        $"'{m_collectionName}' is not enumerable - it is of type {model.GetType().FullName}");
+                }
             }
         }
 

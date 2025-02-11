@@ -22,6 +22,75 @@ namespace DocxTemplater.Test
             result.SaveAsFileAndOpenInWord();
         }
 
+        [Test]
+        public void ProcessComplexTemplateWithErrorHandlingInDocument()
+        {
+            using var fileStream = File.OpenRead("Resources/ComplexTemplate.docx");
+            var docTemplate = new DocxTemplate(fileStream, new ProcessSettings() { BindingErrorHandling = BindingErrorHandling.HighlightErrorsInDocument });
+
+            docTemplate.BindModel("ds", new { });
+
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            result.Position = 0;
+            // result.SaveAsFileAndOpenInWord();
+
+            // add items not enumerable
+            fileStream.Position = 0;
+            docTemplate = new DocxTemplate(fileStream, new ProcessSettings() { BindingErrorHandling = BindingErrorHandling.HighlightErrorsInDocument });
+            docTemplate.BindModel("ds", new
+            {
+                Items = new
+                {
+                    Images = new List<byte[]>()
+                }
+            });
+            result = docTemplate.Process();
+            docTemplate.Validate();
+            result.Position = 0;
+            //result.SaveAsFileAndOpenInWord();
+
+            // add items
+            fileStream.Position = 0;
+            docTemplate = new DocxTemplate(fileStream, new ProcessSettings() { BindingErrorHandling = BindingErrorHandling.HighlightErrorsInDocument });
+            docTemplate.BindModel("ds", new { Items = new[] { new { Images = new List<byte[]>() } } });
+            result = docTemplate.Process();
+            docTemplate.Validate();
+            result.Position = 0;
+            //result.SaveAsFileAndOpenInWord();
+
+            // add SoftwareVersions
+            fileStream.Position = 0;
+            docTemplate = new DocxTemplate(fileStream, new ProcessSettings() { BindingErrorHandling = BindingErrorHandling.HighlightErrorsInDocument });
+            docTemplate.BindModel("ds", new
+            {
+                Items = new[] { new
+            {
+                Images = new List<byte[]>(),
+                SoftwareVersions = new[] {new{}}
+            } }
+            });
+            result = docTemplate.Process();
+            docTemplate.Validate();
+            result.Position = 0;
+            //result.SaveAsFileAndOpenInWord();
+
+            fileStream.Position = 0;
+            docTemplate = new DocxTemplate(fileStream, new ProcessSettings() { BindingErrorHandling = BindingErrorHandling.HighlightErrorsInDocument });
+            docTemplate.BindModel("ds", new
+            {
+                Items = new[] { new
+                {
+                    Images = new List<byte[]>(),
+                    SoftwareVersions = new[] {new{ Version = "v1.0"}}
+                } }
+            });
+            result = docTemplate.Process();
+            docTemplate.Validate();
+            result.Position = 0;
+            result.SaveAsFileAndOpenInWord();
+        }
+
         private object CreateModel(byte[] imageBytes)
         {
             var items = new List<WarehouseItem>

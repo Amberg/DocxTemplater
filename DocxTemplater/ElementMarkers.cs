@@ -13,9 +13,9 @@ namespace DocxTemplater
             element.SetAttribute(new OpenXmlAttribute(null, MarkerAttribute, null, value.ToString()));
         }
 
-        public static void RemoveAttribute(this OpenXmlElement element, string name)
+        public static void RemoveMark(this OpenXmlElement element)
         {
-            element.RemoveAttribute(name, null);
+            element.RemoveAttribute(MarkerAttribute, null);
         }
 
         public static bool IsMarked(this OpenXmlElement element)
