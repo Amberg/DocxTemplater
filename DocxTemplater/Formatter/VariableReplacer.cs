@@ -3,7 +3,6 @@ using DocumentFormat.OpenXml.Wordprocessing;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using DocumentFormat.OpenXml.Packaging;
 
 namespace DocxTemplater.Formatter
 {
@@ -41,14 +40,13 @@ namespace DocxTemplater.Formatter
             {
                 var firstParagraph = rootElement.GetFirstChild<Paragraph>();
                 var paragraph = new Paragraph();
-                foreach (var error in m_errors)
+                var text = new Text(string.Join("\n", m_errors.Distinct()));
+                paragraph.AppendChild(new Run(new RunProperties()
                 {
-                    paragraph.AppendChild(new Run(new RunProperties()
-                    {
-                        Color = new Color() { Val = "FF0000" },
-                        Bold = new Bold()
-                    }, new Text(error)));
-                }
+                    Color = new Color() { Val = "FF0000" },
+                    Bold = new Bold()
+                }, text));
+                SplitNewLinesInText(text);
                 if (firstParagraph != null)
                 {
                     firstParagraph.InsertBeforeSelf(paragraph);
