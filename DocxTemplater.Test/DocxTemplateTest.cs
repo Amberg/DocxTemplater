@@ -396,6 +396,171 @@ namespace DocxTemplater.Test
             Assert.That(body.Descendants<Paragraph>().Count(), Is.EqualTo(4));
         }
 
+        [Test]
+        public void BoundToPrimitiveArray()
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(
+                new Paragraph(new Run(new Text("{{ds.Items.Length}}"))),
+                new Paragraph(new Run(new Text("{{#ds.Items}}"))),
+                new Paragraph(new Run(new Text("{?{ds.Items < 6}}less than 6{{/}}"))),
+                new Paragraph(new Run(new Text("{{/ds.Items}}")))
+            ));
+            wpDocument.Save();
+            memStream.Position = 0;
+            var docTemplate = new DocxTemplate(memStream);
+            docTemplate.BindModel("ds", new { Items = new[] { 6, 7, 5 } });
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.That(result, Is.Not.Null);
+            result.Position = 0;
+            result.SaveAsFileAndOpenInWord();
+            result.Position = 0;
+            // there should only be 4 paragraphs after processing
+            var document = WordprocessingDocument.Open(result, false);
+            var text = document.MainDocumentPart.Document.Body.InnerText;
+            Assert.That(text, Is.EqualTo("3less than 6"));
+        }
+
+        [Test]
+        public void BoundToEmptyArray()
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(
+                new Paragraph(new Run(new Text("{{ds.Items.Length}}"))),
+                new Paragraph(new Run(new Text("{{#ds.Items}}"))),
+                new Paragraph(new Run(new Text("{?{ds.Count < 6}}less than 6{{/}}"))),
+                new Paragraph(new Run(new Text("{{/ds.Items}}")))
+            ));
+            wpDocument.Save();
+            memStream.Position = 0;
+            var docTemplate = new DocxTemplate(memStream);
+            docTemplate.BindModel("ds", new { Items = Array.Empty<int>() });
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.That(result, Is.Not.Null);
+            result.Position = 0;
+            result.SaveAsFileAndOpenInWord();
+            result.Position = 0;
+            // there should only be 4 paragraphs after processing
+            var document = WordprocessingDocument.Open(result, false);
+            var text = document.MainDocumentPart.Document.Body.InnerText;
+            Assert.That(text, Is.EqualTo("0"));
+        }
+
+        [Test]
+        public void ScopeAccessVarInCondition()
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(
+                new Paragraph(new Run(new Text("{{#ds.Items}}"))),
+                new Paragraph(new Run(new Text("{?{. < 6}}less than 6{{/}}"))),
+                new Paragraph(new Run(new Text("{{/ds.Items}}")))
+            ));
+            wpDocument.Save();
+            memStream.Position = 0;
+            var docTemplate = new DocxTemplate(memStream);
+            docTemplate.BindModel("ds", new { Items = new[] { 6, 7, 5 } });
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.That(result, Is.Not.Null);
+            result.Position = 0;
+            result.SaveAsFileAndOpenInWord();
+            result.Position = 0;
+            // there should only be 4 paragraphs after processing
+            var document = WordprocessingDocument.Open(result, false);
+            var text = document.MainDocumentPart.Document.Body.InnerText;
+            Assert.That(text, Is.EqualTo("less than 6"));
+        }
+
+        [Test]
+        public void ScopeAccessWithPropertyAccessInCondition()
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(
+                new Paragraph(new Run(new Text("{{#ds.Items}}"))),
+                new Paragraph(new Run(new Text("{?{.Value < 6}}less than 6{{/}}"))),
+                new Paragraph(new Run(new Text("{{/ds.Items}}")))
+            ));
+            wpDocument.Save();
+            memStream.Position = 0;
+            var docTemplate = new DocxTemplate(memStream);
+            docTemplate.BindModel("ds", new { Items = new[] { new { Value = 5 } } });
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.That(result, Is.Not.Null);
+            result.Position = 0;
+            result.SaveAsFileAndOpenInWord();
+            result.Position = 0;
+            // there should only be 4 paragraphs after processing
+            var document = WordprocessingDocument.Open(result, false);
+            var text = document.MainDocumentPart.Document.Body.InnerText;
+            Assert.That(text, Is.EqualTo("less than 6"));
+        }
+
+        [Test]
+        public void ScopeAccessVarInConditionNested()
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(
+                new Paragraph(new Run(new Text("{{#ds.Items}}"))),
+                new Paragraph(new Run(new Text("{{#.Inner}}"))),
+                new Paragraph(new Run(new Text("{?{6 >= . || . == 8}}match {{.}} {{/}}"))),
+                new Paragraph(new Run(new Text("{{/.Inner}}"))),
+                new Paragraph(new Run(new Text("{{/ds.Items}}")))
+            ));
+            wpDocument.Save();
+            memStream.Position = 0;
+            var docTemplate = new DocxTemplate(memStream);
+            docTemplate.BindModel("ds", new { Items = new[] { new { Inner = new List<int> { 3, 7, 8 } } } });
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.That(result, Is.Not.Null);
+            result.Position = 0;
+            result.SaveAsFileAndOpenInWord();
+            result.Position = 0;
+            // there should only be 4 paragraphs after processing
+            var document = WordprocessingDocument.Open(result, false);
+            var text = document.MainDocumentPart.Document.Body.InnerText;
+            Assert.That(text, Is.EqualTo("match 3 match 8 "));
+        }
+
+        [Test]
+        public void ScopeAccessVarInConditionWithValue_Unicode()
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(
+                new Paragraph(new Run(new Text("{{#ds.Items}}"))),
+                new Paragraph(new Run(new Text("{?{.Ч1 < 6}}less than 6{{/}}"))),
+                new Paragraph(new Run(new Text("{{/ds.Items}}")))
+            ));
+            wpDocument.Save();
+            memStream.Position = 0;
+            var docTemplate = new DocxTemplate(memStream);
+            docTemplate.BindModel("ds", new { Items = new[] { new { Ч1 = 5 } } });
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.That(result, Is.Not.Null);
+            result.Position = 0;
+            result.SaveAsFileAndOpenInWord();
+            result.Position = 0;
+            // there should only be 4 paragraphs after processing
+            var document = WordprocessingDocument.Open(result, false);
+            var text = document.MainDocumentPart.Document.Body.InnerText;
+            Assert.That(text, Is.EqualTo("less than 6"));
+        }
 
         [Test]
         public void CollectionSeparatorTest()
@@ -431,7 +596,7 @@ namespace DocxTemplater.Test
                 new Paragraph(new Run(new Text("{?{ds3.MyBool}}Test4{{:}}else4{{/}}"))),
                 new Paragraph(new Run(new Text("{?{!ds4.MyBool}}Test5{{:}}else4{{/}}"))),
                 new Paragraph(new Run(new Text("{?{!ds3.MyBool}}NoElse{{/}}")))
-                    ));
+                ));
             wpDocument.Save();
             memStream.Position = 0;
             var docTemplate = new DocxTemplate(memStream);
@@ -449,6 +614,63 @@ namespace DocxTemplater.Test
             var document = WordprocessingDocument.Open(result, false);
             var body = document.MainDocumentPart.Document.Body;
             Assert.That(body.InnerText, Is.EqualTo("Test1Test2Test3Test4Test5"));
+        }
+
+
+        [Test]
+        public void ConditionWithLogicalOperators()
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(
+                new Paragraph(new Run(new Text("{?{ ds.Test > 5 }} 1 {{/}}"))),
+                new Paragraph(new Run(new Text("{?{ ds2.Test > 8 || ds3.MyBool}} 2 {{/}}"))),
+                new Paragraph(new Run(new Text("{?{ ds2.Test > 8 || (!ds4.MyBool && ds3.MyBool) }} 3 {{/}}")))
+            ));
+            wpDocument.Save();
+            memStream.Position = 0;
+            var docTemplate = new DocxTemplate(memStream);
+            docTemplate.BindModel("ds", new { Test = 6 });
+            docTemplate.BindModel("ds2", new { Test = 6 });
+            docTemplate.BindModel("ds3", new { MyBool = true });
+            docTemplate.BindModel("ds4", new { MyBool = false });
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.That(result, Is.Not.Null);
+            result.Position = 0;
+            result.SaveAsFileAndOpenInWord();
+            result.Position = 0;
+            // check result text
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            Assert.That(body.InnerText, Is.EqualTo(" 1  2  3 "));
+        }
+
+        [Test]
+        public void ConditionWithStringOperators()
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(
+                new Paragraph(new Run(new Text("{?{ ds.Test.Contains(\"here\") }} 1 {{/}}"))),
+                new Paragraph(new Run(new Text("{?{ ds.Test.StartsWith('String') }} 2 {{/}}")))
+            ));
+            wpDocument.Save();
+            memStream.Position = 0;
+            var docTemplate = new DocxTemplate(memStream);
+            docTemplate.BindModel("ds", new { Test = "String here" });
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.That(result, Is.Not.Null);
+            result.Position = 0;
+            result.SaveAsFileAndOpenInWord();
+            result.Position = 0;
+            // check result text
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            Assert.That(body.InnerText, Is.EqualTo(" 1  2 "));
         }
 
         [Test]

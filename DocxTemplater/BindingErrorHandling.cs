@@ -3,6 +3,7 @@
     public enum BindingErrorHandling
     {
         ThrowException,
+        HighlightErrorsInDocument,
         SkipBindingAndRemoveContent
     }
 }

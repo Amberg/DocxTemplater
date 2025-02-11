@@ -8,7 +8,7 @@ namespace DocxTemplater
     internal class ScriptCompiler : IScriptCompiler
     {
         private readonly IModelLookup m_modelDictionary;
-        private static readonly Regex RegexWordStartingWithDot = new(@"^(\.+)([a-zA-z0-9_]+)", RegexOptions.Compiled);
+        private static readonly Regex RegexWordStartingWithDot = new(@"(?:^|\s+|(?<unary>[+\-!]))(?<dots>\.+)(?<prop>[\p{L}\p{N}_]*)", RegexOptions.Compiled);
 
         public ScriptCompiler(IModelLookup modelDictionary, ProcessSettings processSettings)
         {
@@ -20,7 +20,9 @@ namespace DocxTemplater
 
         public Func<bool> CompileScript(string scriptAsString)
         {
-            scriptAsString = scriptAsString.Trim().Replace('\'', '"');
+            scriptAsString = scriptAsString.Trim().Replace('\'', '"').Replace('“', '"');
+
+
             // replace replace leading dots (implicit scope) with variables
             var interpreter = new Interpreter();
             scriptAsString = RegexWordStartingWithDot.Replace(scriptAsString, (m) => OnVariableReplace(m, interpreter));
@@ -49,11 +51,19 @@ namespace DocxTemplater
 
         private string OnVariableReplace(Match match, Interpreter interpreter)
         {
-            var dotCount = match.Groups[1].Length;
+            string unary = match.Groups["unary"].Value; // Preserve unary operators if present
+            string prop = match.Groups["prop"].Value;   // Preserve the word after dots
+            var dots = match.Groups["dots"].Value;
+
+            var dotCount = dots.Length;
             var scope = m_modelDictionary.GetScopeParentLevel(dotCount - 1);
-            var varName = $"__s{dotCount}_"; // choose a variable name that is unlikely to be used by the user
+            var varName = $"{unary}__s{dotCount}_"; // choose a variable name that is unlikely to be used by the user
             interpreter.SetVariable(varName, scope);
-            return $"{varName}.{match.Groups[2].Value}";
+            if (!string.IsNullOrWhiteSpace(prop))
+            {
+                varName += $".{prop}";
+            }
+            return varName;
         }
 
         private class ModelVariable : DynamicObject
