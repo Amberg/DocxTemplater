@@ -8,7 +8,23 @@ namespace DocxTemplater
     internal class ScriptCompiler : IScriptCompiler
     {
         private readonly IModelLookup m_modelDictionary;
-        private static readonly Regex RegexWordStartingWithDot = new(@"(?:^|\s+|(?<unary>[+\-!]))(?<dots>\.+)(?<prop>[\p{L}\p{N}_]*)", RegexOptions.Compiled);
+        private static readonly Regex RegexWordStartingWithDot = new(@"
+                                                                    (?x)                          # Enable verbose mode - allows comments and whitespace in pattern
+                                                                    (?:                           # Non-capturing group for all possible prefixes:
+                                                                        ^                         # Either start of string
+                                                                        |                        
+                                                                        (?<unary>[+\-!])         # Capture unary operators (+, -, !) in 'unary' group
+                                                                        |                       
+                                                                        (?<=[^.\p{L}\p{N}_])     # Position after any char that's not a dot, letter, number, or underscore
+                                                                                                 # (lookbehind - ensures we don't break existing identifiers)
+                                                                    )
+                                                                    (?<dots>\.+)                 # Capture one or more dots in 'dots' group
+                                                                    (?<prop>                     # Start 'prop' group for the property name
+                                                                        [\p{L}\p{N}_]*           # Any number of letters, numbers, or underscores
+                                                                    )                            
+                                                                    ",
+            RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace
+        );
 
         public ScriptCompiler(IModelLookup modelDictionary, ProcessSettings processSettings)
         {
@@ -21,9 +37,7 @@ namespace DocxTemplater
         public Func<bool> CompileScript(string scriptAsString)
         {
             scriptAsString = scriptAsString.Trim().Replace('\'', '"').Replace('“', '"');
-
-
-            // replace replace leading dots (implicit scope) with variables
+            // replace leading dots (implicit scope) with variables
             var interpreter = new Interpreter();
             scriptAsString = RegexWordStartingWithDot.Replace(scriptAsString, (m) => OnVariableReplace(m, interpreter));
             var identifiers = interpreter.DetectIdentifiers(scriptAsString);
