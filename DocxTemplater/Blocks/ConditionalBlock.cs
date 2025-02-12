@@ -26,8 +26,9 @@ namespace DocxTemplater.Blocks
             {
                 conditionResult = m_scriptCompiler.CompileScript(m_condition)();
             }
-            catch (OpenXmlTemplateException) when (m_scriptCompiler.ProcessSettings.BindingErrorHandling != BindingErrorHandling.ThrowException)
+            catch (OpenXmlTemplateException e) when (m_scriptCompiler.ProcessSettings.BindingErrorHandling != BindingErrorHandling.ThrowException)
             {
+                m_variableReplacer.AddError($"{e.Message} in condition '{m_condition}'");
             }
             var cloned = m_content.Select(x => x.CloneNode(true)).ToList();
             InsertContent(parentNode, cloned);

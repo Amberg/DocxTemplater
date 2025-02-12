@@ -30,6 +30,10 @@ namespace DocxTemplater.Formatter
 
         public void WriteErrorMessages(OpenXmlCompositeElement rootElement)
         {
+            if (ProcessSettings.BindingErrorHandling != BindingErrorHandling.HighlightErrorsInDocument)
+            {
+                return;
+            }
 
             if (rootElement is Document document)
             {
