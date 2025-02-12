@@ -85,33 +85,35 @@ namespace DocxTemplater.Markdown
                     for (int idx = 0; idx < convertedMdElements.Length; idx++)
                     {
                         var currentElement = convertedMdElements[idx];
-                        if (idx == 0)
+                        if (idx == 0 && currentElement is Paragraph firstMdParagraph)
                         {
-                            if (currentElement is Paragraph firstMdParagraph) // merge runs into first paragraph
-                            {
-                                var children = firstMdParagraph.ChildElements.Where(x => x is Table or Run).ToList();
-                                var targetParagraph = target.GetFirstAncestor<Paragraph>();
-                                MergeStyle(targetParagraph, firstMdParagraph);
-                                firstMdParagraph.RemoveAllChildren();
-                                target.GetFirstAncestor<Run>().InsertAfterSelf(children);
-                                continue;
-                            }
+                            var children = firstMdParagraph.ChildElements.Where(x => x is Table or Run).ToList();
+                            var targetParagraph = target.GetFirstAncestor<Paragraph>();
+                            MergeStyle(targetParagraph, firstMdParagraph);
+                            firstMdParagraph.RemoveAllChildren();
+                            target.GetFirstAncestor<Run>().InsertAfterSelf(children);
+                        }
+                        else
+                        {
+                            lastInsertedElement = lastInsertedElement.InsertAfterSelf(currentElement);
                         }
 
-                        if (idx == convertedMdElements.Length - 1 && paragraphBeforeMd != paragraphAfterMd) // last element merge with paragraph after MD
+                        if (idx == convertedMdElements.Length - 1) // last element merge with paragraph after MD
                         {
-                            if (currentElement is Paragraph lastMdParagraph) // merge runs into first paragraph
+                            if (paragraphBeforeMd != paragraphAfterMd) // the original paragraph was split
                             {
-                                var children = lastMdParagraph.ChildElements.Where(x => x is Table or Run).Reverse().ToList();
-                                MergeStyle(paragraphAfterMd, lastMdParagraph);
-                                foreach (var c in children)
+                                if (lastInsertedElement is Paragraph lastInsertedParagraph) // merge runs into first paragraph
                                 {
-                                    paragraphAfterMd.PrependChild(c);
+                                    var children = paragraphAfterMd.ChildElements.Where(x => x is Table or Run).ToList();
+                                    paragraphAfterMd.RemoveAllChildren();
+                                    paragraphAfterMd.Remove();
+                                    foreach (var c in children)
+                                    {
+                                        lastInsertedParagraph.AppendChild(c);
+                                    }
                                 }
-                                continue;
                             }
                         }
-                        lastInsertedElement = lastInsertedElement.InsertAfterSelf(currentElement);
                     }
                 }
                 target.RemoveWithEmptyParent();

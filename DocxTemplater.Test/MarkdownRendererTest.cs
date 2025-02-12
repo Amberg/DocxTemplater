@@ -32,7 +32,11 @@ namespace DocxTemplater.Test
             using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
             MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
             mainPart.Document =
-                new Document(new Body(new Paragraph(new Run(new Text("{{ds.markdown}:md}")))));
+                new Document(new Body(new Paragraph(
+                    new Run(new Text("Line Before ")),
+                    new Run(new Text("{{ds.markdown}:md}")),
+                    new Run(new Text("Line After"))
+                    )));
             wpDocument.Save();
             memStream.Position = 0;
 
@@ -53,7 +57,8 @@ namespace DocxTemplater.Test
             var body = document.MainDocumentPart.Document.Body;
 
             // {{ds.markdown}:md} --> "_Hello_ **{{ds:Name}}**" --> "Hello John"
-            Assert.That(body.InnerText, Is.EqualTo("Hello JOHN Doe"));
+            Assert.That(body.InnerText, Is.EqualTo("Line Before Hello JOHN DoeLine After"));
+            Assert.That(body.Descendants<Paragraph>().Count(), Is.EqualTo(1));
         }
 
         [TestCase("**Hello**")]
