@@ -43,55 +43,117 @@ namespace DocxTemplater.Markdown
             }
 
             m_nestingDepth++;
-            var root = target.GetRoot();
-            if (root is OpenXmlPartRootElement openXmlPartRootElement && openXmlPartRootElement.OpenXmlPart != null)
+            try
             {
-                var pipeline = new MarkdownPipelineBuilder().UsePipeTables().Build();
-                var markdownDocument = MarkdownParser.Parse(mdText, pipeline);
-
-                var parentParagraph = target.GetFirstAncestor<Paragraph>();
-                // split the paragraph at the target
-                var paragraph = (Paragraph)parentParagraph.SplitAfterElement(target).First();
-
-                var renderer = new MarkdownToOpenXmlRenderer(paragraph, target, m_mainDocumentPart, m_configuration);
-                var firstParagraph = renderer.CurrentParagraph;
-                renderer.Render(markdownDocument);
-                var lastParagraph = renderer.CurrentParagraph;
-                try
+                var root = target.GetRoot();
+                if (root is OpenXmlPartRootElement openXmlPartRootElement && openXmlPartRootElement.OpenXmlPart != null)
                 {
-                    target.RemoveWithEmptyParent();
-                    DoVariableReplacementInParagraphs(firstParagraph, lastParagraph);
+                    var pipeline = new MarkdownPipelineBuilder().UsePipeTables().Build();
+                    var markdownDocument = MarkdownParser.Parse(mdText, pipeline);
+
+
+                    // split the paragraph at the target
+                    var split = target.GetFirstAncestor<Paragraph>().SplitAfterElement(target);
+                    Paragraph paragraphBeforeMd = split.OfType<Paragraph>().First();
+                    Paragraph paragraphAfterMd = split.OfType<Paragraph>().Last();
+
+                    // create a container for the markdown as render target
+                    var renderedMarkdownContainer = new Body();
+                    var containerParagraph = new Paragraph();
+                    renderedMarkdownContainer.Append(containerParagraph);
+
+                    var renderer = new MarkdownToOpenXmlRenderer(containerParagraph, target, m_mainDocumentPart, m_configuration);
+                    renderer.Render(markdownDocument);
+                    try
+                    {
+                        DoVariableReplacementInParagraphs(renderedMarkdownContainer);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new OpenXmlTemplateException("Variable Replacement in markdown failed", e);
+                    }
+                    containerParagraph.RemoveWithEmptyParent();
+
+#if DEBUG
+                    Console.WriteLine("----------- Markdown Converted to OpenXML --------");
+                    Console.WriteLine(renderedMarkdownContainer.ToPrettyPrintXml());
+#endif
+
+                    var convertedMdElements = renderedMarkdownContainer.ChildElements.ToArray();
+                    renderedMarkdownContainer.RemoveAllChildren();
+                    OpenXmlElement lastInsertedElement = paragraphBeforeMd;
+                    for (int idx = 0; idx < convertedMdElements.Length; idx++)
+                    {
+                        var currentElement = convertedMdElements[idx];
+                        if (idx == 0 && currentElement is Paragraph firstMdParagraph)
+                        {
+                            var children = firstMdParagraph.ChildElements.Where(x => x is Table or Run).ToList();
+                            var targetParagraph = target.GetFirstAncestor<Paragraph>();
+                            MergeStyle(targetParagraph, firstMdParagraph);
+                            firstMdParagraph.RemoveAllChildren();
+                            target.GetFirstAncestor<Run>().InsertAfterSelf(children);
+                        }
+                        else
+                        {
+                            lastInsertedElement = lastInsertedElement.InsertAfterSelf(currentElement);
+                        }
+
+                        if (idx == convertedMdElements.Length - 1) // last element merge with paragraph after MD
+                        {
+                            if (paragraphBeforeMd != paragraphAfterMd) // the original paragraph was split
+                            {
+                                if (lastInsertedElement is Paragraph lastInsertedParagraph) // merge runs into first paragraph
+                                {
+                                    var children = paragraphAfterMd.ChildElements.Where(x => x is Table or Run).ToList();
+                                    paragraphAfterMd.RemoveAllChildren();
+                                    paragraphAfterMd.Remove();
+                                    foreach (var c in children)
+                                    {
+                                        lastInsertedParagraph.AppendChild(c);
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
-                catch (Exception e)
-                {
-                    throw new OpenXmlTemplateException("Variable Replacement in markdown failed", e);
-                }
+                target.RemoveWithEmptyParent();
             }
-            m_nestingDepth--;
-            target.RemoveWithEmptyParent();
+            finally
+            {
+                m_nestingDepth--;
+            }
         }
 
-        private void DoVariableReplacementInParagraphs(Paragraph firstParagraph, Paragraph lastParagraph)
+        private static void MergeStyle(Paragraph existing, Paragraph addedStyle)
         {
-            var currentParagraph = firstParagraph;
-            do
+            if (existing == null || addedStyle == null)
             {
-                if (currentParagraph.InnerText.Contains('{'))
+                return;
+            }
+            var existingParaProps = existing.GetFirstChild<ParagraphProperties>();
+            var addedProperties = (ParagraphProperties)addedStyle.GetFirstChild<ParagraphProperties>();
+            if (addedProperties != null)
+            {
+                if (existingParaProps != null)
                 {
-                    var processor = new XmlNodeTemplate(currentParagraph, m_processSettings, m_modelLookup, m_variableReplacer, m_scriptCompiler, m_mainDocumentPart);
-                    processor.Process();
+                    existingParaProps.ParagraphStyleId = (ParagraphStyleId)addedProperties.ParagraphStyleId?.CloneNode(true);
+                    existingParaProps.ParagraphBorders = (ParagraphBorders)addedProperties.ParagraphBorders?.CloneNode(true);
                 }
-                if (currentParagraph == lastParagraph)
+                else
                 {
-                    break;
-                }
-                currentParagraph = currentParagraph.NextSibling<Paragraph>();
-                if (currentParagraph == null)
-                {
-                    break;
+                    existing.AddChild(addedProperties.CloneNode(true));
                 }
             }
-            while (currentParagraph != lastParagraph);
+        }
+
+        private void DoVariableReplacementInParagraphs(Body mdContainer)
+        {
+            if (!mdContainer.InnerText.Contains('{'))
+            {
+                return;
+            }
+            var processor = new XmlNodeTemplate(mdContainer, m_processSettings, m_modelLookup, m_variableReplacer, m_scriptCompiler, m_mainDocumentPart);
+            processor.Process();
         }
 
         public void Initialize(IModelLookup modelLookup, IScriptCompiler scriptCompiler, IVariableReplacer variableReplacer,

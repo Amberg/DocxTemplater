@@ -15,8 +15,8 @@ namespace DocxTemplater
     public abstract class TemplateProcessor
     {
         private readonly IModelLookup m_models;
-        private readonly IVariableReplacer m_variableReplacer;
         private readonly IScriptCompiler m_scriptCompiler;
+        internal readonly IVariableReplacer m_variableReplacer;
 
         public ProcessSettings Settings { get; }
 
@@ -62,9 +62,6 @@ namespace DocxTemplater
             }
 
             Cleanup(rootElement, removeEmptyElements: true);
-
-            m_variableReplacer.WriteErrorMessages(rootElement);
-
 #if DEBUG
             Console.WriteLine("----------- Completed --------");
             Console.WriteLine(rootElement.ToPrettyPrintXml());

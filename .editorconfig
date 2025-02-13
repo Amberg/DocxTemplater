@@ -1,5 +1,10 @@
 ﻿[*.cs]
 
+# Indentation and spacing
+indent_size = 4
+indent_style = space
+tab_width = 4
+
 # IDE0028: Simplify collection initialization
 dotnet_diagnostic.IDE0028.severity = suggestion
 

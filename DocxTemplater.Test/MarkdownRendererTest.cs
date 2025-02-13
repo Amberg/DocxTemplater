@@ -32,7 +32,11 @@ namespace DocxTemplater.Test
             using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
             MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
             mainPart.Document =
-                new Document(new Body(new Paragraph(new Run(new Text("{{ds.markdown}:md}")))));
+                new Document(new Body(new Paragraph(
+                    new Run(new Text("Line Before ")),
+                    new Run(new Text("{{ds.markdown}:md}")),
+                    new Run(new Text("Line After"))
+                    )));
             wpDocument.Save();
             memStream.Position = 0;
 
@@ -53,7 +57,8 @@ namespace DocxTemplater.Test
             var body = document.MainDocumentPart.Document.Body;
 
             // {{ds.markdown}:md} --> "_Hello_ **{{ds:Name}}**" --> "Hello John"
-            Assert.That(body.InnerText, Is.EqualTo("Hello JOHN Doe"));
+            Assert.That(body.InnerText, Is.EqualTo("Line Before Hello JOHN DoeLine After"));
+            Assert.That(body.Descendants<Paragraph>().Count(), Is.EqualTo(1));
         }
 
         [TestCase("**Hello**")]
@@ -212,6 +217,24 @@ namespace DocxTemplater.Test
         }
 
         [Test]
+        public void TableInTable()
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("| Header 1 | Header 2 |");
+            sb.AppendLine("|----------|----------|");
+            sb.AppendLine("| Row 1 Col 1 | Row 1 Col 2 |");
+            sb.AppendLine("| Row 2 Col 1 | Row 2 Col 2 |");
+            var body = CreateTemplateWithMarkdownAndReturnBody(sb.ToString());
+            Assert.That(body.InnerXml, Is.EqualTo("<w:tbl xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:tblPr><w:tblW w:w=\"5000\" w:type=\"pct\" />" +
+                                                  "</w:tblPr><w:tblGrid><w:gridCol /><w:gridCol /><w:gridCol /></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr>" +
+                                                  "<w:p><w:r><w:t>Header 1</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Header 2</w:t>" +
+                                                  "</w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Row 1 Col 1</w:t></w:r></w:p>" +
+                                                  "</w:tc><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Row 1 Col 2</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc>" +
+                                                  "<w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Row 2 Col 1</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:type=\"auto\" />" +
+                                                  "</w:tcPr><w:p><w:r><w:t>Row 2 Col 2</w:t></w:r></w:p></w:tc></w:tr></w:tbl><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" />"));
+        }
+
+        [Test]
         public void Headings()
         {
 
@@ -265,6 +288,7 @@ namespace DocxTemplater.Test
 
             var model = new
             {
+                Numbers = new int[] { 1, 2, 3, 4, 5 },
                 markdown = File.ReadAllText("Resources/TestMarkDown.md"),
                 markdownInTable = sb.ToString(),
                 markdownInTableList = sb2.ToString(),

@@ -20,6 +20,20 @@
         }
 
         [Test]
+        public void ConditionWithScopeAccessAndOperatorsWithoutSpaces()
+        {
+            m_modelDictionary.Add("x", new { a = new { b = 5, c = 25 } });
+            var scope = m_modelDictionary.OpenScope();
+            scope.AddVariable("foooo", 55);
+            Assert.That(m_scriptCompiler.CompileScript(".>50&&.<60")());
+            Assert.That(m_scriptCompiler.CompileScript(".%2==0")(), Is.False);
+
+            var scope2 = m_modelDictionary.OpenScope();
+            scope2.AddVariable("2", 550);
+            Assert.That(m_scriptCompiler.CompileScript(".==..*10")());
+        }
+
+        [Test]
         public void WithMemberAccess()
         {
             m_modelDictionary.Add("x", new { a = new { b = 5 } });

@@ -102,6 +102,7 @@ namespace DocxTemplater
             {
                 ProcessNode(footer.Footer);
             }
+            m_variableReplacer.WriteErrorMessages(m_wpDocument.MainDocumentPart.RootElement);
             m_wpDocument.Save();
             m_stream.Position = 0;
             return m_stream;

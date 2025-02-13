@@ -430,7 +430,8 @@ namespace DocxTemplater
                         var nextSibling = row.NextSibling<TableRow>();
                         if (nextSibling != null)
                         {
-                            var nextRowProperties = nextSibling.ChildElements.OfType<TableRowProperties>().FirstOrDefault();
+                            var nextRowProperties =
+                                nextSibling.ChildElements.OfType<TableRowProperties>().FirstOrDefault();
                             if (nextRowProperties == null)
                             {
                                 rowProperties.Remove();
@@ -441,12 +442,13 @@ namespace DocxTemplater
                 }
                 else
                 {
-                    removeParent = !element.ChildElements.Any(x => x is not Languages and not RunProperties and not ParagraphProperties);
+                    removeParent = !element.ChildElements.Any(x =>
+                        x is not Languages and not RunProperties and not ParagraphProperties);
                 }
 
                 if (removeParent)
                 {
-                    element.Remove();
+                    parent.RemoveChild(element);
                     RemoveWithEmptyParent(parent);
                 }
             }
