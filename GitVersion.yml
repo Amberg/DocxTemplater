@@ -1,8 +1,21 @@
 assembly-versioning-scheme: MajorMinorPatch
 mode: Mainline
-next-version: 0.0.0
+next-version: 2.4.0
 branches:
-  main: {}
+  main:
+    regex: ^main$
+    tag: ''
+    increment: Patch
+    prevent-increment-of-merged-branch-version: false
+    is-release-branch: true
+  beta:
+    regex: ^beta$
+    tag: beta
+    source-branches: ['main']
+    increment: Patch
+    prevent-increment-of-merged-branch-version: false
+    track-merge-target: true
+    is-release-branch: false
 ignore:
   sha: []
 merge-message-formats: {}
