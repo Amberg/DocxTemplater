@@ -28,6 +28,7 @@
 
 
 	<PropertyGroup>
+		<Version>2.4.0-local</Version> <!-- Default value, overridden in CI -->
 		<PackageId>$(MSBuildProjectName)</PackageId>
 		<RepositoryType>git</RepositoryType>
 		<Authors>Orphis AG</Authors>
