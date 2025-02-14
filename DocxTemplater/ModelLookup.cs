@@ -95,6 +95,11 @@ namespace DocxTemplater
                     {
                         throw new OpenXmlTemplateException($"Property {propertyName} not found in {modelRootPath}");
                     }
+                    if (model is ValueWithMetadata valWithMetadata)
+                    {
+                        model = valWithMetadata.Value;
+                        lastValueMetadata = valWithMetadata.Metadata;
+                    }
                 }
                 else
                 {
