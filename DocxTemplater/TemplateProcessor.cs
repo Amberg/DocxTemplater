@@ -157,6 +157,11 @@ namespace DocxTemplater
                 var value = text.GetMarker();
                 var match = PatternMatcher.FindSyntaxPatterns(text.Text).Single();
 
+                if (value is PatternType.InlineKeyWord)
+                {
+                    StartBlock(blockStack, match, value, text);
+                    CloseBlock(blockStack, match, text);
+                }
 
                 if (value is PatternType.Condition or PatternType.CollectionStart)
                 {

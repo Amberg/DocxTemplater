@@ -10,6 +10,7 @@
         CollectionSeparator,
         CollectionEnd,
         Variable,
-        ConditionElse
+        ConditionElse,
+        InlineKeyWord
     }
 }

@@ -47,6 +47,7 @@ namespace DocxTemplater.Blocks
                 PatternType.CollectionStart => new LoopBlock(variableReplacer, patternType, startTextNode, matchedStartNode),
                 PatternType.CollectionSeparator => new CollectionSeparatorBlock(variableReplacer, patternType, startTextNode, matchedStartNode),
                 PatternType.Condition => new ConditionalBlock(variableReplacer, scriptCompiler, patternType, startTextNode, matchedStartNode),
+                PatternType.InlineKeyWord => new InlineKeyWordBlock(variableReplacer, patternType, startTextNode, matchedStartNode),
                 _ => new ContentBlock(variableReplacer, patternType, startTextNode, matchedStartNode)
             };
         }

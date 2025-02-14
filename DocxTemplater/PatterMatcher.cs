@@ -31,12 +31,12 @@ namespace DocxTemplater
         private static readonly Regex PatternRegex = new(@"\{\s*(?<condMarker>\?\s*)?\{\s*
         (?:   
             (?<separator>:\s*s\s*:) |
-            (?<else>(?:else)|:) |
+            (?<else>(?:else|:(?!\s*[^\s}]+))) |  # Match : only if nothing but whitespace follows before }
             (?(condMarker)
                 (?<condition>[^}]+) # allow any character except }
                 |
                 (?:
-                    (?<prefix>[\/\#])?(?<varname>[\p{L}\p{N}\._]+)? # \p{L}\p{N} - any letter or number (unicode) same as [a-zA-Z0-9] for ascii
+                    (?<prefix>[\/\#:])?(?<varname>[\p{L}\p{N}\._]+)? # \p{L}\p{N} - any letter or number (unicode) same as [a-zA-Z0-9] for ascii
                 ) 
             )
         )
@@ -79,14 +79,24 @@ namespace DocxTemplater
                 }
                 else if (match.Groups["prefix"].Success)
                 {
-                    if (match.Groups["prefix"].Value == "#")
+                    string varname = match.Groups["varname"].Success ? match.Groups["varname"].Value : null;
+                    var prefix = match.Groups["prefix"].Value;
+                    if (prefix == ":")
+                    {
+                        if (varname == null)
+                        {
+                            throw new OpenXmlTemplateException($"Invalid syntax '{match.Value}'");
+                        }
+                        result.Add(new PatternMatch(match, PatternType.InlineKeyWord, null, prefix, varname, null, null, match.Index, match.Length));
+                    }
+                    else if (prefix == "#")
                     {
                         result.Add(new PatternMatch(match, PatternType.CollectionStart, null,
                             match.Groups["prefix"].Value, match.Groups["varname"].Value,
                             match.Groups["formatter"].Value, match.Groups["arg"].Value.Split(','), match.Index,
                             match.Length));
                     }
-                    else if (!match.Groups["varname"].Success)
+                    else if (varname == null)
                     {
                         result.Add(new PatternMatch(match, PatternType.ConditionEnd, null, null, null, null, null,
                             match.Index, match.Length));
