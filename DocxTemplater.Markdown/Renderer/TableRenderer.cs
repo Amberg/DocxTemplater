@@ -1,4 +1,5 @@
-﻿using DocumentFormat.OpenXml.Packaging;
+﻿using System.Linq;
+using DocumentFormat.OpenXml.Packaging;
 using Markdig.Extensions.Tables;
 using Table = Markdig.Extensions.Tables.Table;
 using WP = DocumentFormat.OpenXml.Wordprocessing;
@@ -35,19 +36,14 @@ namespace DocxTemplater.Markdown.Renderer
                 }
             };
 
-            if (m_markDownFormatterConfiguration.TableStyle != null)
+            m_tableStyle ??= FindDefaultTableStyle(m_mainDocument, m_markDownFormatterConfiguration);
+
+            if (m_tableStyle != null)
             {
-                if (m_tableStyle == null)
+                tableProperties.TableStyle = new WP.TableStyle
                 {
-                    m_tableStyle ??= m_mainDocument.FindTableStyleByName(m_markDownFormatterConfiguration.TableStyle);
-                    if (m_tableStyle != null)
-                    {
-                        tableProperties.TableStyle = new WP.TableStyle
-                        {
-                            Val = m_tableStyle.StyleId
-                        };
-                    }
-                }
+                    Val = m_tableStyle.StyleId
+                };
             }
 
             var tableGrid = new WP.TableGrid();
@@ -86,6 +82,52 @@ namespace DocxTemplater.Markdown.Renderer
             renderer.AddParagraph(table);
             renderer.ExplicitParagraph = true;
             renderer.AddParagraph();
+        }
+
+        public static WP.Style FindDefaultTableStyle(MainDocumentPart mainDocumentPart, MarkDownFormatterConfiguration markDownFormatterConfiguration)
+        {
+            var part = mainDocumentPart.StyleDefinitionsPart;
+            if (part?.Styles == null)
+            {
+                return null;
+            }
+
+            // First search for style by name
+            if (markDownFormatterConfiguration.TableStyle != null)
+            {
+                var style = mainDocumentPart.FindTableStyleByName(markDownFormatterConfiguration.TableStyle);
+                if (style != null)
+                {
+                    return style;
+                }
+            }
+
+            // 1. Fallback: Use the style from an existing table in the document.
+            var firstTable = mainDocumentPart.Document?.Body?.Elements<WP.Table>().FirstOrDefault();
+            if (firstTable != null)
+            {
+                var tblPr = firstTable.GetFirstChild<WP.TableProperties>();
+                var tblStyle = tblPr?.GetFirstChild<WP.TableStyle>();
+                if (tblStyle != null && !string.IsNullOrEmpty(tblStyle.Val?.Value))
+                {
+                    var existingStyle = part.Styles.Elements<WP.Style>()
+                        .FirstOrDefault(s => s.StyleId == tblStyle.Val.Value);
+                    if (existingStyle != null)
+                    {
+                        return existingStyle;
+                    }
+                }
+            }
+
+            // 3. Fallback: Use the latent default style ("TableGrid").
+            var latentDefault = part.Styles.Elements<WP.Style>().LastOrDefault(s => s.Type == WP.StyleValues.Table);
+            if (latentDefault != null)
+            {
+                return latentDefault;
+            }
+
+            // 4. As a last resort, return any table style marked as default.
+            return part.Styles.Elements<WP.Style>().FirstOrDefault(s => s.Type == WP.StyleValues.Table && s.Default != null && s.Default.Value);
         }
     }
 }

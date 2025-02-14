@@ -3,6 +3,7 @@ using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using DocxTemplater.Markdown;
+using Markdig;
 
 namespace DocxTemplater.Test
 {
@@ -21,6 +22,37 @@ namespace DocxTemplater.Test
             var secondParagraph = body.Descendants<Text>().Last();
             Assert.That(secondParagraph.Text, Is.EqualTo("Second Paragraph First Line"));
             Assert.That(body.Descendants<Paragraph>().Count(), Is.EqualTo(2));
+        }
+
+        [Test]
+        public void MarkdownRenderDefinedInMetadata()
+        {
+            string markdown = @"| Documents / Meetings | Date |
+                        | --- | --- |
+                        | Risk Analysis Region X - Scenario Description and Assessment | 29.03.2010 |
+                        | PLAN-X Guide - Regional Hazard Analysis and Preparedness | 01.01.2013 |
+                        | Meeting between A. Sample (Dept. A) and B. Example (Dept. B) | 16.02.2023 |
+                        | Meeting between A. Sample (Dept. A) and B. Example (Dept. B) | 15.03.2023 |
+
+                        | Documents / Meetings | Date |
+                        | --- | ---: |
+                        | Email request from C. Example | 18.07.2024 |
+                        | On-site meeting between D. Testman and C. Example (both from Clinic X) as well as E. Sample and F. Demo (both from Authority Y) | 25.09.2024 |
+                        | Received documents: Crisis Manual Clinic X, Safety Guidelines 2024, Evacuation Plan Clinic X | 01.10.2024 |
+                        ";
+
+            using var fileStream = File.OpenRead("Resources/MarkdownTableCopiesStyleFromExistingTable.docx");
+            var docTemplate = new DocxTemplate(fileStream);
+            docTemplate.RegisterFormatter(new MarkdownFormatter());
+            docTemplate.BindModel("ds", new Dictionary<string,object>() {{ "MyMarkdown", new ValueWithMetadata(markdown, new ValueMetadata("md"))}});
+
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.That(result, Is.Not.Null);
+            result.SaveAsFileAndOpenInWord();
+            result.Position = 0;
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
         }
 
 
