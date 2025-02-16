@@ -54,77 +54,88 @@ namespace DocxTemplater
                 \))?
         )?
         \s*\}
-        ", RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
+        ", RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace, TimeSpan.FromSeconds(1));
 
         public static IEnumerable<PatternMatch> FindSyntaxPatterns(string text)
         {
-            var matches = PatternRegex.Matches(text);
-            var result = new List<PatternMatch>(matches.Count);
-            foreach (Match match in matches)
+            try
             {
-                if (match.Groups["separator"].Success)
+                var matches = PatternRegex.Matches(text);
+                var result = new List<PatternMatch>(matches.Count);
+                foreach (Match match in matches)
                 {
-                    result.Add(new PatternMatch(match, PatternType.CollectionSeparator, null, null, null, null, null,
-                        match.Index, match.Length));
-                }
-                else if (match.Groups["else"].Success)
-                {
-                    result.Add(new PatternMatch(match, PatternType.ConditionElse, null, null, null, null, null,
-                        match.Index, match.Length));
-                }
-                else if (match.Groups["condition"].Success)
-                {
-                    result.Add(new PatternMatch(match, PatternType.Condition, match.Groups["condition"].Value, null,
-                        null, null, null, match.Index, match.Length));
-                }
-                else if (match.Groups["prefix"].Success)
-                {
-                    string varname = match.Groups["varname"].Success ? match.Groups["varname"].Value : null;
-                    var prefix = match.Groups["prefix"].Value;
-                    if (prefix == ":")
+                    if (match.Groups["separator"].Success)
                     {
-                        if (varname == null)
-                        {
-                            throw new OpenXmlTemplateException($"Invalid syntax '{match.Value}'");
-                        }
-                        result.Add(new PatternMatch(match, PatternType.InlineKeyWord, null, prefix, varname, null, null, match.Index, match.Length));
-                    }
-                    else if (prefix == "#")
-                    {
-                        result.Add(new PatternMatch(match, PatternType.CollectionStart, null,
-                            match.Groups["prefix"].Value, match.Groups["varname"].Value,
-                            match.Groups["formatter"].Value, match.Groups["arg"].Value.Split(','), match.Index,
-                            match.Length));
-                    }
-                    else if (varname == null)
-                    {
-                        result.Add(new PatternMatch(match, PatternType.ConditionEnd, null, null, null, null, null,
+                        result.Add(new PatternMatch(match, PatternType.CollectionSeparator, null, null, null, null,
+                            null,
                             match.Index, match.Length));
+                    }
+                    else if (match.Groups["else"].Success)
+                    {
+                        result.Add(new PatternMatch(match, PatternType.ConditionElse, null, null, null, null, null,
+                            match.Index, match.Length));
+                    }
+                    else if (match.Groups["condition"].Success)
+                    {
+                        result.Add(new PatternMatch(match, PatternType.Condition, match.Groups["condition"].Value, null,
+                            null, null, null, match.Index, match.Length));
+                    }
+                    else if (match.Groups["prefix"].Success)
+                    {
+                        string varname = match.Groups["varname"].Success ? match.Groups["varname"].Value : null;
+                        var prefix = match.Groups["prefix"].Value;
+                        if (prefix == ":")
+                        {
+                            if (varname == null)
+                            {
+                                throw new OpenXmlTemplateException($"Invalid syntax '{match.Value}'");
+                            }
+
+                            result.Add(new PatternMatch(match, PatternType.InlineKeyWord, null, prefix, varname, null,
+                                null, match.Index, match.Length));
+                        }
+                        else if (prefix == "#")
+                        {
+                            result.Add(new PatternMatch(match, PatternType.CollectionStart, null,
+                                match.Groups["prefix"].Value, match.Groups["varname"].Value,
+                                match.Groups["formatter"].Value, match.Groups["arg"].Value.Split(','), match.Index,
+                                match.Length));
+                        }
+                        else if (varname == null)
+                        {
+                            result.Add(new PatternMatch(match, PatternType.ConditionEnd, null, null, null, null, null,
+                                match.Index, match.Length));
+                        }
+                        else
+                        {
+                            result.Add(new PatternMatch(match, PatternType.CollectionEnd, null,
+                                match.Groups["prefix"].Value, match.Groups["varname"].Value,
+                                match.Groups["formatter"].Value, match.Groups["arg"].Value.Split(','), match.Index,
+                                match.Length));
+                        }
+                    }
+                    else if (match.Groups["varname"].Success)
+                    {
+                        var argGroup = match.Groups["arg"];
+                        var arguments = argGroup.Success
+                            ? argGroup.Captures.Select(x => x.Value?.Replace("\\'", "'")).ToArray()
+                            : Array.Empty<string>();
+                        result.Add(new PatternMatch(match, PatternType.Variable, null, null,
+                            match.Groups["varname"].Value,
+                            match.Groups["formatter"].Value, arguments, match.Index, match.Length));
                     }
                     else
                     {
-                        result.Add(new PatternMatch(match, PatternType.CollectionEnd, null,
-                            match.Groups["prefix"].Value, match.Groups["varname"].Value,
-                            match.Groups["formatter"].Value, match.Groups["arg"].Value.Split(','), match.Index,
-                            match.Length));
+                        throw new OpenXmlTemplateException($"Invalid syntax '{match.Value}'");
                     }
                 }
-                else if (match.Groups["varname"].Success)
-                {
-                    var argGroup = match.Groups["arg"];
-                    var arguments = argGroup.Success
-                        ? argGroup.Captures.Select(x => x.Value?.Replace("\\'", "'")).ToArray()
-                        : Array.Empty<string>();
-                    result.Add(new PatternMatch(match, PatternType.Variable, null, null, match.Groups["varname"].Value,
-                        match.Groups["formatter"].Value, arguments, match.Index, match.Length));
-                }
-                else
-                {
-                    throw new OpenXmlTemplateException($"Invalid syntax '{match.Value}'");
-                }
-            }
 
-            return result;
+                return result;
+            }
+            catch (RegexMatchTimeoutException)
+            {
+                throw new OpenXmlTemplateException($"Invalid syntax '{text}' - match timeout");
+            }
         }
     }
 }
