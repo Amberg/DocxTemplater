@@ -10,7 +10,7 @@ namespace DocxTemplater.Blocks
     {
         private readonly string m_collectionName;
 
-        public LoopBlock(TemplateProcessingContext context, PatternType patternType, Text startTextNode, PatternMatch startMatch)
+        public LoopBlock(ITemplateProcessingContext context, PatternType patternType, Text startTextNode, PatternMatch startMatch)
             : base(context, patternType, startTextNode, startMatch)
         {
             m_collectionName = startMatch.Variable;

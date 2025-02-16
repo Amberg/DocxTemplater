@@ -24,7 +24,8 @@ namespace DocxTemplater.Markdown
             return prefixUpper is "MD" && type == typeof(string);
         }
 
-        public void ApplyFormat(TemplateProcessingContext templateContext, FormatterContext formatterContext, Text target)
+        public void ApplyFormat(ITemplateProcessingContext templateContext, FormatterContext formatterContext,
+            Text target)
         {
             if (formatterContext.Value is not string mdText)
             {
@@ -140,13 +141,13 @@ namespace DocxTemplater.Markdown
             }
         }
 
-        private static void DoVariableReplacementInParagraphs(Body mdContainer, TemplateProcessingContext templateContext)
+        private static void DoVariableReplacementInParagraphs(Body mdContainer, ITemplateProcessingContext templateContext)
         {
             if (!mdContainer.InnerText.Contains('{'))
             {
                 return;
             }
-            var processor = new XmlNodeTemplate(mdContainer, templateContext);
+            var processor = new XmlNodeTemplate(mdContainer, (ITemplateProcessingContextAccess)templateContext);
             processor.Process();
         }
     }

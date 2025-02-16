@@ -20,7 +20,7 @@ namespace DocxTemplater.Formatter
                    prefix.Equals("T", StringComparison.CurrentCultureIgnoreCase);
         }
 
-        public void ApplyFormat(TemplateProcessingContext templateContext, FormatterContext formatterContext,
+        public void ApplyFormat(ITemplateProcessingContext templateContext, FormatterContext formatterContext,
             Text target)
         {
             if (formatterContext.Args.Length == 0)

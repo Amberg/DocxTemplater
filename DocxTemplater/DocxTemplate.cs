@@ -41,7 +41,7 @@ namespace DocxTemplater
                     TargetMinimumVersion)
             };
             m_wpDocument = WordprocessingDocument.Open(m_stream, true, openSettings);
-            Context.MainDocumentPart = m_wpDocument.MainDocumentPart;
+            Context.Initialize(m_wpDocument.MainDocumentPart);
             Processed = false;
             RegisterFormatter(new SubTemplateFormatter());
         }

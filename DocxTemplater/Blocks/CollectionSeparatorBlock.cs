@@ -6,7 +6,7 @@ namespace DocxTemplater.Blocks
 {
     internal class CollectionSeparatorBlock : ContentBlock
     {
-        public CollectionSeparatorBlock(TemplateProcessingContext context, PatternType patternType, Text startTextNode,
+        public CollectionSeparatorBlock(ITemplateProcessingContext context, PatternType patternType, Text startTextNode,
             PatternMatch startMatch)
             : base(context, patternType, startTextNode, startMatch)
         {

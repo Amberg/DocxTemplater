@@ -11,7 +11,7 @@ namespace DocxTemplater.Blocks
         protected InsertionPoint m_insertionPoint;
         protected IReadOnlyCollection<OpenXmlElement> m_content;
         protected readonly List<ContentBlock> m_childBlocks;
-        protected readonly TemplateProcessingContext m_context;
+        protected readonly ITemplateProcessingContext m_context;
 #pragma warning disable IDE0052
         private InsertionPoint m_lastElementMarker;
 #pragma warning restore IDE0052
@@ -23,7 +23,7 @@ namespace DocxTemplater.Blocks
             m_childBlocks = new List<ContentBlock>();
         }
 
-        public ContentBlock(TemplateProcessingContext context, PatternType patternType, Text startTextNode, PatternMatch startMatch)
+        public ContentBlock(ITemplateProcessingContext context, PatternType patternType, Text startTextNode, PatternMatch startMatch)
         {
             m_content = new List<OpenXmlElement>();
             m_childBlocks = new List<ContentBlock>();
@@ -34,7 +34,7 @@ namespace DocxTemplater.Blocks
         }
 
         public static ContentBlock Crate(
-            TemplateProcessingContext context,
+            ITemplateProcessingContext context,
             PatternType patternType,
             Text startTextNode,
             PatternMatch matchedStartNode)

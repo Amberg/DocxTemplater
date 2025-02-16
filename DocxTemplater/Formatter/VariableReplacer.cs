@@ -76,7 +76,7 @@ namespace DocxTemplater.Formatter
         /// <summary>
         /// the formatter string is the leading formatter prefix, e.g. "FORMAT" followed by the formatter arguments ae image(100,200)
         /// </summary>
-        private void ApplyFormatter(TemplateProcessingContext templateContext, PatternMatch patternMatch, ValueWithMetadata valueWithMetadata, Text target)
+        private void ApplyFormatter(ITemplateProcessingContext templateContext, PatternMatch patternMatch, ValueWithMetadata valueWithMetadata, Text target)
         {
             var value = valueWithMetadata.Value;
             if (value == null)
@@ -110,7 +110,8 @@ namespace DocxTemplater.Formatter
 
         }
 
-        public void ReplaceVariables(IReadOnlyCollection<OpenXmlElement> content, TemplateProcessingContext templateContext)
+        public void ReplaceVariables(IReadOnlyCollection<OpenXmlElement> content,
+            ITemplateProcessingContext templateContext)
         {
             foreach (var element in content)
             {
@@ -118,7 +119,7 @@ namespace DocxTemplater.Formatter
             }
         }
 
-        public void ReplaceVariables(OpenXmlElement cloned, TemplateProcessingContext templateContext)
+        public void ReplaceVariables(OpenXmlElement cloned, ITemplateProcessingContext templateContext)
         {
             var variables = cloned.GetElementsWithMarker(PatternType.Variable).OfType<Text>().ToList();
             foreach (var text in variables)

@@ -13,9 +13,9 @@ namespace DocxTemplater
 {
     public abstract class TemplateProcessor
     {
-        internal TemplateProcessingContext Context { get; }
+        internal ITemplateProcessingContextAccess Context { get; }
 
-        private protected TemplateProcessor(TemplateProcessingContext context)
+        private protected TemplateProcessor(ITemplateProcessingContextAccess context)
         {
             Context = context;
         }

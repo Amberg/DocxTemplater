@@ -9,7 +9,7 @@ namespace DocxTemplater.Blocks
     {
         private readonly string m_condition;
 
-        public ConditionalBlock(TemplateProcessingContext context, PatternType patternType, Text startTextNode, PatternMatch startMatch)
+        public ConditionalBlock(ITemplateProcessingContext context, PatternType patternType, Text startTextNode, PatternMatch startMatch)
             : base(context, patternType, startTextNode, startMatch)
         {
             m_condition = startMatch.Condition;

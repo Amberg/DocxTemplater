@@ -11,7 +11,7 @@ namespace DocxTemplater.Blocks
         private const string SectionBreak = "SECTIONBREAK";
         private readonly string m_keyWord;
 
-        public InlineKeyWordBlock(TemplateProcessingContext context, PatternType patternType, Text startTextNode, PatternMatch startMatch)
+        public InlineKeyWordBlock(ITemplateProcessingContext context, PatternType patternType, Text startTextNode, PatternMatch startMatch)
             : base(context, patternType, startTextNode, startMatch)
         {
             m_keyWord = StartMatch.Variable.ToUpper(CultureInfo.InvariantCulture);

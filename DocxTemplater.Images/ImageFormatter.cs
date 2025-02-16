@@ -28,7 +28,7 @@ namespace DocxTemplater.Images
             return prefixUpper is "IMAGE" or "IMG" && type == typeof(byte[]);
         }
 
-        public void ApplyFormat(TemplateProcessingContext templateContext, FormatterContext formatterContext,
+        public void ApplyFormat(ITemplateProcessingContext templateContext, FormatterContext formatterContext,
             Text target)
         {
             // TODO: handle other ppi values than default 96

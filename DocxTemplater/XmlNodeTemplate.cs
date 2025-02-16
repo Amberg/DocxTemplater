@@ -6,7 +6,7 @@ namespace DocxTemplater
     {
         private readonly OpenXmlCompositeElement m_openXmlElement;
 
-        internal XmlNodeTemplate(OpenXmlCompositeElement openXmlElement, TemplateProcessingContext context)
+        internal XmlNodeTemplate(OpenXmlCompositeElement openXmlElement, ITemplateProcessingContextAccess context)
             : base(context)
         {
             m_openXmlElement = openXmlElement;
