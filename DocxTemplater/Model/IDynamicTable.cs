@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace DocxTemplater
+namespace DocxTemplater.Model
 {
     public interface IDynamicTable
     {

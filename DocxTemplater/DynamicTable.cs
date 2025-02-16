@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using DocxTemplater.Model;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace DocxTemplater

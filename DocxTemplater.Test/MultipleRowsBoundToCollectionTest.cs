@@ -1,5 +1,6 @@
 ﻿using AutoBogus;
 using DocxTemplater.Images;
+using DocxTemplater.Model;
 
 namespace DocxTemplater.Test
 {

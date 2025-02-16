@@ -1,4 +1,4 @@
-﻿namespace DocxTemplater
+﻿namespace DocxTemplater.Model
 {
     /// <summary>
     /// Interface for template model if a normal object or a dictionary is not suitable.
