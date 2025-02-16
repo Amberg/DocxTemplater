@@ -7,6 +7,6 @@ namespace DocxTemplater.Formatter
     {
         bool CanHandle(Type type, string prefix);
 
-        void ApplyFormat(FormatterContext context, Text target);
+        void ApplyFormat(TemplateProcessingContext templateContext, FormatterContext formatterContext, Text target);
     }
 }

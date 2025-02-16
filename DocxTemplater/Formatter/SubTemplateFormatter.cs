@@ -12,38 +12,26 @@ namespace DocxTemplater.Formatter
     /// Arguments:
     /// 
     /// </summary>
-    internal class SubTemplateFormatter : IFormatter, IFormatterInitialization
+    internal class SubTemplateFormatter : IFormatter
     {
-
-        private readonly ModelLookup m_modelLookup;
-        private readonly ProcessSettings m_settings;
-        private MainDocumentPart m_mainDocumentPart;
-
-        public SubTemplateFormatter(
-            ModelLookup modelLookup,
-            ProcessSettings settings)
-        {
-            m_modelLookup = modelLookup;
-            m_settings = settings;
-        }
-
         public bool CanHandle(Type type, string prefix)
         {
             return prefix.Equals("template", StringComparison.CurrentCultureIgnoreCase) ||
                    prefix.Equals("T", StringComparison.CurrentCultureIgnoreCase);
         }
 
-        public void ApplyFormat(FormatterContext context, Text target)
+        public void ApplyFormat(TemplateProcessingContext templateContext, FormatterContext formatterContext,
+            Text target)
         {
-            if (context.Args.Length == 0)
+            if (formatterContext.Args.Length == 0)
             {
                 throw new OpenXmlTemplateException("Template formatter requires a template name");
             }
-            var templateElement = LoadTemplateElements(context.Args[0]?.Trim()) ?? throw new OpenXmlTemplateException("Template is null or is not a valid OpenXML template");
+            var templateElement = LoadTemplateElements(formatterContext.Args[0]?.Trim(), templateContext.ModelLookup) ?? throw new OpenXmlTemplateException("Template is null or is not a valid OpenXML template");
 
-            if (context.Args.Length > 1)
+            if (formatterContext.Args.Length > 1)
             {
-                var selector = context.Args[1];
+                var selector = formatterContext.Args[1];
                 templateElement = selector switch
                 {
                     "p" => templateElement.Descendants<Paragraph>().First(),
@@ -54,15 +42,16 @@ namespace DocxTemplater.Formatter
                 };
             }
 
+            // create a new Template context with replaced ModelLookup
             var templateModelLookup = new ModelLookup();
-            templateModelLookup.Add("ds", context.Value);
-            foreach (var models in m_modelLookup.Models.Skip(1))
+            templateModelLookup.Add("ds", formatterContext.Value);
+            foreach (var models in templateContext.ModelLookup.Models.Skip(1))
             {
                 templateModelLookup.Add(models.Key, models.Value);
             }
-            var variableReplacer = new VariableReplacer(templateModelLookup, m_settings);
-            var scriptCompiler = new ScriptCompiler(templateModelLookup, m_settings);
-            var processor = new XmlNodeTemplate(templateElement, m_settings, templateModelLookup, variableReplacer, scriptCompiler, m_mainDocumentPart);
+            var variableReplacer = new VariableReplacer(templateModelLookup, templateContext.ProcessSettings);
+            var scriptCompiler = new ScriptCompiler(templateModelLookup, templateContext.ProcessSettings);
+            var processor = new XmlNodeTemplate(templateElement, new TemplateProcessingContext(templateContext.ProcessSettings, templateModelLookup, variableReplacer, scriptCompiler));
             processor.Process();
 
             if (templateElement is Body body)
@@ -105,9 +94,9 @@ namespace DocxTemplater.Formatter
             target.RemoveWithEmptyParent();
         }
 
-        private OpenXmlCompositeElement LoadTemplateElements(string templateVariable)
+        private static OpenXmlCompositeElement LoadTemplateElements(string templateVariable, IModelLookup modelLookup)
         {
-            var value = m_modelLookup.GetValue(templateVariable);
+            var value = modelLookup.GetValue(templateVariable);
             if (value is string templateString)
             {
                 try
@@ -166,12 +155,6 @@ namespace DocxTemplater.Formatter
                 return body;
             }
             return null;
-        }
-
-        public void Initialize(IModelLookup modelLookup, IScriptCompiler scriptCompiler, IVariableReplacer variableReplacer,
-            ProcessSettings processSettings, MainDocumentPart mainDocumentPart)
-        {
-            m_mainDocumentPart = mainDocumentPart;
         }
     }
 }

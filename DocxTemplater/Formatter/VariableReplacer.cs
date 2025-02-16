@@ -75,7 +75,7 @@ namespace DocxTemplater.Formatter
         /// <summary>
         /// the formatter string is the leading formatter prefix, e.g. "FORMAT" followed by the formatter arguments ae image(100,200)
         /// </summary>
-        private void ApplyFormatter(PatternMatch patternMatch, ValueWithMetadata valueWithMetadata, Text target)
+        private void ApplyFormatter(TemplateProcessingContext templateContext, PatternMatch patternMatch, ValueWithMetadata valueWithMetadata, Text target)
         {
             var value = valueWithMetadata.Value;
             if (value == null)
@@ -93,7 +93,7 @@ namespace DocxTemplater.Formatter
                     {
                         var context = new FormatterContext(patternMatch.Variable, formatterText, formaterArguments,
                             value, ProcessSettings.Culture);
-                        formatter.ApplyFormat(context, target);
+                        formatter.ApplyFormat(templateContext, context, target);
                         return;
                     }
                 }
@@ -109,15 +109,15 @@ namespace DocxTemplater.Formatter
 
         }
 
-        public void ReplaceVariables(IReadOnlyCollection<OpenXmlElement> content)
+        public void ReplaceVariables(IReadOnlyCollection<OpenXmlElement> content, TemplateProcessingContext templateContext)
         {
             foreach (var element in content)
             {
-                ReplaceVariables(element);
+                ReplaceVariables(element, templateContext);
             }
         }
 
-        public void ReplaceVariables(OpenXmlElement cloned)
+        public void ReplaceVariables(OpenXmlElement cloned, TemplateProcessingContext templateContext)
         {
             var variables = cloned.GetElementsWithMarker(PatternType.Variable).OfType<Text>().ToList();
             foreach (var text in variables)
@@ -127,7 +127,7 @@ namespace DocxTemplater.Formatter
                 try
                 {
                     var valueWithMetadata = m_models.GetValueWithMetadata(variableMatch.Variable);
-                    ApplyFormatter(variableMatch, valueWithMetadata, text);
+                    ApplyFormatter(templateContext, variableMatch, valueWithMetadata, text);
                     VariableReplacer.SplitNewLinesInText(text);
                 }
                 catch (Exception e) when (e is OpenXmlTemplateException or FormatException)

@@ -1,5 +1,4 @@
 ﻿using DocumentFormat.OpenXml;
-using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using DocxTemplater.Formatter;
 using Markdig;
@@ -9,15 +8,10 @@ using System.Linq;
 
 namespace DocxTemplater.Markdown
 {
-    public class MarkdownFormatter : IFormatter, IFormatterInitialization
+    public class MarkdownFormatter : IFormatter
     {
         private readonly MarkDownFormatterConfiguration m_configuration;
-        private IModelLookup m_modelLookup;
-        private ProcessSettings m_processSettings;
-        private IVariableReplacer m_variableReplacer;
-        private IScriptCompiler m_scriptCompiler;
         private int m_nestingDepth;
-        private MainDocumentPart m_mainDocumentPart;
 
         public MarkdownFormatter(MarkDownFormatterConfiguration configuration = null)
         {
@@ -30,9 +24,9 @@ namespace DocxTemplater.Markdown
             return prefixUpper is "MD" && type == typeof(string);
         }
 
-        public void ApplyFormat(FormatterContext context, Text target)
+        public void ApplyFormat(TemplateProcessingContext templateContext, FormatterContext formatterContext, Text target)
         {
-            if (context.Value is not string mdText)
+            if (formatterContext.Value is not string mdText)
             {
                 return;
             }
@@ -62,11 +56,11 @@ namespace DocxTemplater.Markdown
                     var containerParagraph = new Paragraph();
                     renderedMarkdownContainer.Append(containerParagraph);
 
-                    var renderer = new MarkdownToOpenXmlRenderer(containerParagraph, target, m_mainDocumentPart, m_configuration);
+                    var renderer = new MarkdownToOpenXmlRenderer(containerParagraph, target, templateContext.MainDocumentPart, m_configuration);
                     renderer.Render(markdownDocument);
                     try
                     {
-                        DoVariableReplacementInParagraphs(renderedMarkdownContainer);
+                        DoVariableReplacementInParagraphs(renderedMarkdownContainer, templateContext);
                     }
                     catch (Exception e)
                     {
@@ -131,7 +125,7 @@ namespace DocxTemplater.Markdown
                 return;
             }
             var existingParaProps = existing.GetFirstChild<ParagraphProperties>();
-            var addedProperties = (ParagraphProperties)addedStyle.GetFirstChild<ParagraphProperties>();
+            var addedProperties = addedStyle.GetFirstChild<ParagraphProperties>();
             if (addedProperties != null)
             {
                 if (existingParaProps != null)
@@ -146,24 +140,14 @@ namespace DocxTemplater.Markdown
             }
         }
 
-        private void DoVariableReplacementInParagraphs(Body mdContainer)
+        private static void DoVariableReplacementInParagraphs(Body mdContainer, TemplateProcessingContext templateContext)
         {
             if (!mdContainer.InnerText.Contains('{'))
             {
                 return;
             }
-            var processor = new XmlNodeTemplate(mdContainer, m_processSettings, m_modelLookup, m_variableReplacer, m_scriptCompiler, m_mainDocumentPart);
+            var processor = new XmlNodeTemplate(mdContainer, templateContext);
             processor.Process();
-        }
-
-        public void Initialize(IModelLookup modelLookup, IScriptCompiler scriptCompiler, IVariableReplacer variableReplacer,
-            ProcessSettings processSettings, MainDocumentPart mainDocumentPart)
-        {
-            m_modelLookup = modelLookup;
-            m_processSettings = processSettings;
-            m_variableReplacer = variableReplacer;
-            m_scriptCompiler = scriptCompiler;
-            m_mainDocumentPart = mainDocumentPart;
         }
     }
 }

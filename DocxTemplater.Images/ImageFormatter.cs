@@ -28,11 +28,12 @@ namespace DocxTemplater.Images
             return prefixUpper is "IMAGE" or "IMG" && type == typeof(byte[]);
         }
 
-        public void ApplyFormat(FormatterContext context, Text target)
+        public void ApplyFormat(TemplateProcessingContext templateContext, FormatterContext formatterContext,
+            Text target)
         {
             // TODO: handle other ppi values than default 96
             // see https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.wordprocessing.pixelsperinch?view=openxml-2.8.1#remarks
-            if (context.Value is not byte[] imageBytes)
+            if (formatterContext.Value is not byte[] imageBytes)
             {
                 return;
             }
@@ -52,7 +53,7 @@ namespace DocxTemplater.Images
                     {
                         using var image = Image.Load(imageBytes);
                         string imagePartRelId = null;
-                        var imagePartType = DetectPartTypeInfo(context.Placeholder, image.Metadata);
+                        var imagePartType = DetectPartTypeInfo(formatterContext.Placeholder, image.Metadata);
                         if (openXmlPartRootElement.OpenXmlPart is HeaderPart headerPart)
                         {
                             imagePartRelId = CreateImagePart(headerPart, imageBytes, imagePartType);
@@ -74,12 +75,12 @@ namespace DocxTemplater.Images
                     }
 
                     // case 1. Image ist the only child element of a <wps:wsp> (TextBox)
-                    if (TryHandleImageInWordprocessingShape(target, imageInfo, context.Args.FirstOrDefault() ?? string.Empty, maxPropertyId))
+                    if (TryHandleImageInWordprocessingShape(target, imageInfo, formatterContext.Args.FirstOrDefault() ?? string.Empty, maxPropertyId))
                     {
                         return;
                     }
 
-                    AddInlineGraphicToRun(target, imageInfo, maxPropertyId, context.Args);
+                    AddInlineGraphicToRun(target, imageInfo, maxPropertyId, formatterContext.Args);
                 }
                 else
                 {

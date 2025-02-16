@@ -8,31 +8,19 @@ using DocxTemplater.Blocks;
 using DocxTemplater.Formatter;
 using System.Collections.Generic;
 using System.Linq;
-using DocumentFormat.OpenXml.Packaging;
 
 namespace DocxTemplater
 {
     public abstract class TemplateProcessor
     {
-        private readonly IModelLookup m_models;
-        private readonly IScriptCompiler m_scriptCompiler;
-        internal readonly IVariableReplacer m_variableReplacer;
+        internal TemplateProcessingContext Context { get; }
 
-        public ProcessSettings Settings { get; }
-
-        private protected TemplateProcessor(
-            ProcessSettings settings,
-            IModelLookup modelLookup,
-            IVariableReplacer variableReplacer,
-            IScriptCompiler scriptCompiler)
+        private protected TemplateProcessor(TemplateProcessingContext context)
         {
-            Settings = settings;
-            m_models = modelLookup;
-            m_variableReplacer = variableReplacer;
-            m_scriptCompiler = scriptCompiler;
+            Context = context;
         }
 
-        public IReadOnlyDictionary<string, object> Models => m_models.Models;
+        public IReadOnlyDictionary<string, object> Models => Context.ModelLookup.Models;
 
 
         protected void ProcessNode(OpenXmlCompositeElement rootElement)
@@ -55,10 +43,10 @@ namespace DocxTemplater
             Console.WriteLine("----------- After Loops --------");
             Console.WriteLine(rootElement.ToPrettyPrintXml());
 #endif
-            m_variableReplacer.ReplaceVariables(rootElement);
+            Context.VariableReplacer.ReplaceVariables(rootElement, Context);
             foreach (var loop in loops)
             {
-                loop.Expand(m_models, rootElement);
+                loop.Expand(Context.ModelLookup, rootElement);
             }
 
             Cleanup(rootElement, removeEmptyElements: true);
@@ -214,7 +202,7 @@ namespace DocxTemplater
 
         private void StartBlock(Stack<ContentBlock> blockStack, PatternMatch match, PatternType value, Text text)
         {
-            var newBlock = ContentBlock.Crate(m_variableReplacer, m_scriptCompiler, value, text, match);
+            var newBlock = ContentBlock.Crate(Context, value, text, match);
             blockStack.Peek().AddChildBlock(newBlock);
             blockStack.Push(newBlock);
         }
@@ -279,18 +267,12 @@ namespace DocxTemplater
 
         public void BindModel(string prefix, object model)
         {
-            m_models.Add(prefix, model);
+            Context.ModelLookup.Add(prefix, model);
         }
 
         public void RegisterFormatter(IFormatter formatter)
         {
-            if (formatter is IFormatterInitialization formatterInitialization)
-            {
-                formatterInitialization.Initialize(m_models, m_scriptCompiler, m_variableReplacer, Settings, GetMainDocumentPart());
-            }
-            m_variableReplacer.RegisterFormatter(formatter);
+            Context.VariableReplacer.RegisterFormatter(formatter);
         }
-
-        protected abstract MainDocumentPart GetMainDocumentPart();
     }
 }

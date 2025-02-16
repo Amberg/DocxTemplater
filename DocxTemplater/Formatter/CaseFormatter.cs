@@ -14,22 +14,23 @@ namespace DocxTemplater.Formatter
             return false;
         }
 
-        public void ApplyFormat(FormatterContext context, Text target)
+        public void ApplyFormat(TemplateProcessingContext templateContext, FormatterContext formatterContext,
+            Text target)
         {
-            if (context.Value is string str)
+            if (formatterContext.Value is string str)
             {
-                if (context.Formatter.Equals("toupper", StringComparison.InvariantCultureIgnoreCase))
+                if (formatterContext.Formatter.Equals("toupper", StringComparison.InvariantCultureIgnoreCase))
                 {
-                    target.Text = str.ToUpper(context.Culture);
+                    target.Text = str.ToUpper(formatterContext.Culture);
                 }
-                else if (context.Formatter.Equals("tolower", StringComparison.InvariantCultureIgnoreCase))
+                else if (formatterContext.Formatter.Equals("tolower", StringComparison.InvariantCultureIgnoreCase))
                 {
-                    target.Text = str.ToLower(context.Culture);
+                    target.Text = str.ToLower(formatterContext.Culture);
                 }
             }
             else
             {
-                throw new OpenXmlTemplateException($"Formatter {context.Formatter} can only be applied to string objects - property {context.Placeholder}");
+                throw new OpenXmlTemplateException($"Formatter {formatterContext.Formatter} can only be applied to string objects - property {formatterContext.Placeholder}");
             }
         }
     }

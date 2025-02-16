@@ -7,8 +7,8 @@ namespace DocxTemplater.Formatter
     {
         void RegisterFormatter(IFormatter formatter);
 
-        void ReplaceVariables(IReadOnlyCollection<OpenXmlElement> content);
-        void ReplaceVariables(OpenXmlElement cloned);
+        void ReplaceVariables(IReadOnlyCollection<OpenXmlElement> content, TemplateProcessingContext templateContext);
+        void ReplaceVariables(OpenXmlElement cloned, TemplateProcessingContext templateContext);
         ProcessSettings ProcessSettings { get; }
         void AddError(string errorMessage);
         void WriteErrorMessages(OpenXmlCompositeElement rootElement);

@@ -1,6 +1,5 @@
 ﻿using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Wordprocessing;
-using DocxTemplater.Formatter;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -12,8 +11,8 @@ namespace DocxTemplater.Blocks
         private const string SectionBreak = "SECTIONBREAK";
         private readonly string m_keyWord;
 
-        public InlineKeyWordBlock(IVariableReplacer variableReplacer, PatternType patternType, Text startTextNode, PatternMatch startMatch)
-            : base(variableReplacer, patternType, startTextNode, startMatch)
+        public InlineKeyWordBlock(TemplateProcessingContext context, PatternType patternType, Text startTextNode, PatternMatch startMatch)
+            : base(context, patternType, startTextNode, startMatch)
         {
             m_keyWord = StartMatch.Variable.ToUpper(CultureInfo.InvariantCulture);
         }

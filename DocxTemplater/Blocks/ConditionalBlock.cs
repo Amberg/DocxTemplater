@@ -2,21 +2,17 @@
 using System.Linq;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Wordprocessing;
-using DocxTemplater.Formatter;
 
 namespace DocxTemplater.Blocks
 {
     internal class ConditionalBlock : ContentBlock
     {
         private readonly string m_condition;
-        private readonly IScriptCompiler m_scriptCompiler;
 
-
-        public ConditionalBlock(IVariableReplacer variableReplacer, IScriptCompiler scriptCompiler, PatternType patternType, Text startTextNode, PatternMatch startMatch)
-            : base(variableReplacer, patternType, startTextNode, startMatch)
+        public ConditionalBlock(TemplateProcessingContext context, PatternType patternType, Text startTextNode, PatternMatch startMatch)
+            : base(context, patternType, startTextNode, startMatch)
         {
             m_condition = startMatch.Condition;
-            m_scriptCompiler = scriptCompiler;
         }
 
         public override void Expand(IModelLookup models, OpenXmlElement parentNode)
@@ -24,15 +20,15 @@ namespace DocxTemplater.Blocks
             bool conditionResult = false;
             try
             {
-                conditionResult = m_scriptCompiler.CompileScript(m_condition)();
+                conditionResult = m_context.ScriptCompiler.CompileScript(m_condition)();
             }
-            catch (OpenXmlTemplateException e) when (m_scriptCompiler.ProcessSettings.BindingErrorHandling != BindingErrorHandling.ThrowException)
+            catch (OpenXmlTemplateException e) when (m_context.ScriptCompiler.ProcessSettings.BindingErrorHandling != BindingErrorHandling.ThrowException)
             {
-                m_variableReplacer.AddError($"{e.Message} in condition '{m_condition}'");
+                m_context.VariableReplacer.AddError($"{e.Message} in condition '{m_condition}'");
             }
             var cloned = m_content.Select(x => x.CloneNode(true)).ToList();
             InsertContent(parentNode, cloned);
-            m_variableReplacer.ReplaceVariables(cloned);
+            m_context.VariableReplacer.ReplaceVariables(cloned, m_context);
             Debug.Assert(m_childBlocks.Count is 1 or 2);
 
             var elseBlock = m_childBlocks.Count > 1 ? m_childBlocks[1] : null;
