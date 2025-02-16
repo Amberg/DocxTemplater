@@ -80,12 +80,12 @@ namespace DocxTemplater
             {
                 var firstChar = charMap[m.Index];
                 var lastChar = charMap[m.Index + m.Length - 1];
-                var firstText = (Text)firstChar.Element;
-                var lastText = (Text)lastChar.Element;
-                var mergedText = firstText.MergeText(firstChar.Index, lastText, m.Length);
+                var firstText = firstChar.Element;
+                var lastText = lastChar.Element;
+                var mergedText = firstText.MergeText(firstChar.CharIndexInText, lastText, m.Length);
                 mergedText.Mark(m.Type);
                 // TODO: Ist this possible without recreate charMap?
-                charMap.MarkAsDirty();
+                charMap.Recreate();
             }
         }
 
