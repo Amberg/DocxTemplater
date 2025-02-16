@@ -4,10 +4,8 @@ namespace DocxTemplater
 {
     public interface IDynamicTable
     {
-        public IEnumerable<object> Headers { get; }
+        IEnumerable<object> Headers { get; }
 
-
-        public IEnumerable<IEnumerable<object>> Rows { get; }
-
+        IEnumerable<IEnumerable<object>> Rows { get; }
     }
 }

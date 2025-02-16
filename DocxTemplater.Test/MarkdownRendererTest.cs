@@ -3,7 +3,6 @@ using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using DocxTemplater.Markdown;
-using Markdig;
 
 namespace DocxTemplater.Test
 {
@@ -44,7 +43,7 @@ namespace DocxTemplater.Test
             using var fileStream = File.OpenRead("Resources/MarkdownTableCopiesStyleFromExistingTable.docx");
             var docTemplate = new DocxTemplate(fileStream);
             docTemplate.RegisterFormatter(new MarkdownFormatter());
-            docTemplate.BindModel("ds", new Dictionary<string,object>() {{ "MyMarkdown", new ValueWithMetadata(markdown, new ValueMetadata("md"))}});
+            docTemplate.BindModel("ds", new Dictionary<string, object>() { { "MyMarkdown", new ValueWithMetadata(markdown, new ValueMetadata("md")) } });
 
             var result = docTemplate.Process();
             docTemplate.Validate();

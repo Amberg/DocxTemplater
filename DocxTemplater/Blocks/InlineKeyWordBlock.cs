@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace DocxTemplater.Blocks
 {
-    class InlineKeyWordBlock : ContentBlock
+    internal class InlineKeyWordBlock : ContentBlock
     {
         private const string SectionBreak = "SECTIONBREAK";
         private readonly string m_keyWord;
@@ -27,12 +27,12 @@ namespace DocxTemplater.Blocks
                 if (para != null)
                 {
                     var first = (Paragraph)para.SplitAfterElement(StartTextNode).First();
-                        var breakPara = new Paragraph();
-                        var paraProperties = new ParagraphProperties();
-                        paraProperties.AddChild(new SectionProperties(
-                                new SectionType() { Val = SectionMarkValues.NextPage }
-                            ));
-                            breakPara.AddChild(paraProperties);
+                    var breakPara = new Paragraph();
+                    var paraProperties = new ParagraphProperties();
+                    paraProperties.AddChild(new SectionProperties(
+                            new SectionType() { Val = SectionMarkValues.NextPage }
+                        ));
+                    breakPara.AddChild(paraProperties);
 
                     first.InsertAfterSelf(breakPara);
                 }
@@ -50,7 +50,7 @@ namespace DocxTemplater.Blocks
             var element = m_keyWord switch
             {
                 "BREAK" => (OpenXmlElement)new Break(),
-                "PAGEBREAK" => new Break() {Type = BreakValues.Page},
+                "PAGEBREAK" => new Break() { Type = BreakValues.Page },
                 SectionBreak => null,
                 _ => throw new OpenXmlTemplateException($"Invalid expression {StartTextNode.Text}")
             };

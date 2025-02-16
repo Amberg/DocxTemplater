@@ -1,14 +1,12 @@
 ﻿using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Wordprocessing;
-using System.Diagnostics;
-using System.Text;
 
 
 
 namespace DocxTemplater
 {
     internal record struct Character(char Char, Text Element, int CharIndexInText);
-   
+
     internal class CharacterMap
     {
         private readonly Character[] m_map;
