@@ -8,6 +8,7 @@ using DocxTemplater.Blocks;
 using DocxTemplater.Formatter;
 using System.Collections.Generic;
 using System.Linq;
+using DocxTemplater.Extensions;
 
 namespace DocxTemplater
 {
@@ -56,9 +57,28 @@ namespace DocxTemplater
 #endif
         }
 
-        private static void PreProcess(OpenXmlCompositeElement content)
+        private void PreProcess(OpenXmlCompositeElement content)
         {
+            // remove spell check 'ProofError' elements
             content.Descendants<ProofError>().ToList().ForEach(x => x.Remove());
+
+            // remove all bookmarks -> not useful for generated documents and complex to handle
+            // because of special cases in tables see
+            // https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.wordprocessing.bookmarkstart?view=openxml-3.0.1#remarks
+            foreach (var bookmark in content.Descendants<BookmarkStart>().ToList())
+            {
+                bookmark.RemoveWithEmptyParent();
+            }
+            foreach (var bookmark in content.Descendants<BookmarkEnd>().ToList())
+            {
+                bookmark.RemoveWithEmptyParent();
+            }
+
+            // call extensions
+            foreach (var extension in Context.Extensions)
+            {
+                extension.PreProcess(content);
+            }
         }
 
         private static void IsolateAndMergeTextTemplateMarkers(OpenXmlCompositeElement content)
@@ -92,18 +112,6 @@ namespace DocxTemplater
                 {
                     markedText.RemoveAttribute("mrk", null);
                 }
-            }
-
-            // remove all bookmarks -> not useful for generated documents and complex to handle
-            // because of special cases in tables see
-            // https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.wordprocessing.bookmarkstart?view=openxml-3.0.1#remarks
-            foreach (var bookmark in element.Descendants<BookmarkStart>().ToList())
-            {
-                bookmark.RemoveWithEmptyParent();
-            }
-            foreach (var bookmark in element.Descendants<BookmarkEnd>().ToList())
-            {
-                bookmark.RemoveWithEmptyParent();
             }
 
             // make dock properties ids unique
@@ -154,7 +162,7 @@ namespace DocxTemplater
                 if (value is PatternType.Condition or PatternType.CollectionStart)
                 {
                     StartBlock(blockStack, match, value, text);
-                    StartBlock(blockStack, match, PatternType.None, text);
+                    StartBlock(blockStack, match, PatternType.None, text); // open the child content block of the loop or condition
                 }
                 else if (value is PatternType.ConditionElse or PatternType.CollectionSeparator)
                 {
@@ -225,6 +233,11 @@ namespace DocxTemplater
         public void RegisterFormatter(IFormatter formatter)
         {
             Context.VariableReplacer.RegisterFormatter(formatter);
+        }
+
+        public void RegisterExtension(ITemplateProcessorExtension extension)
+        {
+            Context.RegisterExtension(extension);
         }
     }
 }

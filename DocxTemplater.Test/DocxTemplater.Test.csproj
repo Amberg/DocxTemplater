@@ -30,6 +30,9 @@
     <ProjectReference Include="..\DocxTemplater\DocxTemplater.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <None Update="Resources\BarChart.docx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Resources\BillTemplate.docx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

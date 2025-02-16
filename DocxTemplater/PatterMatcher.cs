@@ -60,6 +60,11 @@ namespace DocxTemplater
         {
             try
             {
+                if (text == null)
+                {
+                    return Array.Empty<PatternMatch>();
+                }
+
                 var matches = PatternRegex.Matches(text);
                 var result = new List<PatternMatch>(matches.Count);
                 foreach (Match match in matches)

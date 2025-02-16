@@ -101,6 +101,10 @@ namespace DocxTemplater.Blocks
         {
             var cloned = m_content.Select(x => x.CloneNode(true)).ToList();
             InsertContent(parentNode, cloned);
+            foreach (var extensions in m_context.Extensions)
+            {
+                extensions.ReplaceVariables(m_context, parentNode, cloned);
+            }
             m_context.VariableReplacer.ReplaceVariables(cloned, m_context);
         }
 

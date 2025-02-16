@@ -5,6 +5,7 @@ using DocxTemplater.Formatter;
 using System;
 using System.IO;
 using System.Linq;
+using DocxTemplater.Extensions.Charts;
 
 namespace DocxTemplater
 {
@@ -43,7 +44,9 @@ namespace DocxTemplater
             m_wpDocument = WordprocessingDocument.Open(m_stream, true, openSettings);
             Context.Initialize(m_wpDocument.MainDocumentPart);
             Processed = false;
+
             RegisterFormatter(new SubTemplateFormatter());
+            RegisterExtension(new ChartProcessor());
         }
 
         public static DocxTemplate Open(string pathToTemplate, ProcessSettings settings = null)

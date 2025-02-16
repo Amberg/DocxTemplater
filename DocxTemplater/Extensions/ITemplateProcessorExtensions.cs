@@ -1,6 +1,5 @@
-﻿using System.Collections.Generic;
-using DocumentFormat.OpenXml;
-using DocxTemplater.Formatter;
+﻿using DocumentFormat.OpenXml;
+using System.Collections.Generic;
 
 namespace DocxTemplater.Extensions
 {
@@ -8,8 +7,6 @@ namespace DocxTemplater.Extensions
     {
         void PreProcess(OpenXmlCompositeElement content);
 
-        void BlockContentExtracted(IReadOnlyCollection<OpenXmlElement> content);
-
-        void ReplaceVariables(IVariableReplacer variableReplacer, IModelLookup models, OpenXmlElement parentNode, List<OpenXmlElement> newContent);
+        void ReplaceVariables(ITemplateProcessingContext templateContext, OpenXmlElement parentNode, List<OpenXmlElement> newContent);
     }
 }
