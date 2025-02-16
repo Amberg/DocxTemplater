@@ -217,54 +217,6 @@ namespace DocxTemplater
             closedBlock.CloseBlock(text, match);
         }
 
-        internal static IReadOnlyCollection<OpenXmlElement> ExtractBlockContent(OpenXmlElement startText,
-            OpenXmlElement endText, out OpenXmlElement leadingPart)
-        {
-            var commonParent = startText.FindCommonParent(endText) ??
-                               throw new OpenXmlTemplateException("Start and end text are not in the same tree");
-            var result = new List<OpenXmlElement>();
-            if (commonParent is TableRow)
-            {
-                var previousRow = commonParent.PreviousSibling();
-                if (previousRow == null)
-                {
-                    commonParent.InsertBeforeSelf(new TableRow());
-                }
-
-                leadingPart = commonParent.PreviousSibling();
-                commonParent.Remove();
-                result.Add(commonParent);
-            }
-            else
-            {
-                // find childs of common parent that contains start and end text
-                var startChildOfCommonParent = commonParent.ChildElements.Single(c =>
-                    c == startText || c.Descendants<Text>().Any(d => d == startText));
-                var endChildOfCommonParent =
-                    commonParent.ChildElements.Single(c =>
-                        c == endText || c.Descendants<Text>().Any(d => d == endText));
-
-                var startSplit = startChildOfCommonParent.SplitAfterElement(startText);
-                leadingPart = startSplit.First();
-                if (startChildOfCommonParent == endChildOfCommonParent)
-                {
-                    result.AddRange(commonParent.ChildsBetween(startSplit.First(), endChildOfCommonParent).ToList());
-                }
-                else
-                {
-                    var endSplit = endChildOfCommonParent.SplitBeforeElement(endText);
-                    result.AddRange(commonParent.ChildsBetween(leadingPart, endSplit.Last()).ToList());
-                }
-
-                foreach (var element in result)
-                {
-                    element.Remove();
-                }
-            }
-
-            return result;
-        }
-
         public void BindModel(string prefix, object model)
         {
             Context.ModelLookup.Add(prefix, model);
