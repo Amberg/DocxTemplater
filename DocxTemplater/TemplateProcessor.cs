@@ -8,31 +8,20 @@ using DocxTemplater.Blocks;
 using DocxTemplater.Formatter;
 using System.Collections.Generic;
 using System.Linq;
-using DocumentFormat.OpenXml.Packaging;
+using DocxTemplater.Extensions;
 
 namespace DocxTemplater
 {
     public abstract class TemplateProcessor
     {
-        private readonly IModelLookup m_models;
-        private readonly IScriptCompiler m_scriptCompiler;
-        internal readonly IVariableReplacer m_variableReplacer;
+        internal ITemplateProcessingContextAccess Context { get; }
 
-        public ProcessSettings Settings { get; }
-
-        private protected TemplateProcessor(
-            ProcessSettings settings,
-            IModelLookup modelLookup,
-            IVariableReplacer variableReplacer,
-            IScriptCompiler scriptCompiler)
+        private protected TemplateProcessor(ITemplateProcessingContextAccess context)
         {
-            Settings = settings;
-            m_models = modelLookup;
-            m_variableReplacer = variableReplacer;
-            m_scriptCompiler = scriptCompiler;
+            Context = context;
         }
 
-        public IReadOnlyDictionary<string, object> Models => m_models.Models;
+        public IReadOnlyDictionary<string, object> Models => Context.ModelLookup.Models;
 
 
         protected void ProcessNode(OpenXmlCompositeElement rootElement)
@@ -55,10 +44,10 @@ namespace DocxTemplater
             Console.WriteLine("----------- After Loops --------");
             Console.WriteLine(rootElement.ToPrettyPrintXml());
 #endif
-            m_variableReplacer.ReplaceVariables(rootElement);
+            Context.VariableReplacer.ReplaceVariables(rootElement, Context);
             foreach (var loop in loops)
             {
-                loop.Expand(m_models, rootElement);
+                loop.Expand(Context.ModelLookup, rootElement);
             }
 
             Cleanup(rootElement, removeEmptyElements: true);
@@ -68,9 +57,28 @@ namespace DocxTemplater
 #endif
         }
 
-        private static void PreProcess(OpenXmlCompositeElement content)
+        private void PreProcess(OpenXmlCompositeElement content)
         {
+            // remove spell check 'ProofError' elements
             content.Descendants<ProofError>().ToList().ForEach(x => x.Remove());
+
+            // remove all bookmarks -> not useful for generated documents and complex to handle
+            // because of special cases in tables see
+            // https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.wordprocessing.bookmarkstart?view=openxml-3.0.1#remarks
+            foreach (var bookmark in content.Descendants<BookmarkStart>().ToList())
+            {
+                bookmark.RemoveWithEmptyParent();
+            }
+            foreach (var bookmark in content.Descendants<BookmarkEnd>().ToList())
+            {
+                bookmark.RemoveWithEmptyParent();
+            }
+
+            // call extensions
+            foreach (var extension in Context.Extensions)
+            {
+                extension.PreProcess(content);
+            }
         }
 
         private static void IsolateAndMergeTextTemplateMarkers(OpenXmlCompositeElement content)
@@ -80,12 +88,12 @@ namespace DocxTemplater
             {
                 var firstChar = charMap[m.Index];
                 var lastChar = charMap[m.Index + m.Length - 1];
-                var firstText = (Text)firstChar.Element;
-                var lastText = (Text)lastChar.Element;
-                var mergedText = firstText.MergeText(firstChar.Index, lastText, m.Length);
+                var firstText = firstChar.Element;
+                var lastText = lastChar.Element;
+                var mergedText = firstText.MergeText(firstChar.CharIndexInText, lastText, m.Length);
                 mergedText.Mark(m.Type);
                 // TODO: Ist this possible without recreate charMap?
-                charMap.MarkAsDirty();
+                charMap.Recreate();
             }
         }
 
@@ -104,18 +112,6 @@ namespace DocxTemplater
                 {
                     markedText.RemoveAttribute("mrk", null);
                 }
-            }
-
-            // remove all bookmarks -> not useful for generated documents and complex to handle
-            // because of special cases in tables see
-            // https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.wordprocessing.bookmarkstart?view=openxml-3.0.1#remarks
-            foreach (var bookmark in element.Descendants<BookmarkStart>().ToList())
-            {
-                bookmark.RemoveWithEmptyParent();
-            }
-            foreach (var bookmark in element.Descendants<BookmarkEnd>().ToList())
-            {
-                bookmark.RemoveWithEmptyParent();
             }
 
             // make dock properties ids unique
@@ -157,11 +153,16 @@ namespace DocxTemplater
                 var value = text.GetMarker();
                 var match = PatternMatcher.FindSyntaxPatterns(text.Text).Single();
 
+                if (value is PatternType.InlineKeyWord)
+                {
+                    StartBlock(blockStack, match, value, text);
+                    CloseBlock(blockStack, match, text);
+                }
 
                 if (value is PatternType.Condition or PatternType.CollectionStart)
                 {
                     StartBlock(blockStack, match, value, text);
-                    StartBlock(blockStack, match, PatternType.None, text);
+                    StartBlock(blockStack, match, PatternType.None, text); // open the child content block of the loop or condition
                 }
                 else if (value is PatternType.ConditionElse or PatternType.CollectionSeparator)
                 {
@@ -209,7 +210,7 @@ namespace DocxTemplater
 
         private void StartBlock(Stack<ContentBlock> blockStack, PatternMatch match, PatternType value, Text text)
         {
-            var newBlock = ContentBlock.Crate(m_variableReplacer, m_scriptCompiler, value, text, match);
+            var newBlock = ContentBlock.Crate(Context, value, text, match);
             blockStack.Peek().AddChildBlock(newBlock);
             blockStack.Push(newBlock);
         }
@@ -224,68 +225,19 @@ namespace DocxTemplater
             closedBlock.CloseBlock(text, match);
         }
 
-        internal static IReadOnlyCollection<OpenXmlElement> ExtractBlockContent(OpenXmlElement startText,
-            OpenXmlElement endText, out OpenXmlElement leadingPart)
-        {
-            var commonParent = startText.FindCommonParent(endText) ??
-                               throw new OpenXmlTemplateException("Start and end text are not in the same tree");
-            var result = new List<OpenXmlElement>();
-            if (commonParent is TableRow)
-            {
-                var previousRow = commonParent.PreviousSibling();
-                if (previousRow == null)
-                {
-                    commonParent.InsertBeforeSelf(new TableRow());
-                }
-
-                leadingPart = commonParent.PreviousSibling();
-                commonParent.Remove();
-                result.Add(commonParent);
-            }
-            else
-            {
-                // find childs of common parent that contains start and end text
-                var startChildOfCommonParent = commonParent.ChildElements.Single(c =>
-                    c == startText || c.Descendants<Text>().Any(d => d == startText));
-                var endChildOfCommonParent =
-                    commonParent.ChildElements.Single(c =>
-                        c == endText || c.Descendants<Text>().Any(d => d == endText));
-
-                var startSplit = startChildOfCommonParent.SplitAfterElement(startText);
-                leadingPart = startSplit.First();
-                if (startChildOfCommonParent == endChildOfCommonParent)
-                {
-                    result.AddRange(commonParent.ChildsBetween(startSplit.First(), endChildOfCommonParent).ToList());
-                }
-                else
-                {
-                    var endSplit = endChildOfCommonParent.SplitBeforeElement(endText);
-                    result.AddRange(commonParent.ChildsBetween(leadingPart, endSplit.Last()).ToList());
-                }
-
-                foreach (var element in result)
-                {
-                    element.Remove();
-                }
-            }
-
-            return result;
-        }
-
         public void BindModel(string prefix, object model)
         {
-            m_models.Add(prefix, model);
+            Context.ModelLookup.Add(prefix, model);
         }
 
         public void RegisterFormatter(IFormatter formatter)
         {
-            if (formatter is IFormatterInitialization formatterInitialization)
-            {
-                formatterInitialization.Initialize(m_models, m_scriptCompiler, m_variableReplacer, Settings, GetMainDocumentPart());
-            }
-            m_variableReplacer.RegisterFormatter(formatter);
+            Context.VariableReplacer.RegisterFormatter(formatter);
         }
 
-        protected abstract MainDocumentPart GetMainDocumentPart();
+        public void RegisterExtension(ITemplateProcessorExtension extension)
+        {
+            Context.RegisterExtension(extension);
+        }
     }
 }

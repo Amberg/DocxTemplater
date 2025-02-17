@@ -15,9 +15,10 @@ namespace DocxTemplater.Formatter
             return type == typeof(string) && prefix.Equals("HTML", StringComparison.CurrentCultureIgnoreCase);
         }
 
-        public void ApplyFormat(FormatterContext context, Text target)
+        public void ApplyFormat(ITemplateProcessingContext templateContext, FormatterContext formatterContext,
+            Text target)
         {
-            if (context.Value is not string html || string.IsNullOrWhiteSpace(html))
+            if (formatterContext.Value is not string html || string.IsNullOrWhiteSpace(html))
             {
                 target.RemoveWithEmptyParent();
                 return;

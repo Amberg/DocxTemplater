@@ -6,10 +6,10 @@
         Condition,
         ConditionEnd,
         CollectionStart,
-        DynamicTable,
         CollectionSeparator,
         CollectionEnd,
         Variable,
-        ConditionElse
+        ConditionElse,
+        InlineKeyWord
     }
 }

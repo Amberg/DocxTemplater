@@ -116,6 +116,18 @@ Will render a table row for each item in the collection:
 | John  | Developer |
 | Alice | CEO       |
 
+#### Shortcut for Dot Notation - accessing the current item
+
+To access the current item in the collection, use the dot notation `{{.}}`:
+```
+{{#Items}} This text {{.Name}} is rendered for each element in the items collection {{/Items}}
+```
+
+To access the outer item in a nested collection, use the dot notation `{{..}}` This is useful when you have nested collections and want to access a property from the outer scope:
+```
+{{#Items}} This text {{..SomePropertyFromTheOuterScope}} is rendered for each element in the items collection {{/Items}}
+```
+
 #### Accessing the Index of the Current Item
 
 To access the index of the current item, use the special variable `Items._Idx` In this example, the collection is called "Items".

@@ -23,7 +23,7 @@ namespace DocxTemplater
                                                                         [\p{L}\p{N}_]*           # Any number of letters, numbers, or underscores
                                                                     )                            
                                                                     ",
-            RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace
+            RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace, TimeSpan.FromMilliseconds(500)
         );
 
         public ScriptCompiler(IModelLookup modelDictionary, ProcessSettings processSettings)
@@ -39,7 +39,14 @@ namespace DocxTemplater
             scriptAsString = scriptAsString.Trim().Replace('\'', '"').Replace('“', '"');
             // replace leading dots (implicit scope) with variables
             var interpreter = new Interpreter();
-            scriptAsString = RegexWordStartingWithDot.Replace(scriptAsString, (m) => OnVariableReplace(m, interpreter));
+            try
+            {
+                scriptAsString = RegexWordStartingWithDot.Replace(scriptAsString, (m) => OnVariableReplace(m, interpreter));
+            }
+            catch (RegexMatchTimeoutException)
+            {
+                throw new OpenXmlTemplateException($"Invalid expression '{scriptAsString}'");
+            }
             var identifiers = interpreter.DetectIdentifiers(scriptAsString);
             foreach (var identifier in identifiers.UnknownIdentifiers)
             {

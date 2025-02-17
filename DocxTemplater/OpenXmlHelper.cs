@@ -8,6 +8,7 @@ using System.Text;
 using System.Xml;
 using System.Xml.Linq;
 using DocumentFormat.OpenXml.Drawing.Wordprocessing;
+using DocumentFormat.OpenXml.Validation;
 
 
 namespace DocxTemplater
@@ -361,6 +362,10 @@ namespace DocxTemplater
 
         public static string ToPrettyPrintXml(this OpenXmlElement element)
         {
+            if (element == null)
+            {
+                return null;
+            }
             var xmldoc = XDocument.Parse(element.OuterXml);
             return xmldoc.ToString();
         }
@@ -464,6 +469,26 @@ namespace DocxTemplater
                 .RootElement
                 .Descendants<DocProperties>()
                 .Max(x => (uint?)x.Id) ?? 0;
+        }
+
+        public static void ValidateOpenXmlElement(this OpenXmlElement element)
+        {
+            var validator = new OpenXmlValidator(FileFormatVersions.Office2010);
+            var result = validator.Validate(element);
+            var sb = new StringBuilder();
+            sb.AppendLine("Invalid OpenXML:");
+            foreach (var rInfo in result)
+            {
+                sb.AppendLine(rInfo.Description);
+                sb.AppendLine($"Path: {rInfo.Path.XPath}");
+                sb.AppendLine($"Node: {rInfo.Node} - {rInfo.RelatedNode.ToPrettyPrintXml()}");
+                sb.AppendLine($"RelatedNode: {rInfo.RelatedNode} - {rInfo.RelatedNode.ToPrettyPrintXml()}");
+                sb.AppendLine();
+            }
+            if (result.Any())
+            {
+                throw new OpenXmlTemplateException(sb.ToString());
+            }
         }
 
         public static OpenXmlElement ParseOpenXmlString(string openXmlString)

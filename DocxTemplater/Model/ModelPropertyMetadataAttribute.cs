@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace DocxTemplater
+namespace DocxTemplater.Model
 {
     [AttributeUsage(AttributeTargets.Property)]
     public class ModelPropertyAttribute : Attribute

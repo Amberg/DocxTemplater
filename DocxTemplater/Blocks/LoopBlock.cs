@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Linq;
 using DocumentFormat.OpenXml;
-using DocxTemplater.Formatter;
 using Text = DocumentFormat.OpenXml.Wordprocessing.Text;
 
 namespace DocxTemplater.Blocks
@@ -11,8 +10,8 @@ namespace DocxTemplater.Blocks
     {
         private readonly string m_collectionName;
 
-        public LoopBlock(IVariableReplacer variableReplacer, PatternType patternType, Text startTextNode, PatternMatch startMatch)
-            : base(variableReplacer, patternType, startTextNode, startMatch)
+        public LoopBlock(ITemplateProcessingContext context, PatternType patternType, Text startTextNode, PatternMatch startMatch)
+            : base(context, patternType, startTextNode, startMatch)
         {
             m_collectionName = startMatch.Variable;
         }
@@ -24,13 +23,13 @@ namespace DocxTemplater.Blocks
             {
                 model = models.GetValue(m_collectionName);
             }
-            catch (OpenXmlTemplateException e) when (m_variableReplacer.ProcessSettings.BindingErrorHandling !=
+            catch (OpenXmlTemplateException e) when (m_context.ProcessSettings.BindingErrorHandling !=
                                                      BindingErrorHandling.ThrowException)
             {
-                if (m_variableReplacer.ProcessSettings.BindingErrorHandling ==
+                if (m_context.ProcessSettings.BindingErrorHandling ==
                     BindingErrorHandling.HighlightErrorsInDocument)
                 {
-                    m_variableReplacer.AddError(e.Message);
+                    m_context.VariableReplacer.AddError(e.Message);
                 }
             }
 
@@ -50,14 +49,14 @@ namespace DocxTemplater.Blocks
             }
             else if (model != null)
             {
-                if (m_variableReplacer.ProcessSettings.BindingErrorHandling == BindingErrorHandling.ThrowException)
+                if (m_context.VariableReplacer.ProcessSettings.BindingErrorHandling == BindingErrorHandling.ThrowException)
                 {
                     throw new OpenXmlTemplateException(
                         $"'{m_collectionName}' is not enumerable - it is of type {model.GetType().FullName}");
                 }
                 else
                 {
-                    m_variableReplacer.AddError(
+                    m_context.VariableReplacer.AddError(
                         $"'{m_collectionName}' is not enumerable - it is of type {model.GetType().FullName}");
                 }
             }

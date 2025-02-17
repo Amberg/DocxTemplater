@@ -1,113 +1,46 @@
-﻿using System.Collections.Generic;
-using System.Text;
+﻿using System.Text;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Wordprocessing;
 
+
+
 namespace DocxTemplater
 {
-    internal record Character
-    {
-        public char Char;
-        public OpenXmlElement Element;
-        public int Index;
-    }
+    internal record struct Character(char Char, Text Element, int CharIndexInText);
+
     internal class CharacterMap
     {
-        private readonly List<OpenXmlElement> m_elements = new();
-        private readonly List<Character> m_map = new();
-        private readonly StringBuilder m_textBuilder = new();
+        private readonly Character[] m_map;
         private readonly OpenXmlCompositeElement m_rootElement;
-        private string m_text;
-        private bool m_isDirty;
+        private readonly StringBuilder m_stringBuilder;
 
-        public Character this[int index]
-        {
-            get
-            {
-                if (m_isDirty)
-                {
-                    Recreate();
-                }
-                return m_map[index];
-            }
-        }
+        public Character this[int index] => m_map[index];
 
-        public string Text
-        {
-            get
-            {
-                if (m_isDirty)
-                {
-                    Recreate();
-                }
-                return m_text;
-            }
-        }
+        public string Text { get; private set; }
 
         public CharacterMap(OpenXmlCompositeElement ce)
         {
             m_rootElement = ce;
-            CreateMap(m_rootElement);
-            m_text = m_textBuilder.ToString();
-            m_isDirty = false;
+            Text = ce.InnerText;
+            m_map = new Character[Text.Length];
+            m_stringBuilder = new StringBuilder(Text.Length);
+            Recreate();
         }
 
-        private void Recreate()
+        public void Recreate()
         {
-            m_elements.Clear();
-            m_map.Clear();
-            m_textBuilder.Clear();
-            CreateMap(m_rootElement);
-            m_text = m_textBuilder.ToString();
-            m_isDirty = false;
-        }
-
-        private void CreateMap(OpenXmlCompositeElement ce)
-        {
-            foreach (var child in ce.ChildElements)
+            int index = 0;
+            m_stringBuilder.Clear();
+            foreach (var text in m_rootElement.Descendants<Text>())
             {
-                if (child.HasChildren)
+                m_stringBuilder.Append(text.Text);
+                for (var charIndexInText = 0; charIndexInText < text.Text.Length; ++charIndexInText)
                 {
-                    CreateMap(child as OpenXmlCompositeElement);
-                }
-                else
-                {
-                    m_elements.Add(child);
-                }
-
-                if (child is Paragraph or Break)
-                {
-                    m_map.Add(new Character
-                    {
-                        Char = (char)10,
-                        Element = child,
-                        Index = -1
-                    });
-
-                    m_textBuilder.Append((char)10);
-                }
-
-                if (child is Text)
-                {
-                    var t = child as Text;
-                    for (var i = 0; i < t.Text.Length; ++i)
-                    {
-                        m_map.Add(new Character
-                        {
-                            Char = t.Text[i],
-                            Element = child,
-                            Index = i
-                        });
-                    }
-
-                    m_textBuilder.Append(t.Text);
+                    m_map[index++] = new Character(text.Text[charIndexInText], text, charIndexInText);
                 }
             }
-        }
 
-        public void MarkAsDirty()
-        {
-            m_isDirty = true;
+            Text = m_stringBuilder.ToString();
         }
     }
 }

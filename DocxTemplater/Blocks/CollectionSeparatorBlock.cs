@@ -1,15 +1,14 @@
 ﻿using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Wordprocessing;
-using DocxTemplater.Formatter;
 using System.Collections.Generic;
 
 namespace DocxTemplater.Blocks
 {
     internal class CollectionSeparatorBlock : ContentBlock
     {
-        public CollectionSeparatorBlock(IVariableReplacer variableReplacer, PatternType patternType, Text startTextNode,
+        public CollectionSeparatorBlock(ITemplateProcessingContext context, PatternType patternType, Text startTextNode,
             PatternMatch startMatch)
-            : base(variableReplacer, patternType, startTextNode, startMatch)
+            : base(context, patternType, startTextNode, startMatch)
         {
         }
 

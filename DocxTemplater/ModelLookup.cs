@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using DocxTemplater.Model;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -94,6 +95,11 @@ namespace DocxTemplater
                     if (!dict.TryGetValue(propertyName, out model))
                     {
                         throw new OpenXmlTemplateException($"Property {propertyName} not found in {modelRootPath}");
+                    }
+                    if (model is ValueWithMetadata valWithMetadata)
+                    {
+                        model = valWithMetadata.Value;
+                        lastValueMetadata = valWithMetadata.Metadata;
                     }
                 }
                 else

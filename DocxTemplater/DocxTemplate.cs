@@ -5,6 +5,7 @@ using DocxTemplater.Formatter;
 using System;
 using System.IO;
 using System.Linq;
+using DocxTemplater.Extensions.Charts;
 
 namespace DocxTemplater
 {
@@ -26,7 +27,7 @@ namespace DocxTemplater
         }
 
         private DocxTemplate(Stream docXStream, ProcessSettings settings, ModelLookup modelLookup)
-        : base(settings, modelLookup, new VariableReplacer(modelLookup, settings), new ScriptCompiler(modelLookup, settings))
+        : base(new TemplateProcessingContext(settings, modelLookup, new VariableReplacer(modelLookup, settings), new ScriptCompiler(modelLookup, settings)))
         {
             ArgumentNullException.ThrowIfNull(docXStream);
             m_stream = new MemoryStream();
@@ -41,8 +42,11 @@ namespace DocxTemplater
                     TargetMinimumVersion)
             };
             m_wpDocument = WordprocessingDocument.Open(m_stream, true, openSettings);
+            Context.Initialize(m_wpDocument.MainDocumentPart);
             Processed = false;
-            RegisterFormatter(new SubTemplateFormatter(modelLookup, settings));
+
+            RegisterFormatter(new SubTemplateFormatter());
+            RegisterExtension(new ChartProcessor());
         }
 
         public static DocxTemplate Open(string pathToTemplate, ProcessSettings settings = null)
@@ -53,6 +57,8 @@ namespace DocxTemplater
         }
 
         public bool Processed { get; private set; }
+
+        public ProcessSettings Settings => Context.ProcessSettings;
 
         public void Save(string targetPath)
         {
@@ -102,7 +108,7 @@ namespace DocxTemplater
             {
                 ProcessNode(footer.Footer);
             }
-            m_variableReplacer.WriteErrorMessages(m_wpDocument.MainDocumentPart.RootElement);
+            Context.VariableReplacer.WriteErrorMessages(m_wpDocument.MainDocumentPart.RootElement);
             m_wpDocument.Save();
             m_stream.Position = 0;
             return m_stream;
@@ -113,11 +119,6 @@ namespace DocxTemplater
         {
             m_stream?.Dispose();
             m_wpDocument?.Dispose();
-        }
-
-        protected override MainDocumentPart GetMainDocumentPart()
-        {
-            return m_wpDocument.MainDocumentPart;
         }
     }
 }

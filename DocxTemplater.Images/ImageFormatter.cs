@@ -17,7 +17,7 @@ namespace DocxTemplater.Images
 {
     public class ImageFormatter : IFormatter
     {
-        private static readonly Regex m_argumentRegex = new(@"(?<key>[whr]):(?<value>\d+)(?<unit>px|cm|in|pt)?", RegexOptions.Compiled);
+        private static readonly Regex ArgumentRegex = new(@"(?<key>[whr]):(?<value>\d+)(?<unit>px|cm|in|pt)?", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
         private sealed record ImageInfo(int PixelWidth, int PixelHeight, string ImagePartRelationId);
         private readonly Dictionary<byte[], ImageInfo> m_imagePartRelIdCache = new();
         private OpenXmlPartRootElement m_currentRoot;
@@ -28,11 +28,12 @@ namespace DocxTemplater.Images
             return prefixUpper is "IMAGE" or "IMG" && type == typeof(byte[]);
         }
 
-        public void ApplyFormat(FormatterContext context, Text target)
+        public void ApplyFormat(ITemplateProcessingContext templateContext, FormatterContext formatterContext,
+            Text target)
         {
             // TODO: handle other ppi values than default 96
             // see https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.wordprocessing.pixelsperinch?view=openxml-2.8.1#remarks
-            if (context.Value is not byte[] imageBytes)
+            if (formatterContext.Value is not byte[] imageBytes)
             {
                 return;
             }
@@ -52,7 +53,7 @@ namespace DocxTemplater.Images
                     {
                         using var image = Image.Load(imageBytes);
                         string imagePartRelId = null;
-                        var imagePartType = DetectPartTypeInfo(context.Placeholder, image.Metadata);
+                        var imagePartType = DetectPartTypeInfo(formatterContext.Placeholder, image.Metadata);
                         if (openXmlPartRootElement.OpenXmlPart is HeaderPart headerPart)
                         {
                             imagePartRelId = CreateImagePart(headerPart, imageBytes, imagePartType);
@@ -74,12 +75,12 @@ namespace DocxTemplater.Images
                     }
 
                     // case 1. Image ist the only child element of a <wps:wsp> (TextBox)
-                    if (TryHandleImageInWordprocessingShape(target, imageInfo, context.Args.FirstOrDefault() ?? string.Empty, maxPropertyId))
+                    if (TryHandleImageInWordprocessingShape(target, imageInfo, formatterContext.Args.FirstOrDefault() ?? string.Empty, maxPropertyId))
                     {
                         return;
                     }
 
-                    AddInlineGraphicToRun(target, imageInfo, maxPropertyId, context.Args);
+                    AddInlineGraphicToRun(target, imageInfo, maxPropertyId, formatterContext.Args);
                 }
                 else
                 {
@@ -297,32 +298,39 @@ namespace DocxTemplater.Images
 
             foreach (var argument in arguments)
             {
-                var matches = m_argumentRegex.Matches(argument);
-                if (matches.Count == 0)
+                try
                 {
-                    outCxEmu = OpenXmlHelper.PixelsToEmu(pixelWidth);
-                    outCyEmu = OpenXmlHelper.PixelsToEmu(pixelHeight);
-                    rot = rotation;
-                    return;
-                }
-
-                foreach (System.Text.RegularExpressions.Match match in matches)
-                {
-                    var key = match.Groups["key"].Value;
-                    var value = int.Parse(match.Groups["value"].Value);
-                    var unit = match.Groups["unit"].Value;
-                    switch (key)
+                    var matches = ArgumentRegex.Matches(argument);
+                    if (matches.Count == 0)
                     {
-                        case "w":
-                            cxEmu = OpenXmlHelper.LengthToEmu(value, unit);
-                            break;
-                        case "h":
-                            cyEmu = OpenXmlHelper.LengthToEmu(value, unit);
-                            break;
-                        case "r":
-                            rotation = value;
-                            break;
+                        outCxEmu = OpenXmlHelper.PixelsToEmu(pixelWidth);
+                        outCyEmu = OpenXmlHelper.PixelsToEmu(pixelHeight);
+                        rot = rotation;
+                        return;
                     }
+
+                    foreach (System.Text.RegularExpressions.Match match in matches)
+                    {
+                        var key = match.Groups["key"].Value;
+                        var value = int.Parse(match.Groups["value"].Value);
+                        var unit = match.Groups["unit"].Value;
+                        switch (key)
+                        {
+                            case "w":
+                                cxEmu = OpenXmlHelper.LengthToEmu(value, unit);
+                                break;
+                            case "h":
+                                cyEmu = OpenXmlHelper.LengthToEmu(value, unit);
+                                break;
+                            case "r":
+                                rotation = value;
+                                break;
+                        }
+                    }
+                }
+                catch (RegexMatchTimeoutException)
+                {
+                    throw new OpenXmlTemplateException($"Invalid image formatter argument '{argument}'");
                 }
             }
 

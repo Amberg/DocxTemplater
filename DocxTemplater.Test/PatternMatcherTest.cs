@@ -22,6 +22,7 @@ namespace DocxTemplater.Test
         static IEnumerable TestPatternMatch_Cases()
         {
             yield return new TestCaseData("{{Foo}}").Returns(new[] { PatternType.Variable });
+            yield return new TestCaseData("{{:Break}}").Returns(new[] { PatternType.InlineKeyWord });
             yield return new TestCaseData("{{Foo}:blupp()}").Returns(new[] { PatternType.Variable });
             yield return new TestCaseData("{{/Items}}").Returns(new[] { PatternType.CollectionEnd });
             yield return new TestCaseData("{{ /Items }}").Returns(new[] { PatternType.CollectionEnd });

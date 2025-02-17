@@ -2,6 +2,7 @@
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using DocxTemplater.Images;
+using DocxTemplater.Model;
 using System.Collections;
 using System.Dynamic;
 using System.Globalization;

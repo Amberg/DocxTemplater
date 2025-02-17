@@ -1,6 +1,5 @@
 ﻿using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Wordprocessing;
-using DocxTemplater.Formatter;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,7 +11,7 @@ namespace DocxTemplater.Blocks
         protected InsertionPoint m_insertionPoint;
         protected IReadOnlyCollection<OpenXmlElement> m_content;
         protected readonly List<ContentBlock> m_childBlocks;
-        protected readonly IVariableReplacer m_variableReplacer;
+        protected readonly ITemplateProcessingContext m_context;
 #pragma warning disable IDE0052
         private InsertionPoint m_lastElementMarker;
 #pragma warning restore IDE0052
@@ -24,30 +23,30 @@ namespace DocxTemplater.Blocks
             m_childBlocks = new List<ContentBlock>();
         }
 
-        public ContentBlock(IVariableReplacer variableReplacer, PatternType patternType, Text startTextNode, PatternMatch startMatch)
+        public ContentBlock(ITemplateProcessingContext context, PatternType patternType, Text startTextNode, PatternMatch startMatch)
         {
             m_content = new List<OpenXmlElement>();
             m_childBlocks = new List<ContentBlock>();
-            m_variableReplacer = variableReplacer;
+            m_context = context;
             PatternType = patternType;
             StartTextNode = startTextNode ?? throw new ArgumentNullException(nameof(startTextNode));
             StartMatch = startMatch ?? throw new ArgumentNullException(nameof(startMatch));
         }
 
         public static ContentBlock Crate(
-            IVariableReplacer variableReplacer,
-            IScriptCompiler scriptCompiler,
+            ITemplateProcessingContext context,
             PatternType patternType,
             Text startTextNode,
             PatternMatch matchedStartNode)
         {
             return patternType switch
             {
-                PatternType.CollectionStart when matchedStartNode.Formatter.Equals("dyntable", StringComparison.InvariantCultureIgnoreCase) => new DynamicTableBlock(variableReplacer, patternType, startTextNode, matchedStartNode),
-                PatternType.CollectionStart => new LoopBlock(variableReplacer, patternType, startTextNode, matchedStartNode),
-                PatternType.CollectionSeparator => new CollectionSeparatorBlock(variableReplacer, patternType, startTextNode, matchedStartNode),
-                PatternType.Condition => new ConditionalBlock(variableReplacer, scriptCompiler, patternType, startTextNode, matchedStartNode),
-                _ => new ContentBlock(variableReplacer, patternType, startTextNode, matchedStartNode)
+                PatternType.CollectionStart when matchedStartNode.Formatter.Equals("dyntable", StringComparison.InvariantCultureIgnoreCase) => new DynamicTableBlock(context, patternType, startTextNode, matchedStartNode),
+                PatternType.CollectionStart => new LoopBlock(context, patternType, startTextNode, matchedStartNode),
+                PatternType.CollectionSeparator => new CollectionSeparatorBlock(context, patternType, startTextNode, matchedStartNode),
+                PatternType.Condition => new ConditionalBlock(context, patternType, startTextNode, matchedStartNode),
+                PatternType.InlineKeyWord => new InlineKeyWordBlock(context, patternType, startTextNode, matchedStartNode),
+                _ => new ContentBlock(context, patternType, startTextNode, matchedStartNode)
             };
         }
 
@@ -102,7 +101,11 @@ namespace DocxTemplater.Blocks
         {
             var cloned = m_content.Select(x => x.CloneNode(true)).ToList();
             InsertContent(parentNode, cloned);
-            m_variableReplacer.ReplaceVariables(cloned);
+            foreach (var extensions in m_context.Extensions)
+            {
+                extensions.ReplaceVariables(m_context, parentNode, cloned);
+            }
+            m_context.VariableReplacer.ReplaceVariables(cloned, m_context);
         }
 
         public virtual void ExpandChildBlocks(IModelLookup models, OpenXmlElement parentNode)
