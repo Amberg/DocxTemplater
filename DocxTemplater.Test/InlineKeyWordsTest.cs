@@ -14,7 +14,8 @@ namespace DocxTemplater.Test
             using var memStream = new MemoryStream();
             using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
             MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
-            mainPart.Document = new Document(new Body(new Paragraph(new Run(new Text($$$"""Here comes a break{{:{{{keyWord}}}}}and here comes the second run""")))));
+            mainPart.Document = new Document(new Body(new Paragraph(
+                new Run(new Text($$$"""Here comes a break{{:{{{keyWord}}}}}and here comes the second run""")))));
             wpDocument.Save();
             memStream.Position = 0;
             var docTemplate = new DocxTemplate(memStream);
@@ -25,16 +26,16 @@ namespace DocxTemplater.Test
             var document = WordprocessingDocument.Open(result, false);
             var body = document.MainDocumentPart.Document.Body;
             Assert.That(body.ToPrettyPrintXml(), Is.EqualTo($"""
-                                                              <w:body xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-                                                                <w:p>
-                                                                  <w:r>
-                                                                    <w:t xml:space="preserve">Here comes a break</w:t>
-                                                                    {xmlElement}
-                                                                    <w:t xml:space="preserve">and here comes the second run</w:t>
-                                                                  </w:r>
-                                                                </w:p>
-                                                              </w:body>
-                                                              """));
+                                                             <w:body xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                                                               <w:p>
+                                                                 <w:r>
+                                                                   <w:t xml:space="preserve">Here comes a break</w:t>
+                                                                   {xmlElement}
+                                                                   <w:t xml:space="preserve">and here comes the second run</w:t>
+                                                                 </w:r>
+                                                               </w:p>
+                                                             </w:body>
+                                                             """.Replace("\r\n", Environment.NewLine)));
         }
 
         [Test]
@@ -43,7 +44,8 @@ namespace DocxTemplater.Test
             using var memStream = new MemoryStream();
             using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
             MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
-            mainPart.Document = new Document(new Body(new Paragraph(new Run(new Text($$$"""Here comes a break{{:sectionBreak}}and here comes the second part""")))));
+            mainPart.Document = new Document(new Body(new Paragraph(
+                new Run(new Text($$$"""Here comes a break{{:sectionBreak}}and here comes the second part""")))));
             wpDocument.Save();
             memStream.Position = 0;
             var docTemplate = new DocxTemplate(memStream);
@@ -73,7 +75,7 @@ namespace DocxTemplater.Test
                                                                  </w:r>
                                                                </w:p>
                                                              </w:body>
-                                                             """));
+                                                             """.Replace("\r\n", Environment.NewLine)));
         }
     }
 }
