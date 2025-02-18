@@ -84,7 +84,13 @@ namespace DocxTemplater
         private static void IsolateAndMergeTextTemplateMarkers(OpenXmlCompositeElement content)
         {
             var charMap = new CharacterMap(content);
-            foreach (var m in PatternMatcher.FindSyntaxPatterns(charMap.Text))
+        
+            var matches = PatternMatcher
+                .FindSyntaxPatterns(charMap.Text)
+                .OrderByDescending(m => m.Index)
+                .ToArray();
+        
+            foreach (var m in matches)
             {
                 var firstChar = charMap[m.Index];
                 var lastChar = charMap[m.Index + m.Length - 1];
@@ -92,8 +98,6 @@ namespace DocxTemplater
                 var lastText = lastChar.Element;
                 var mergedText = firstText.MergeText(firstChar.CharIndexInText, lastText, m.Length);
                 mergedText.Mark(m.Type);
-                // TODO: Ist this possible without recreate charMap?
-                charMap.Recreate();
             }
         }
 
