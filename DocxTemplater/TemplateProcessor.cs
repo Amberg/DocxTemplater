@@ -32,14 +32,14 @@ namespace DocxTemplater
 #endif
             PreProcess(rootElement);
 
-            DocxTemplate.IsolateAndMergeTextTemplateMarkers(rootElement);
+            var matches = DocxTemplate.IsolateAndMergeTextTemplateMarkers(rootElement);
 
 #if DEBUG
             Console.WriteLine("----------- Isolate Texts --------");
             Console.WriteLine(rootElement.ToPrettyPrintXml());
 #endif
 
-            var loops = ExpandLoops(rootElement);
+            var loops = ExpandLoops(rootElement, matches);
 #if DEBUG
             Console.WriteLine("----------- After Loops --------");
             Console.WriteLine(rootElement.ToPrettyPrintXml());
@@ -81,20 +81,21 @@ namespace DocxTemplater
             }
         }
 
-        private static void IsolateAndMergeTextTemplateMarkers(OpenXmlCompositeElement content)
+        private static IReadOnlyCollection<(PatternMatch, Text)> IsolateAndMergeTextTemplateMarkers(OpenXmlCompositeElement content)
         {
             var charMap = new CharacterMap(content);
+            List<(PatternMatch, Text)> patternMatches = [];
             foreach (var m in PatternMatcher.FindSyntaxPatterns(charMap.Text))
             {
                 var firstChar = charMap[m.Index];
                 var lastChar = charMap[m.Index + m.Length - 1];
-                var firstText = firstChar.Element;
-                var lastText = lastChar.Element;
-                var mergedText = firstText.MergeText(firstChar.CharIndexInText, lastText, m.Length);
-                mergedText.Mark(m.Type);
-                // TODO: Ist this possible without recreate charMap?
-                charMap.Recreate();
+                // merge text creates or deletes elements but the index and the element with the match does not change
+                // for this reason it does not matter that the new nodes are not in the charMap
+                var mergedText = charMap.MergeText(firstChar, lastChar);
+                mergedText.Element.Mark(m.Type);
+                patternMatches.Add(new(m, mergedText.Element));
             }
+            return patternMatches;
         }
 
         private static void Cleanup(OpenXmlCompositeElement element, bool removeEmptyElements)
@@ -144,15 +145,15 @@ namespace DocxTemplater
             }
         }
 
-        private IReadOnlyCollection<ContentBlock> ExpandLoops(OpenXmlCompositeElement element)
+        private IReadOnlyCollection<ContentBlock> ExpandLoops(OpenXmlCompositeElement element, IReadOnlyCollection<(PatternMatch, Text)> matches)
         {
             Stack<ContentBlock> blockStack = new();
             blockStack.Push(new ContentBlock()); // dummy block for root
-            foreach (var text in element.Descendants<Text>().ToList().Where(x => x.IsMarked()))
+            foreach (var item in matches)
             {
-                var value = text.GetMarker();
-                var match = PatternMatcher.FindSyntaxPatterns(text.Text).Single();
-
+                var match = item.Item1;
+                var text = (Text)item.Item2;
+                var value = match.Type;
                 if (value is PatternType.InlineKeyWord)
                 {
                     StartBlock(blockStack, match, value, text);
