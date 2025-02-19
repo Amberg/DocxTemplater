@@ -262,67 +262,7 @@ namespace DocxTemplater
             return element;
         }
 
-        public static Text MergeText(this Text first, int startIndex, Text last, int length)
-        {
-            var commonParent = first.FindCommonParent(last) ?? throw new ArgumentException("Text elements must have a common parent");
-            if (startIndex < 0 || startIndex >= first.Text.Length)
-            {
-                throw new ArgumentOutOfRangeException(nameof(startIndex));
-            }
-            var matchInSameElement = first == last;
-            var firstTextLength = first.Text.Length;
-            if (startIndex != 0) // leading text is not part of the match
-            {
-                first = first.SplitAtIndex(startIndex);
-            }
-            if (startIndex + length < firstTextLength) // trailing text part of the match in the first element
-            {
-                first.SplitAtIndex(length);
-            }
-
-            if (matchInSameElement)
-            {
-                return first;
-            }
-
-            List<OpenXmlElement> toRemove = new();
-            bool found = false;
-            foreach (var current in commonParent.Descendants<Text>())
-            {
-                if (current == first)
-                {
-                    found = true;
-                    continue;
-                }
-                if (!found)
-                {
-                    continue;
-                }
-
-                // trailing text is not part of the match int the last element
-                if (first.Text.Length + current.Text.Length > length)
-                {
-                    var firstPart = current.Text[..(length - first.Text.Length)];
-                    var secondPart = current.Text[(length - first.Text.Length)..];
-                    first.Text += firstPart;
-                    current.Text = secondPart;
-                    break;
-                }
-                first.Text += current.Text;
-                toRemove.Add(current);
-                if (current == last)
-                {
-                    break;
-                }
-            }
-            foreach (var text in toRemove)
-            {
-                text.RemoveWithEmptyParent();
-            }
-            return first;
-        }
-
-        public static Text SplitAtIndex(this Text element, int startIndexSecondPart)
+        public static Text SplitAtIndexAndReturnLastPart(this Text element, int startIndexSecondPart)
         {
             if (startIndexSecondPart < 0 || startIndexSecondPart >= element.Text.Length)
             {
