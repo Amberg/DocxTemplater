@@ -8,7 +8,7 @@ using System.Text;
 
 namespace DocxTemplater
 {
-    internal record struct CharacterPointer(char Char, Text Element, int CharIndexInText, int Index);
+    internal record struct CharacterPointer(Text Element, int CharIndexInText, int Index);
 
     internal class CharacterMap
     {
@@ -38,7 +38,7 @@ namespace DocxTemplater
                 m_stringBuilder.Append(text.Text);
                 for (var charIndexInText = 0; charIndexInText < text.Text.Length; ++charIndexInText)
                 {
-                    m_map[index] = new CharacterPointer(text.Text[charIndexInText], text, charIndexInText, index);
+                    m_map[index] = new CharacterPointer(text, charIndexInText, index);
                     ++index;
                 }
             }
@@ -59,7 +59,7 @@ namespace DocxTemplater
             if (first.CharIndexInText != 0) // leading text is not part of the match
             {
                 // new last part
-                Text newPart = first.Element.SplitAtIndexAndReturnLastPart(first.CharIndexInText);
+                var newPart = first.Element.SplitAtIndexAndReturnLastPart(first.CharIndexInText);
                 var index = first.Index;
                 InsertNewTextAddIndex(index, newPart);
                 first = m_map[index];
@@ -131,7 +131,7 @@ namespace DocxTemplater
             for (int i = 0; i < newPart.Text.Length; i++)
             {
                 var index = startIndex + i;
-                m_map[index] = new CharacterPointer(newPart.Text[i], newPart, i, index);
+                m_map[index] = new CharacterPointer(newPart, i, index);
             }
         }
 
@@ -140,9 +140,9 @@ namespace DocxTemplater
             var textStart = characterPointer.Index - characterPointer.CharIndexInText;
             for (int i = 0; i < appendText.Length; i++)
             {
-                var textOffest = characterPointer.Element.Text.Length + i;
-                var index = textStart + textOffest;
-                m_map[index] = new CharacterPointer(appendText[i], characterPointer.Element, textOffest, index);
+                var offset = characterPointer.Element.Text.Length + i;
+                var index = textStart + offset;
+                m_map[index] = new CharacterPointer(characterPointer.Element, offset, index);
             }
             characterPointer.Element.Text += appendText;
         }
