@@ -2,8 +2,8 @@
 using DocumentFormat.OpenXml.Wordprocessing;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
-
 
 
 namespace DocxTemplater
@@ -13,39 +13,31 @@ namespace DocxTemplater
     internal class CharacterMap
     {
         private readonly CharacterPointer[] m_map;
-        private readonly OpenXmlCompositeElement m_rootElement;
-        private readonly StringBuilder m_stringBuilder;
 
         public CharacterPointer this[int index] => m_map[index];
 
         public string Text { get; private set; }
 
-        public CharacterMap(OpenXmlCompositeElement ce)
-        {
-            m_rootElement = ce;
-            Text = ce.InnerText;
-            m_map = new CharacterPointer[Text.Length];
-            m_stringBuilder = new StringBuilder(Text.Length);
-            Recreate();
-        }
-
-        public void Recreate()
+        public CharacterMap(OpenXmlCompositeElement root)
         {
             int index = 0;
-            m_stringBuilder.Clear();
-            foreach (var text in m_rootElement.Descendants<Text>())
+            var sb = new StringBuilder();
+            var textElements = root.Descendants<Text>().ToList();
+            foreach (var text in textElements)
             {
-                m_stringBuilder.Append(text.Text);
+                sb.Append(text.Text);
+            }
+            Text = sb.ToString();
+            m_map = new CharacterPointer[Text.Length];
+            foreach (var text in textElements)
+            {
                 for (var charIndexInText = 0; charIndexInText < text.Text.Length; ++charIndexInText)
                 {
                     m_map[index] = new CharacterPointer(text, charIndexInText, index);
                     ++index;
                 }
             }
-
-            Text = m_stringBuilder.ToString();
         }
-
 
         public CharacterPointer MergeText(CharacterPointer first, CharacterPointer last)
         {
