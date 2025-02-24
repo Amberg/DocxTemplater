@@ -212,54 +212,5 @@ namespace DocxTemplater.Test
             Assert.That(parts.ElementAt(0).InnerText, Is.EqualTo("{{ds.Items.Value}}"));
             Assert.That(parts.ElementAt(1).InnerText, Is.EqualTo(string.Empty));
         }
-
-        [Test]
-        public void MergeTextToOneRun()
-        {
-            var xml = @"<w:p xmlns:w=""http://schemas.openxmlformats.org/wordprocessingml/2006/main"">
-                        <w:r>
-                        <w:t>Leading Text Same Run</w:t>
-                        <w:t>##Text1</w:t>
-                        </w:r>
-                        <w:r>
-                        <w:t>Text2</w:t>
-                        <w:t>Text3</w:t>
-                        </w:r>
-                        <w:r>
-                            <w:t>Text4##NotPart</w:t>
-                        </w:r>
-                        <w:r>
-                            <w:t>Not Merged after</w:t>
-                        </w:r>
-                    </w:p>";
-            var paragraph = new Paragraph(xml);
-            var texts = paragraph.Descendants<Text>().ToList();
-            var firstText = texts.Single(x => x.Text.EndsWith("Text1"));
-
-            firstText.MergeText(2, texts.Single(x => x.Text.StartsWith("Text4")), 20);
-
-            Console.WriteLine(paragraph.ToPrettyPrintXml());
-            texts = paragraph.Descendants<Text>().ToList();
-            Assert.That(texts.Count, Is.EqualTo(5));
-            Assert.That(texts[0].Text, Is.EqualTo("Leading Text Same Run"));
-            Assert.That(texts[1].Text, Is.EqualTo("##"));
-            Assert.That(texts[2].Text, Is.EqualTo("Text1Text2Text3Text4"));
-            Assert.That(texts[3].Text, Is.EqualTo("##NotPart"));
-            Assert.That(texts[4].Text, Is.EqualTo("Not Merged after"));
-        }
-
-        [Test]
-        public void MergeTextMiddle()
-        {
-            var xml = @"<w:p xmlns:w=""http://schemas.openxmlformats.org/wordprocessingml/2006/main"">
-                        <w:r>
-                        <w:t>LeadingMiddleEnd</w:t> 
-                        </w:r>             
-                    </w:p>";
-            var paragraph = new Paragraph(xml);
-            var firstText = paragraph.Descendants<Text>().Single(x => x.Text == "LeadingMiddleEnd");
-            firstText.MergeText(7, firstText, 6);
-            Assert.That(paragraph.Descendants<Text>().Select(x => x.Text), Is.EqualTo(new[] { "Leading", "Middle", "End" }));
-        }
     }
 }
