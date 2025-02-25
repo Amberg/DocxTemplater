@@ -221,7 +221,7 @@ namespace DocxTemplater.Blocks
                 var endChildOfCommonParent = ParentNode.ChildElements.Single(c => c == EndTextNode || c.Descendants<Text>().Any(d => d == EndTextNode));
                 var split = startChildOfCommonParent.SplitAfterElement(StartTextNode);
                 OpenXmlElement anchorElement = null;
-                if (split.Count == 1)
+                if (split.Count == 1 && startChildOfCommonParent != endChildOfCommonParent)
                 {
                     // already split - only first part returned
                     var nextElement = split.First().NextSibling();
