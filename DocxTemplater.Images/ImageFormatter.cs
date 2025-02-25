@@ -4,6 +4,7 @@ using DocumentFormat.OpenXml.Wordprocessing;
 using DocxTemplater.Formatter;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Metadata;
+using SixLabors.ImageSharp.Metadata.Profiles.Exif;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -11,14 +12,14 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using A = DocumentFormat.OpenXml.Drawing;
 using DW = DocumentFormat.OpenXml.Drawing.Wordprocessing;
-using PIC = DocumentFormat.OpenXml.Drawing.Pictures; // http://schemas.openxmlformats.org/drawingml/2006/picture"
+using PIC = DocumentFormat.OpenXml.Drawing.Pictures;
 
 namespace DocxTemplater.Images
 {
     public class ImageFormatter : IFormatter
     {
         private static readonly Regex ArgumentRegex = new(@"(?<key>[whr]):(?<value>\d+)(?<unit>px|cm|in|pt)?", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
-        private sealed record ImageInfo(int PixelWidth, int PixelHeight, string ImagePartRelationId);
+        private sealed record ImageInfo(int PixelWidth, int PixelHeight, string ImagePartRelationId, int? Orientation);
         private readonly Dictionary<byte[], ImageInfo> m_imagePartRelIdCache = new();
         private OpenXmlPartRootElement m_currentRoot;
 
@@ -52,6 +53,12 @@ namespace DocxTemplater.Images
                     if (!TryGetImageIdFromCache(imageBytes, openXmlPartRootElement, out var imageInfo))
                     {
                         using var image = Image.Load(imageBytes);
+                        int? orientation = null;
+                        if (image.Metadata?.ExifProfile?.TryGetValue(ExifTag.Orientation, out var orientationValue) == true)
+                        {
+                            orientation = orientationValue.Value;
+                        }
+
                         string imagePartRelId = null;
                         var imagePartType = DetectPartTypeInfo(formatterContext.Placeholder, image.Metadata);
                         if (openXmlPartRootElement.OpenXmlPart is HeaderPart headerPart)
@@ -70,11 +77,10 @@ namespace DocxTemplater.Images
                         {
                             throw new OpenXmlTemplateException("Could not find a valid image part");
                         }
-                        imageInfo = new ImageInfo(image.Width, image.Height, imagePartRelId);
+                        imageInfo = new ImageInfo(image.Width, image.Height, imagePartRelId, orientation);
                         m_imagePartRelIdCache[imageBytes] = imageInfo;
                     }
 
-                    // case 1. Image ist the only child element of a <wps:wsp> (TextBox)
                     if (TryHandleImageInWordprocessingShape(target, imageInfo, formatterContext.Args.FirstOrDefault() ?? string.Empty, maxPropertyId))
                     {
                         return;
@@ -155,7 +161,7 @@ namespace DocxTemplater.Images
                     targetExtent.Cy = (long)(imageCy * scale);
                 }
 
-                ReplaceAnchorContentWithPicture(imageInfo.ImagePartRelationId, maxPropertyId, drawing);
+                ReplaceAnchorContentWithPicture(imageInfo.ImagePartRelationId, maxPropertyId, drawing, imageInfo.Orientation);
             }
 
             target.Remove();
@@ -164,7 +170,7 @@ namespace DocxTemplater.Images
 
 
         private static void ReplaceAnchorContentWithPicture(string impagepartRelationShipId, uint maxDocumentPropertyId,
-            Drawing original)
+            Drawing original, int? originalOrientation)
         {
             var propertyId = maxDocumentPropertyId + 1;
             var inlineOrAnchor = (OpenXmlElement)original.GetFirstChild<DW.Anchor>() ??
@@ -215,7 +221,7 @@ namespace DocxTemplater.Images
                     new A.GraphicFrameLocks {NoChangeAspect = true}),
                 new A.Graphic(
                     new A.GraphicData(
-                            CreatePicture(impagepartRelationShipId, propertyId, originaleExtent.Cx, originaleExtent.Cy, rotation)
+                            CreatePicture(impagepartRelationShipId, propertyId, originaleExtent.Cx, originaleExtent.Cy, rotation, originalOrientation)
                         )
                         {Uri = "http://schemas.openxmlformats.org/drawingml/2006/picture"})
             });
@@ -232,7 +238,6 @@ namespace DocxTemplater.Images
             var propertyId = maxDocumentPropertyId + 1;
 
             TransformSize(imageInfo.PixelWidth, imageInfo.PixelHeight, arguments, out var cx, out var cy, out var rotation);
-            rotation *= 60000;
 
             // Define the reference of the image.
             var drawing =
@@ -255,7 +260,7 @@ namespace DocxTemplater.Images
                             new A.GraphicFrameLocks { NoChangeAspect = true }),
                         new A.Graphic(
                             new A.GraphicData(
-                                    CreatePicture(imageInfo.ImagePartRelationId, propertyId, cx, cy, rotation)
+                                    CreatePicture(imageInfo.ImagePartRelationId, propertyId, cx, cy, rotation, imageInfo.Orientation)
                                 )
                             { Uri = "http://schemas.openxmlformats.org/drawingml/2006/picture" })
                     )
@@ -352,7 +357,6 @@ namespace DocxTemplater.Images
             }
             else
             {
-                // if both are set, the aspect ratio is kept
                 var aspectRatio = (double)pixelWidth / pixelHeight;
                 var newAspectRatio = (double)cxEmu / cyEmu;
                 if (aspectRatio > newAspectRatio)
@@ -369,9 +373,27 @@ namespace DocxTemplater.Images
             rot = rotation;
         }
 
-
-        private static PIC.Picture CreatePicture(string impagepartRelationShipId, uint propertyId, long cx, long cy, int rotation)
+        private static PIC.Picture CreatePicture(string impagepartRelationShipId, uint propertyId, long cx, long cy, int rotation, int? originalOrientation = null)
         {
+            int finalRotation = rotation;
+            if (originalOrientation.HasValue)
+            {
+                switch (originalOrientation.Value)
+                {
+                    case 6: // Rotated 90 degrees right
+                        finalRotation = (rotation + 90) % 360;
+                        break;
+                    case 3: // Rotated 180 degrees
+                        finalRotation = (rotation + 180) % 360;
+                        break;
+                    case 8: // Rotated 90 degrees left
+                        finalRotation = (rotation + 270) % 360;
+                        break;
+                }
+            }
+
+            finalRotation *= 60000; // Convert to OpenXML rotation units
+
             return new PIC.Picture(
                 new PIC.NonVisualPictureProperties(
                     new PIC.NonVisualDrawingProperties
@@ -398,7 +420,7 @@ namespace DocxTemplater.Images
                         new A.Offset { X = 0L, Y = 0L },
                         new A.Extents { Cx = cx, Cy = cy })
                     {
-                        Rotation = rotation
+                        Rotation = finalRotation
                     },
                     new A.PresetGeometry(
                             new A.AdjustValueList()
