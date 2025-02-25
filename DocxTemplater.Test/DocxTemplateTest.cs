@@ -128,6 +128,26 @@ namespace DocxTemplater.Test
             Assert.That(rows[4].InnerText, Is.EqualTo("80.00  11/12/200790.00  9/12/2007100.00  11/12/2003"));
         }
 
+
+        [Test]
+        public void NoMatchesInDocument()
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(new Paragraph(new Run(new Text("Hi There")))));
+            wpDocument.Save();
+            memStream.Position = 0;
+            var docTemplate = new DocxTemplate(memStream);
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.That(result, Is.Not.Null);
+            // check result text
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            Assert.That(body.InnerText, Is.EqualTo("Hi There"));
+        }
+
         [Test]
         public void MissingVariableThrows()
         {
