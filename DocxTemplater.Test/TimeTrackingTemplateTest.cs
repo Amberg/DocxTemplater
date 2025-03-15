@@ -21,7 +21,7 @@ namespace DocxTemplater.Test
                 {
                     new()
                     {
-                        Date = DateTime.Now,
+                        Date = new DateTime(2025,2,25),
                         Duration = TimeSpan.FromHours(1),
                         BillableDuration = TimeSpan.FromHours(0.5),
                         Activity = "Activity 1",
@@ -34,7 +34,7 @@ namespace DocxTemplater.Test
                     },
                     new()
                     {
-                        Date = DateTime.Now.AddDays(1),
+                        Date = new DateTime(2025,2,26),
                         Duration = TimeSpan.FromHours(2),
                         BillableDuration = TimeSpan.FromHours(1),
                         Activity = "Activity 2",
