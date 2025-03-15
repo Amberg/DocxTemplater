@@ -194,7 +194,7 @@ namespace DocxTemplater.Formatter
             {
                 var parts = text.Text.Split('\n');
                 OpenXmlElement lastElement = text;
-                foreach (var part in parts)
+                foreach (var part in parts.Where(x => !string.IsNullOrWhiteSpace(x)))
                 {
                     lastElement = lastElement.InsertAfterSelf(new Text(part));
                     lastElement = lastElement.InsertAfterSelf(new Break());
