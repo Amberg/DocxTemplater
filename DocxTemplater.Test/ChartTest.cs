@@ -9,7 +9,7 @@ namespace DocxTemplater.Test
     internal class ChartTest
     {
         [Test]
-        public void RenderTemplateWithBarChart_ModelMissingHighlightError()
+        public void RenderTemplateWithBarChart_ModelMissing_HighlightError()
         {
             using var fileStream = File.OpenRead("Resources/BarChart.docx");
             var docTemplate = new DocxTemplate(fileStream, new ProcessSettings() { BindingErrorHandling = BindingErrorHandling.HighlightErrorsInDocument });
@@ -37,7 +37,7 @@ namespace DocxTemplater.Test
         }
 
         [Test]
-        public void RenderTemplateWithBarChart_RemoveContent()
+        public void RenderTemplateWithBarChart_ModelMissing_RemoveContent()
         {
             using var fileStream = File.OpenRead("Resources/BarChart.docx");
             var docTemplate = new DocxTemplate(fileStream, new ProcessSettings() { BindingErrorHandling = BindingErrorHandling.SkipBindingAndRemoveContent });
@@ -72,7 +72,7 @@ namespace DocxTemplater.Test
 
 
         [Test]
-        public void RenderTemplateWithBarChart_WithBoundData()
+        public void RenderTemplateWithBarChart()
         {
             using var fileStream = File.OpenRead("Resources/BarChart.docx");
             var docTemplate = new DocxTemplate(fileStream);
