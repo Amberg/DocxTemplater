@@ -6,6 +6,13 @@ using System.Linq;
 
 namespace DocxTemplater.Blocks
 {
+    /// <summary>
+    /// Inlines OpenXML specified by the keyword
+    /// ae
+    /// {{:Break}}
+    /// {{:PageBreak}}
+    /// {{:SectionBreak}}
+    /// </summary>
     internal class InlineKeyWordBlock : ContentBlock
     {
         private const string SectionBreak = "SECTIONBREAK";

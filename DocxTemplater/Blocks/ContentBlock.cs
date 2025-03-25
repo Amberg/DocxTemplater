@@ -46,6 +46,7 @@ namespace DocxTemplater.Blocks
                 PatternType.CollectionSeparator => new CollectionSeparatorBlock(context, patternType, startTextNode, matchedStartNode),
                 PatternType.Condition => new ConditionalBlock(context, patternType, startTextNode, matchedStartNode),
                 PatternType.InlineKeyWord => new InlineKeyWordBlock(context, patternType, startTextNode, matchedStartNode),
+                PatternType.IgnoreBlock => new IgnoreBlock(context, patternType, startTextNode, matchedStartNode),
                 _ => new ContentBlock(context, patternType, startTextNode, matchedStartNode)
             };
         }

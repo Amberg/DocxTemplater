@@ -153,24 +153,24 @@ namespace DocxTemplater
             {
                 var match = item.Item1;
                 var text = (Text)item.Item2;
-                var value = match.Type;
-                if (value is PatternType.InlineKeyWord)
+                var patternType = match.Type;
+                if (patternType is PatternType.InlineKeyWord)
                 {
-                    StartBlock(blockStack, match, value, text);
+                    StartBlock(blockStack, match, patternType, text);
                     CloseBlock(blockStack, match, text);
                 }
 
-                if (value is PatternType.Condition or PatternType.CollectionStart)
+                if (patternType is PatternType.Condition or PatternType.CollectionStart or PatternType.IgnoreBlock)
                 {
-                    StartBlock(blockStack, match, value, text);
+                    StartBlock(blockStack, match, patternType, text);
                     StartBlock(blockStack, match, PatternType.None, text); // open the child content block of the loop or condition
                 }
-                else if (value is PatternType.ConditionElse or PatternType.CollectionSeparator)
+                else if (patternType is PatternType.ConditionElse or PatternType.CollectionSeparator)
                 {
                     CloseBlock(blockStack, match, text);
-                    StartBlock(blockStack, match, value, text);
+                    StartBlock(blockStack, match, patternType, text);
                 }
-                if (value is PatternType.ConditionEnd or PatternType.CollectionEnd)
+                if (patternType is PatternType.ConditionEnd or PatternType.CollectionEnd or PatternType.IgnoreEnd)
                 {
                     CloseBlock(blockStack, match, text);
                     CloseBlock(blockStack, match, text);

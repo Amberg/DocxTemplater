@@ -36,7 +36,7 @@ namespace DocxTemplater
                 (?<condition>[^}]+) # allow any character except }
                 |
                 (?:
-                    (?<prefix>[\/\#:])?(?<varname>[\p{L}\p{N}\._]+)? # \p{L}\p{N} - any letter or number (unicode) same as [a-zA-Z0-9] for ascii
+                    (?<prefix>[\/\#:]{1,2})?(?<varname>[\p{L}\p{N}\._]+)? # \p{L}\p{N} - any letter or number (unicode) same as [a-zA-Z0-9] for ascii
                 ) 
             )
         )
@@ -95,9 +95,27 @@ namespace DocxTemplater
                             {
                                 throw new OpenXmlTemplateException($"Invalid syntax '{match.Value}'");
                             }
+                            
+                            if (varname.Equals("ignore", StringComparison.CurrentCultureIgnoreCase))
+                            {
+                                result.Add(new PatternMatch(match, PatternType.IgnoreBlock, null, prefix, varname, null,
+                                    null, match.Index, match.Length));
+                            }
+                            else
+                            {
+                                result.Add(new PatternMatch(match, PatternType.InlineKeyWord, null, prefix, varname,
+                                    null,
+                                    null, match.Index, match.Length));
+                            }
+                        }
+                        else if (prefix == "/:")
+                        {
+                            if (varname.ToLower() != "ignore")
+                            {
+                                throw new OpenXmlTemplateException($"Invalid syntax '{match.Value}'");
+                            }
+                            result.Add(new PatternMatch(match, PatternType.IgnoreEnd, null, prefix, varname, null, null, match.Index, match.Length));
 
-                            result.Add(new PatternMatch(match, PatternType.InlineKeyWord, null, prefix, varname, null,
-                                null, match.Index, match.Length));
                         }
                         else if (prefix == "#")
                         {
