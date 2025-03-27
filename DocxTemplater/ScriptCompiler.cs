@@ -38,7 +38,7 @@ namespace DocxTemplater
 
         public Func<bool> CompileScript(string scriptAsString)
         {
-            scriptAsString = scriptAsString.Trim().Replace('\'', '"').Replace('“', '"');
+            scriptAsString = HelperFunctions.SanitizeQuotes(scriptAsString);
             // replace leading dots (implicit scope) with variables
             var interpreter = new Interpreter();
             try

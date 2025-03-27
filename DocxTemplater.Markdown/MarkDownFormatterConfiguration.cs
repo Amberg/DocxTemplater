@@ -51,11 +51,13 @@ namespace DocxTemplater.Markdown
         public List<ListLevelConfiguration> OrderedListLevelConfiguration
         {
             get;
+            private set;
         }
 
         public List<ListLevelConfiguration> UnorderedListLevelConfiguration
         {
             get;
+            private set;
         }
 
         /// <summary>
@@ -75,5 +77,17 @@ namespace DocxTemplater.Markdown
         /// Name of a table style in the template document applied to tables.
         /// </summary>
         public string TableStyle { get; set; } = "md_TableStyle";
+
+        public MarkDownFormatterConfiguration Clone()
+        {
+            return new MarkDownFormatterConfiguration
+            {
+                OrderedListLevelConfiguration = new List<ListLevelConfiguration>(OrderedListLevelConfiguration),
+                UnorderedListLevelConfiguration = new List<ListLevelConfiguration>(UnorderedListLevelConfiguration),
+                OrderedListStyle = OrderedListStyle,
+                UnorderedListStyle = UnorderedListStyle,
+                TableStyle = TableStyle
+            };
+        }
     }
 }

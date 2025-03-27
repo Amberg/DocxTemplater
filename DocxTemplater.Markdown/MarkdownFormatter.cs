@@ -5,6 +5,8 @@ using Markdig;
 using Markdig.Parsers;
 using System;
 using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace DocxTemplater.Markdown
 {
@@ -37,6 +39,24 @@ namespace DocxTemplater.Markdown
                 throw new OpenXmlTemplateException("Markdown nesting depth exceeded");
             }
 
+            var contextSpecificConfiguration = m_configuration.Clone();
+            if (formatterContext.Args.Length > 0)
+            {
+                var arguments = HelperFunctions.ParseArguments(formatterContext.Args);
+                if (arguments.TryGetValue("ts", out var tableStyleName))
+                {
+                    contextSpecificConfiguration.TableStyle = tableStyleName;
+                }
+                if (arguments.TryGetValue("ls", out var listStyle))
+                {
+                    contextSpecificConfiguration.OrderedListStyle = listStyle;
+                }
+                if (arguments.TryGetValue("ols", out var orderedListStyle))
+                {
+                    contextSpecificConfiguration.OrderedListStyle = orderedListStyle;
+                }
+            }
+
             m_nestingDepth++;
             try
             {
@@ -60,7 +80,7 @@ namespace DocxTemplater.Markdown
                     var containerParagraph = new Paragraph();
                     renderedMarkdownContainer.Append(containerParagraph);
 
-                    var renderer = new MarkdownToOpenXmlRenderer(containerParagraph, target, templateContext.MainDocumentPart, m_configuration);
+                    var renderer = new MarkdownToOpenXmlRenderer(containerParagraph, target, templateContext.MainDocumentPart, contextSpecificConfiguration);
                     renderer.Render(markdownDocument);
                     try
                     {

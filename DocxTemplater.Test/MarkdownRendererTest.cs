@@ -4,6 +4,7 @@ using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using DocxTemplater.Markdown;
+using Markdig;
 
 namespace DocxTemplater.Test
 {
@@ -57,6 +58,34 @@ namespace DocxTemplater.Test
             var docTemplate = new DocxTemplate(fileStream);
             docTemplate.RegisterFormatter(new MarkdownFormatter());
             docTemplate.BindModel("ds", new Dictionary<string, object>() { { "MyMarkdown", new ValueWithMetadata(markdown, new ValueMetadata("md")) } });
+
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.That(result, Is.Not.Null);
+            result.SaveAsFileAndOpenInWord();
+            result.Position = 0;
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+        }
+
+        [Test]
+        public void DifferentTableStyleDefinedWithInlineSettings()
+        {
+      
+
+            string markdown = """
+                              | Documents / Meetings | Date |
+                              | --- | ---:|
+                              | Risk Analysis Region X - Scenario Description and Assessment | 29.03.2010 |
+                              | PLAN-X Guide - Regional Hazard Analysis and Preparedness | 01.01.2013 |
+                              | Meeting between A. Sample (Dept. A) and B. Example (Dept. B) | 16.02.2023 |
+                              | Meeting between A. Sample (Dept. A) and B. Example (Dept. B) | 15.03.2023 |
+                              """;
+
+            using var fileStream = File.OpenRead("Resources/MarkdownTablesDifferentStyle.docx");
+            var docTemplate = new DocxTemplate(fileStream);
+            docTemplate.RegisterFormatter(new DocxTemplater.Markdown.MarkdownFormatter());
+            docTemplate.BindModel("ds",markdown);
 
             var result = docTemplate.Process();
             docTemplate.Validate();
