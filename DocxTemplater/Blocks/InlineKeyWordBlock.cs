@@ -8,7 +8,7 @@ namespace DocxTemplater.Blocks
 {
     /// <summary>
     /// Inlines OpenXML specified by the keyword
-    /// ae
+    /// 
     /// {{:Break}}
     /// {{:PageBreak}}
     /// {{:SectionBreak}}
