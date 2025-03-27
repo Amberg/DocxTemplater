@@ -37,6 +37,24 @@ namespace DocxTemplater.Markdown
                 throw new OpenXmlTemplateException("Markdown nesting depth exceeded");
             }
 
+            var contextSpecificConfiguration = m_configuration.Clone();
+            if (formatterContext.Args.Length > 0)
+            {
+                var arguments = HelperFunctions.ParseArguments(formatterContext.Args);
+                if (arguments.TryGetValue("ts", out var tableStyleName))
+                {
+                    contextSpecificConfiguration.TableStyle = tableStyleName;
+                }
+                if (arguments.TryGetValue("ls", out var listStyle))
+                {
+                    contextSpecificConfiguration.OrderedListStyle = listStyle;
+                }
+                if (arguments.TryGetValue("ols", out var orderedListStyle))
+                {
+                    contextSpecificConfiguration.OrderedListStyle = orderedListStyle;
+                }
+            }
+
             m_nestingDepth++;
             try
             {
@@ -44,6 +62,9 @@ namespace DocxTemplater.Markdown
                 if (root is OpenXmlPartRootElement openXmlPartRootElement && openXmlPartRootElement.OpenXmlPart != null)
                 {
                     var pipeline = new MarkdownPipelineBuilder().UsePipeTables().Build();
+                    // markdown treat multiple newlines as a single newline, we insert a space to keep the newlines
+                    mdText = mdText.Replace("\r\n", "\r");
+                    mdText = mdText.Replace("\r\r\r\r", "\r\r\r\r&nbsp;\r\r\r\r");
                     var markdownDocument = MarkdownParser.Parse(mdText, pipeline);
 
 
@@ -57,7 +78,7 @@ namespace DocxTemplater.Markdown
                     var containerParagraph = new Paragraph();
                     renderedMarkdownContainer.Append(containerParagraph);
 
-                    var renderer = new MarkdownToOpenXmlRenderer(containerParagraph, target, templateContext.MainDocumentPart, m_configuration);
+                    var renderer = new MarkdownToOpenXmlRenderer(containerParagraph, target, templateContext.MainDocumentPart, contextSpecificConfiguration);
                     renderer.Render(markdownDocument);
                     try
                     {

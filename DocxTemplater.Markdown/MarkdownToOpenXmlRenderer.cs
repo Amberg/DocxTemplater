@@ -43,8 +43,6 @@ namespace DocxTemplater.Markdown
             ObjectRenderers.Add(new ThematicBreakRenderer());
         }
 
-        public bool ExplicitParagraph { get; set; }
-
         public Paragraph CurrentParagraph => m_parentElement as Paragraph;
         public MarkdownToOpenXmlRenderer Write(ref StringSlice slice)
         {
@@ -131,7 +129,7 @@ namespace DocxTemplater.Markdown
             }
         }
 
-        public void ReplaceIfCurrentParagraphIsEmpty(Paragraph newParagraph)
+        public void ReplaceIfCurrentParagraphIsEmpty(OpenXmlCompositeElement newParagraph)
         {
             var lastParagraph = CurrentParagraph;
             AddParagraph(newParagraph);

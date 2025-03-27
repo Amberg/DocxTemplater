@@ -46,6 +46,22 @@ namespace DocxTemplater.Test
         }
 
         [Test]
+        public void IgnoreBlockToIgnoretableOfContent()
+        {
+            using var fileStream = File.OpenRead("Resources/TableOfContents.docx");
+            var docTemplate = new DocxTemplate(fileStream);
+            docTemplate.BindModel("ds", new { Headings = new[] { "Heading 1", "Heading2" } });
+
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            result.Position = 0;
+            result.SaveAsFileAndOpenInWord();
+            result.Position = 0;
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+        }
+
+        [Test]
         public void EmptyDynamicTable()
         {
             using var fileStream = File.OpenRead("Resources/DynamicTable.docx");

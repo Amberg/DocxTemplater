@@ -1,49 +1,89 @@
-﻿using System.Text;
-using DocumentFormat.OpenXml;
+﻿using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using DocxTemplater.Markdown;
+using System.Text;
 
 namespace DocxTemplater.Test
 {
     internal class MarkdownRendererTest
     {
         [Test]
-        public void PlainText()
+        public void PlainText_4NewLinesCeratesEmptyParagraph()
         {
-            var markdown = "Hello\r\nSecond Line\r\n\r\nSecond Paragraph First Line";
+            var markdown = "Hello\r\nSecond Line\r\n\r\nSecond Paragraph First Line\r\n\r\n\r\n\r\nThird Line after Empty Paragraph";
             var body = CreateTemplateWithMarkdownAndReturnBody(markdown);
-            // check text from first and second paragraph
-            var firstParagraphFirstLine = body.Descendants<Text>().First();
-            Assert.That(firstParagraphFirstLine.Text, Is.EqualTo("Hello"));
-            var firstParagraphSecondLine = body.Descendants<Text>().ElementAt(1);
-            Assert.That(firstParagraphSecondLine.Text, Is.EqualTo("Second Line"));
-            var secondParagraph = body.Descendants<Text>().Last();
-            Assert.That(secondParagraph.Text, Is.EqualTo("Second Paragraph First Line"));
-            Assert.That(body.Descendants<Paragraph>().Count(), Is.EqualTo(2));
+            Assert.That(body.Descendants<Paragraph>().Count(), Is.EqualTo(4));
+
+            Assert.That(body.InnerXml, Is.EqualTo("<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">" +
+                                                  "<w:r><w:t>Hello</w:t></w:r><w:r><w:br /></w:r><w:r><w:t>Second Line</w:t></w:r>" +
+                                                  "</w:p><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:r><w:t>Second Paragraph First Line</w:t></w:r></w:p>" +
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" />" +
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:r><w:t>Third Line after Empty Paragraph</w:t></w:r></w:p>"));
         }
 
         [Test]
         public void MarkdownRenderDefinedInMetadata()
         {
-            string markdown = @"| Documents / Meetings | Date |
-                        | --- | --- |
+            string markdown = """
+                        | Documents / Meetings | Date |
+                        | --- | ---:|
                         | Risk Analysis Region X - Scenario Description and Assessment | 29.03.2010 |
                         | PLAN-X Guide - Regional Hazard Analysis and Preparedness | 01.01.2013 |
                         | Meeting between A. Sample (Dept. A) and B. Example (Dept. B) | 16.02.2023 |
                         | Meeting between A. Sample (Dept. A) and B. Example (Dept. B) | 15.03.2023 |
 
+                        
+                        
+                        Line 1
+                        
+                        
+                        A Line between the tables
+                        
+                        
+                        Line 2
+                       
                         | Documents / Meetings | Date |
-                        | --- | ---: |
+                        | --- | ---:|
                         | Email request from C. Example | 18.07.2024 |
                         | On-site meeting between D. Testman and C. Example (both from Clinic X) as well as E. Sample and F. Demo (both from Authority Y) | 25.09.2024 |
                         | Received documents: Crisis Manual Clinic X, Safety Guidelines 2024, Evacuation Plan Clinic X | 01.10.2024 |
-                        ";
+                        
+                        Line After table
+                        """;
 
             using var fileStream = File.OpenRead("Resources/MarkdownTableCopiesStyleFromExistingTable.docx");
             var docTemplate = new DocxTemplate(fileStream);
             docTemplate.RegisterFormatter(new MarkdownFormatter());
             docTemplate.BindModel("ds", new Dictionary<string, object>() { { "MyMarkdown", new ValueWithMetadata(markdown, new ValueMetadata("md")) } });
+
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.That(result, Is.Not.Null);
+            result.SaveAsFileAndOpenInWord();
+            result.Position = 0;
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+        }
+
+        [Test]
+        public void DifferentTableStyleDefinedWithInlineSettings()
+        {
+
+
+            string markdown = """
+                              | Documents / Meetings | Date |
+                              | --- | ---:|
+                              | Risk Analysis Region X - Scenario Description and Assessment | 29.03.2010 |
+                              | PLAN-X Guide - Regional Hazard Analysis and Preparedness | 01.01.2013 |
+                              | Meeting between A. Sample (Dept. A) and B. Example (Dept. B) | 16.02.2023 |
+                              | Meeting between A. Sample (Dept. A) and B. Example (Dept. B) | 15.03.2023 |
+                              """;
+
+            using var fileStream = File.OpenRead("Resources/MarkdownTablesDifferentStyle.docx");
+            var docTemplate = new DocxTemplate(fileStream);
+            docTemplate.RegisterFormatter(new DocxTemplater.Markdown.MarkdownFormatter());
+            docTemplate.BindModel("ds", markdown);
 
             var result = docTemplate.Process();
             docTemplate.Validate();
@@ -234,17 +274,21 @@ namespace DocxTemplater.Test
         {
             var sb = new StringBuilder();
             sb.AppendLine("| Header 1 | Header 2 |");
-            sb.AppendLine("|----------|----------|");
+            sb.AppendLine("|:----------|----------:|");
             sb.AppendLine("| Row 1 Col 1 | Row 1 Col 2 |");
             sb.AppendLine("| Row 2 Col 1 | Row 2 Col 2 |");
             var body = CreateTemplateWithMarkdownAndReturnBody(sb.ToString());
-            Assert.That(body.InnerXml, Is.EqualTo("<w:tbl xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:tblPr><w:tblW w:w=\"5000\" w:type=\"pct\" />" +
-                                                  "</w:tblPr><w:tblGrid><w:gridCol /><w:gridCol /><w:gridCol /></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr>" +
-                                                  "<w:p><w:r><w:t>Header 1</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Header 2</w:t>" +
-                                                  "</w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Row 1 Col 1</w:t></w:r></w:p>" +
-                                                  "</w:tc><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Row 1 Col 2</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc>" +
-                                                  "<w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Row 2 Col 1</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:type=\"auto\" />" +
-                                                  "</w:tcPr><w:p><w:r><w:t>Row 2 Col 2</w:t></w:r></w:p></w:tc></w:tr></w:tbl><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" />"));
+            Assert.That(body.InnerXml, Is.EqualTo(
+                "<w:tbl xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">" +
+                "<w:tblPr><w:tblW w:w=\"5000\" w:type=\"pct\" /></w:tblPr><w:tblGrid><w:gridCol /><w:gridCol /><w:gridCol />" +
+                "</w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:pPr><w:jc w:val=\"left\" />" +
+                "</w:pPr><w:r><w:t>Header 1</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:pPr><w:jc w:val=\"right\" />" +
+                "</w:pPr><w:r><w:t>Header 2</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:tcW w:type=\"auto\" />" +
+                "</w:tcPr><w:p><w:pPr><w:jc w:val=\"left\" /></w:pPr><w:r><w:t>Row 1 Col 1</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:type=\"auto\" />" +
+                "</w:tcPr><w:p><w:pPr><w:jc w:val=\"right\" /></w:pPr><w:r><w:t>Row 1 Col 2</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:tcPr>" +
+                "<w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:pPr><w:jc w:val=\"left\" /></w:pPr><w:r><w:t>Row 2 Col 1</w:t></w:r></w:p>" +
+                "</w:tc><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:pPr><w:jc w:val=\"right\" />" +
+                "</w:pPr><w:r><w:t>Row 2 Col 2</w:t></w:r></w:p></w:tc></w:tr></w:tbl><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" />"));
         }
 
         [Test]

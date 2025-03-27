@@ -10,6 +10,8 @@
         CollectionEnd,
         Variable,
         ConditionElse,
-        InlineKeyWord
+        InlineKeyWord,
+        IgnoreBlock,
+        IgnoreEnd
     }
 }

@@ -47,7 +47,6 @@ namespace DocxTemplater.Markdown.Renderer
                     };
                     listParagraph.ParagraphProperties = paragraphProperties;
                     renderer.ReplaceIfCurrentParagraphIsEmpty(listParagraph);
-                    renderer.ExplicitParagraph = true;
                     renderer.WriteChildren(listItem);
                 }
             }
