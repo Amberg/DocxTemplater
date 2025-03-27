@@ -7,11 +7,6 @@ namespace DocxTemplater.Markdown.Renderer
         protected override void Write(MarkdownToOpenXmlRenderer renderer, ParagraphBlock obj)
         {
             renderer.WriteLeafInline(obj);
-            if (renderer.ExplicitParagraph)
-            {
-                renderer.ExplicitParagraph = false;
-                return;
-            }
             if (!renderer.IsLastInContainer)
             {
                 renderer.AddParagraph();

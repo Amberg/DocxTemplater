@@ -44,6 +44,9 @@ namespace DocxTemplater.Markdown
                 if (root is OpenXmlPartRootElement openXmlPartRootElement && openXmlPartRootElement.OpenXmlPart != null)
                 {
                     var pipeline = new MarkdownPipelineBuilder().UsePipeTables().Build();
+                    // markdown treat multiple newlines as a single newline, we insert a space to keep the newlines
+                    mdText = mdText.Replace("\r\n", "\r");
+                    mdText = mdText.Replace("\r\r\r\r", "\r\r\r\r&nbsp;\r\r\r\r");
                     var markdownDocument = MarkdownParser.Parse(mdText, pipeline);
 
 

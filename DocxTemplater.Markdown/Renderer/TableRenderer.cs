@@ -47,12 +47,8 @@ namespace DocxTemplater.Markdown.Renderer
             }
 
             var tableGrid = new WP.TableGrid();
-            foreach (var _ in mkTable.ColumnDefinitions)
+            foreach (var cd in mkTable.ColumnDefinitions)
             {
-                /* TODO:
-                // Add full support for alignment as defined in specs of Pipe table
-                // https://github.com/xoofx/markdig/blob/master/src/Markdig.Tests/Specs/PipeTableSpecs.md
-                */
                 tableGrid.Append(new WP.GridColumn());
             }
 
@@ -65,6 +61,7 @@ namespace DocxTemplater.Markdown.Renderer
                 table.AppendChild(tableRow);
                 for (int i = 0; i < row.Count; i++)
                 {
+                    var columnDefinition = mkTable.ColumnDefinitions[i];
                     var cell = (TableCell)row[i];
                     var cellProperties = new WP.TableCellProperties();
                     var cellWidth = new WP.TableCellWidth { Type = WP.TableWidthUnitValues.Auto };
@@ -72,15 +69,29 @@ namespace DocxTemplater.Markdown.Renderer
                     var cellElement = new WP.TableCell(cellProperties);
                     tableRow.AppendChild(cellElement);
 
+
                     // cell paragraph
                     var cellParagraph = new WP.Paragraph();
+                    var paraProperties = new WP.ParagraphProperties();
+                    if (columnDefinition.Alignment.HasValue)
+                    {
+                        var justification = columnDefinition.Alignment switch
+                        {
+                            TableColumnAlign.Left => WP.JustificationValues.Left,
+                            TableColumnAlign.Center => WP.JustificationValues.Center,
+                            TableColumnAlign.Right => WP.JustificationValues.Right,
+                            _ => WP.JustificationValues.Right
+                        };
+                        paraProperties.Append(new WP.Justification() {Val = justification});
+                        cellParagraph.AddChild(paraProperties);
+                    }
+
                     cellElement.Append(cellParagraph);
                     using var paragraphScope = renderer.PushParagraph(cellParagraph);
                     renderer.WriteChildren(cell);
                 }
             }
-            renderer.AddParagraph(table);
-            renderer.ExplicitParagraph = true;
+            renderer.ReplaceIfCurrentParagraphIsEmpty(table);
             renderer.AddParagraph();
         }
 
