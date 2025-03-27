@@ -3,6 +3,7 @@ using System;
 using System.Dynamic;
 using System.Text.RegularExpressions;
 using DocxTemplater.Model;
+using DocumentFormat.OpenXml.Wordprocessing;
 
 namespace DocxTemplater
 {
@@ -83,7 +84,12 @@ namespace DocxTemplater
 
             var dotCount = dots.Length;
             var scope = m_modelDictionary.GetScopeParentLevel(dotCount - 1);
-            scope = new TemplateModelWrapper(scope);
+
+            if (scope != null && !scope.GetType().IsPrimitive && scope is not string)
+            {
+                scope = new TemplateModelWrapper(scope);
+            }
+
             var varName = $"{unary}__s{dotCount}_"; // choose a variable name that is unlikely to be used by the user
             interpreter.SetVariable(varName, scope);
             if (!string.IsNullOrWhiteSpace(prop))
