@@ -20,6 +20,29 @@
         }
 
         [Test]
+        public void ConditionTestWithMultiplePrimitiveTypes()
+        {
+            var item = new { OpenAmount = -5.0m, IsCool = true, String = "myString", Count = 1 };
+
+            m_modelDictionary.Add("Bills", new List<object> { item });
+
+            var scope = m_modelDictionary.OpenScope();
+            scope.AddVariable("item", item);
+
+            Assert.That(m_scriptCompiler.CompileScript(".OpenAmount <= -5")(), Is.True);
+            Assert.That(m_scriptCompiler.CompileScript(".OpenAmount >= -4")(), Is.False);
+
+            Assert.That(m_scriptCompiler.CompileScript(".IsCool == true")(), Is.True);
+            Assert.That(m_scriptCompiler.CompileScript(".IsCool == false")(), Is.False);
+
+            Assert.That(m_scriptCompiler.CompileScript(".String == 'myString'")(), Is.True);
+            Assert.That(m_scriptCompiler.CompileScript(".String == 'yourString'")(), Is.False);
+
+            Assert.That(m_scriptCompiler.CompileScript(".Count == 1")(), Is.True);
+            Assert.That(m_scriptCompiler.CompileScript(".Count < 0")(), Is.False);
+        }
+
+        [Test]
         public void ConditionWithScopeAccessAndOperatorsWithoutSpaces()
         {
             m_modelDictionary.Add("x", new { a = new { b = 5, c = 25 } });

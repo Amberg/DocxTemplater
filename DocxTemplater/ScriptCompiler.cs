@@ -156,7 +156,7 @@ namespace DocxTemplater
                 if (prop != null)
                 {
                     result = prop.GetValue(m_wrappedModel);
-                    if (result != null && !result.GetType().IsPrimitive && result is not string)
+                    if (result != null && !IsSimpleType(result.GetType()))
                     {
                         result = new TemplateModelWrapper(result);
                     }
@@ -167,6 +167,12 @@ namespace DocxTemplater
             public override bool TrySetMember(SetMemberBinder binder, object value)
             {
                 return false;
+            }
+
+            private static bool IsSimpleType(Type type)
+            {
+                var typeCode = Type.GetTypeCode(type);
+                return typeCode != TypeCode.Object || type == typeof(Guid);
             }
         }
 
