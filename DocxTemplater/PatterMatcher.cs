@@ -110,7 +110,7 @@ namespace DocxTemplater
                         }
                         else if (prefix == "/:")
                         {
-                            if (varname.Equals("ignore", StringComparison.CurrentCultureIgnoreCase))
+                            if (!varname.Equals("ignore", StringComparison.CurrentCultureIgnoreCase))
                             {
                                 throw new OpenXmlTemplateException($"Invalid syntax '{match.Value}'");
                             }
