@@ -1,10 +1,8 @@
-﻿using System.Diagnostics;
-using System.Text;
-using DocumentFormat.OpenXml;
+﻿using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using DocxTemplater.Markdown;
-using Markdig;
+using System.Text;
 
 namespace DocxTemplater.Test
 {
@@ -71,7 +69,7 @@ namespace DocxTemplater.Test
         [Test]
         public void DifferentTableStyleDefinedWithInlineSettings()
         {
-      
+
 
             string markdown = """
                               | Documents / Meetings | Date |
@@ -85,7 +83,7 @@ namespace DocxTemplater.Test
             using var fileStream = File.OpenRead("Resources/MarkdownTablesDifferentStyle.docx");
             var docTemplate = new DocxTemplate(fileStream);
             docTemplate.RegisterFormatter(new DocxTemplater.Markdown.MarkdownFormatter());
-            docTemplate.BindModel("ds",markdown);
+            docTemplate.BindModel("ds", markdown);
 
             var result = docTemplate.Process();
             docTemplate.Validate();

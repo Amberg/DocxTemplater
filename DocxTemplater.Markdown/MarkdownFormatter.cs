@@ -5,8 +5,6 @@ using Markdig;
 using Markdig.Parsers;
 using System;
 using System.Linq;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace DocxTemplater.Markdown
 {

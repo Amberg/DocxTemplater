@@ -42,7 +42,7 @@ namespace DocxTemplater.Markdown
             ObjectRenderers.Add(new HeadingRenderer());
             ObjectRenderers.Add(new ThematicBreakRenderer());
         }
-        
+
         public Paragraph CurrentParagraph => m_parentElement as Paragraph;
         public MarkdownToOpenXmlRenderer Write(ref StringSlice slice)
         {

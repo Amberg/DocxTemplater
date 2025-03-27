@@ -47,7 +47,7 @@ namespace DocxTemplater.Markdown.Renderer
             }
 
             var tableGrid = new WP.TableGrid();
-            foreach (var cd in mkTable.ColumnDefinitions)
+            foreach (var _ in mkTable.ColumnDefinitions)
             {
                 tableGrid.Append(new WP.GridColumn());
             }
@@ -82,7 +82,7 @@ namespace DocxTemplater.Markdown.Renderer
                             TableColumnAlign.Right => WP.JustificationValues.Right,
                             _ => WP.JustificationValues.Right
                         };
-                        paraProperties.Append(new WP.Justification() {Val = justification});
+                        paraProperties.Append(new WP.Justification() { Val = justification });
                         cellParagraph.AddChild(paraProperties);
                     }
 

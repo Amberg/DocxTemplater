@@ -80,7 +80,8 @@ namespace DocxTemplater.Markdown
 
         public MarkDownFormatterConfiguration Clone()
         {
-            return new MarkDownFormatterConfiguration
+#pragma warning disable IDE0306
+            return new()
             {
                 OrderedListLevelConfiguration = new List<ListLevelConfiguration>(OrderedListLevelConfiguration),
                 UnorderedListLevelConfiguration = new List<ListLevelConfiguration>(UnorderedListLevelConfiguration),

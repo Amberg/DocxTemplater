@@ -95,7 +95,7 @@ namespace DocxTemplater
                             {
                                 throw new OpenXmlTemplateException($"Invalid syntax '{match.Value}'");
                             }
-                            
+
                             if (varname.Equals("ignore", StringComparison.CurrentCultureIgnoreCase))
                             {
                                 result.Add(new PatternMatch(match, PatternType.IgnoreBlock, null, prefix, varname, null,

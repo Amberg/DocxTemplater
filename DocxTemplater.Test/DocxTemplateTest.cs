@@ -50,7 +50,7 @@ namespace DocxTemplater.Test
         {
             using var fileStream = File.OpenRead("Resources/TableOfContents.docx");
             var docTemplate = new DocxTemplate(fileStream);
-            docTemplate.BindModel("ds", new {Headings = new[] {"Heading 1", "Heading2"} });
+            docTemplate.BindModel("ds", new { Headings = new[] { "Heading 1", "Heading2" } });
 
             var result = docTemplate.Process();
             docTemplate.Validate();
