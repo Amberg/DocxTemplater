@@ -3,7 +3,6 @@ using System;
 using System.Dynamic;
 using System.Text.RegularExpressions;
 using DocxTemplater.Model;
-using DocumentFormat.OpenXml.Wordprocessing;
 
 namespace DocxTemplater
 {
