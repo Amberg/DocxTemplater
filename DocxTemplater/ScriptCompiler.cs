@@ -2,7 +2,7 @@
 using System;
 using System.Dynamic;
 using System.Text.RegularExpressions;
-using DocxTemplater.Model;
+using DocxTemplater.Blocks;
 
 namespace DocxTemplater
 {
@@ -28,6 +28,9 @@ namespace DocxTemplater
             RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace, TimeSpan.FromMilliseconds(500)
         );
 
+        private static readonly Regex RegexListKeywords = new(@"(?<dots>\.*)(?<variable>\p{L}[\p{L}\p{N}_]*(?:\.\p{L}[\p{L}\p{N}_]*)*)?\.(?<keyword>_Idx|_Length)"
+            , RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace, TimeSpan.FromMilliseconds(500));
+
         public ScriptCompiler(IModelLookup modelDictionary, ProcessSettings processSettings)
         {
             this.m_modelDictionary = modelDictionary;
@@ -43,8 +46,11 @@ namespace DocxTemplater
             var interpreter = new Interpreter();
             try
             {
-                scriptAsString =
-                    RegexWordStartingWithDot.Replace(scriptAsString, (m) => OnVariableReplace(m, interpreter));
+                // replace ..foo / .foo etc
+                scriptAsString = RegexWordStartingWithDot.Replace(scriptAsString, (m) => OnVariableReplace(m, interpreter));
+
+                scriptAsString = RegexListKeywords.Replace(scriptAsString, (m) => OnSpecialKeyWordsReplace(m, interpreter));
+
             }
             catch (RegexMatchTimeoutException)
             {
@@ -55,7 +61,7 @@ namespace DocxTemplater
             foreach (var identifier in identifiers.UnknownIdentifiers)
             {
                 var val = m_modelDictionary.GetValue(identifier);
-                if (val == null || val.GetType().IsPrimitive)
+                if (val == null || IsSimpleType(val.GetType()))
                 {
                     interpreter.SetVariable(identifier, val);
                 }
@@ -80,24 +86,55 @@ namespace DocxTemplater
             string unary = match.Groups["unary"].Value; // Preserve unary operators if present
             string prop = match.Groups["prop"].Value; // Preserve the word after dots
             var dots = match.Groups["dots"].Value;
-
             var dotCount = dots.Length;
-            var scope = m_modelDictionary.GetScopeParentLevel(dotCount - 1);
 
-            if (scope != null && !scope.GetType().IsPrimitive && scope is not string)
+            if (prop == LoopBlock.LoopIndexVariable || prop == LoopBlock.LoopLengthVariable)
             {
-                scope = new TemplateModelWrapper(scope);
+                var varName = $"__s{dotCount}_{prop}";
+                var value = m_modelDictionary.GetValue(match.Value);
+                interpreter.SetVariable(varName, value);
+                return varName;
             }
-
-            var varName = $"{unary}__s{dotCount}_"; // choose a variable name that is unlikely to be used by the user
-            interpreter.SetVariable(varName, scope);
-            if (!string.IsNullOrWhiteSpace(prop))
+            else
             {
-                varName += $".{prop}";
-            }
+                // ".Foo" or "..Foo" etc
+                var scope = m_modelDictionary.GetScopeParentLevel(dotCount - 1);
+                if (scope != null && !IsSimpleType(scope.GetType()))
+                {
+                    scope = new ModelVariable(m_modelDictionary, new string('.', dotCount - 1));
+                }
 
+                var varName = $"__s{dotCount}_"; // choose a variable name that is unlikely to be used by the user
+                interpreter.SetVariable(varName, scope);
+                if (!string.IsNullOrWhiteSpace(prop))
+                {
+                    varName += $".{prop}";
+                }
+
+                return $"{unary}{varName}";
+            }
+        }
+
+        private string OnSpecialKeyWordsReplace(Match match, Interpreter interpreter)
+        {
+            var dots = match.Groups["dots"].Value.Length;
+            var keyWord = match.Groups["keyword"];
+            var varName = $"__s{dots}_{keyWord}";
+            var value = m_modelDictionary.GetValue(match.Value);
+            interpreter.SetVariable(varName, value);
             return varName;
         }
+
+        /// <summary>
+        /// Determines whether the specified type is a simple type.
+        /// Simple types include primitive types, enums, strings, decimals, DateTime, and GUIDs.
+        /// </summary>
+        private static bool IsSimpleType(Type type)
+        {
+            var typeCode = Type.GetTypeCode(type);
+            return typeCode != TypeCode.Object || type == typeof(Guid);
+        }
+
 
         private class ModelVariable : DynamicObject
         {
@@ -114,7 +151,7 @@ namespace DocxTemplater
             {
                 var name = m_rootName + "." + binder.Name;
                 result = m_modelDictionary.GetValue(name);
-                if (result != null && !result.GetType().IsPrimitive && result is not string)
+                if (result != null && !IsSimpleType(result.GetType()))
                 {
                     result = new ModelVariable(m_modelDictionary, name);
                 }
@@ -122,48 +159,6 @@ namespace DocxTemplater
                 return true;
             }
 
-            public override bool TrySetMember(SetMemberBinder binder, object value)
-            {
-                return false;
-            }
-
-        }
-
-        /// <summary>
-        /// Wrapper to handle ITemplatemodels in dynamic expressions
-        /// </summary>
-        private class TemplateModelWrapper : DynamicObject
-        {
-            private readonly object m_wrappedModel;
-
-            public TemplateModelWrapper(object wrappedModel)
-            {
-                m_wrappedModel = wrappedModel;
-            }
-
-            public override bool TryGetMember(GetMemberBinder binder, out object result)
-            {
-                result = null;
-                if (m_wrappedModel is ITemplateModel templateModel)
-                {
-                    if (templateModel.TryGetPropertyValue(binder.Name, out ValueWithMetadata valueWithMetadata))
-                    {
-                        result = valueWithMetadata.Value;
-                        return true;
-                    }
-                }
-                var prop = m_wrappedModel.GetType().GetProperty(binder.Name);
-                if (prop != null)
-                {
-                    result = prop.GetValue(m_wrappedModel);
-                    if (result != null && !result.GetType().IsPrimitive && result is not string)
-                    {
-                        result = new TemplateModelWrapper(result);
-                    }
-                    return true;
-                }
-                return false;
-            }
             public override bool TrySetMember(SetMemberBinder binder, object value)
             {
                 return false;
