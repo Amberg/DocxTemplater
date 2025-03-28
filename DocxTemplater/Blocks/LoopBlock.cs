@@ -8,6 +8,9 @@ namespace DocxTemplater.Blocks
 {
     internal class LoopBlock : ContentBlock
     {
+        public static string LoopIndexVariable = "_Idx";
+        public static string LoopLengthVariable = "_Length";
+
         private readonly string m_collectionName;
 
         public LoopBlock(ITemplateProcessingContext context, PatternType patternType, Text startTextNode, PatternMatch startMatch)
@@ -41,8 +44,8 @@ namespace DocxTemplater.Blocks
                 {
                     using var loopScope = models.OpenScope();
                     loopScope.AddVariable(m_collectionName, item);
-                    loopScope.AddVariable($"{m_collectionName}._Idx", counter);
-                    loopScope.AddVariable($"{m_collectionName}._Length", items.Count);
+                    loopScope.AddVariable($"{m_collectionName}.{LoopIndexVariable}", counter);
+                    loopScope.AddVariable($"{m_collectionName}.{LoopLengthVariable}", items.Count);
                     base.Expand(models, parentNode);
                     counter--;
                 }
