@@ -120,6 +120,7 @@
             Assert.That(m_scriptCompiler.CompileScript("x.a.b == \"hi\"")());
             Assert.That(m_scriptCompiler.CompileScript("x.a.b == 'by'")(), Is.False);
             Assert.That(m_scriptCompiler.CompileScript("x.a.b.Contains('hi')")());
+            Assert.That(m_scriptCompiler.CompileScript("x.a.b == 'hi'")());
             Assert.That(m_scriptCompiler.CompileScript("x.a.b.Contains('by')")(), Is.False);
             Assert.That(m_scriptCompiler.CompileScript("x.a.b.Contains('hi')")());
             Assert.That(m_scriptCompiler.CompileScript("x.a.b.Contains('by')")(), Is.False);

@@ -28,15 +28,19 @@ namespace DocxTemplater.Markdown.Renderer
             listStyleFactory.EnsureLevelDefinitionExists(m_levelWithSameOrdering);
             try
             {
+                if (m_level == 0)
+                {
+                    renderer.ReplaceIfCurrentParagraphIsEmpty(new Paragraph());
+                }
 
                 foreach (var item in listBlock)
                 {
+
                     var numberingProps =
-                    new NumberingProperties(
-                        new NumberingLevelReference() { Val = m_levelWithSameOrdering },
-                        new NumberingId() { Val = listStyleFactory.Numbering.NumberID }
-                    );
-                    var listItem = (ListItemBlock)item;
+                        new NumberingProperties(
+                            new NumberingLevelReference() { Val = m_levelWithSameOrdering },
+                            new NumberingId() { Val = listStyleFactory.Numbering.NumberID }
+                        );
                     var listParagraph = new Paragraph();
                     var paragraphProperties = new ParagraphProperties(numberingProps)
                     {
@@ -47,6 +51,7 @@ namespace DocxTemplater.Markdown.Renderer
                     };
                     listParagraph.ParagraphProperties = paragraphProperties;
                     renderer.ReplaceIfCurrentParagraphIsEmpty(listParagraph);
+                    var listItem = (ListItemBlock)item;
                     renderer.WriteChildren(listItem);
                 }
             }

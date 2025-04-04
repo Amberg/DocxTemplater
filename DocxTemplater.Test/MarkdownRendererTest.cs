@@ -13,36 +13,99 @@ namespace DocxTemplater.Test
         {
             var markdown = "Hello\r\nSecond Line\r\n\r\nSecond Paragraph First Line\r\n\r\n\r\n\r\nThird Line after Empty Paragraph";
             var body = CreateTemplateWithMarkdownAndReturnBody(markdown);
-            Assert.That(body.Descendants<Paragraph>().Count(), Is.EqualTo(4));
+            Assert.That(body.Descendants<Paragraph>().Count(), Is.EqualTo(5));
 
-            Assert.That(body.InnerXml, Is.EqualTo("<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">" +
-                                                  "<w:r><w:t>Hello</w:t></w:r><w:r><w:br /></w:r><w:r><w:t>Second Line</w:t></w:r>" +
-                                                  "</w:p><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:r><w:t>Second Paragraph First Line</w:t></w:r></w:p>" +
-                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" />" +
+            Assert.That(body.InnerXml, Is.EqualTo("<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:r><w:t>Hello</w:t></w:r><w:r><w:br /></w:r><w:r><w:t>Second Line</w:t></w:r></w:p>" +
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:r><w:t>Second Paragraph First Line</w:t></w:r></w:p>" +
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" /><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" />" +
                                                   "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:r><w:t>Third Line after Empty Paragraph</w:t></w:r></w:p>"));
+        }
+
+        [Test]
+        public void TestListRenderer()
+        {
+            string markdown = """
+                                             - Die generelle Zielsetzung kann wie folgt umschrieben werden:  
+                                             - Schulung/Training der Führungsunterstützung mit hohem Praxisbezug, auf Basis der Erkenntnisse aus der Krisenstabsübung 2025
+                                            
+                                             Text
+                                             
+                                             - Die generelle Zielsetzung kann wie folgt umschrieben werden:  
+                                             - Schulung/Training der Führungsunterstützung mit hohem Praxisbezug, auf Basis der Erkenntnisse aus der Krisenstabsübung 2025
+                                             """;
+            var body = CreateTemplateWithMarkdownAndReturnBody(markdown);
+
+            Assert.That(body.InnerXml, Is.EqualTo("<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>Die generelle Zielsetzung kann wie folgt umschrieben werden:</w:t></w:r></w:p>" +
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>Schulung/Training der Führungsunterstützung mit hohem Praxisbezug, auf Basis der Erkenntnisse aus der Krisenstabsübung 2025</w:t></w:r></w:p>" +
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:r><w:t>Text</w:t></w:r></w:p><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>Die generelle Zielsetzung kann wie folgt umschrieben werden:</w:t></w:r></w:p>" +
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>Schulung/Training der Führungsunterstützung mit hohem Praxisbezug, auf Basis der Erkenntnisse aus der Krisenstabsübung 2025</w:t></w:r></w:p>" +
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" />"));
+        }
+
+        [Test]
+        public void GridTableRenderer()
+        {
+            string markdown = """
+                        +-----+:---:+----:+
+                        |  A  |  B  |  C  |
+                        +-----+-----+-----+
+                        |  1  |  2  |  3  |
+                        +-----+-----+-----+
+                        """;
+
+            using var fileStream = File.OpenRead("Resources/MarkdownTableCopiesStyleFromExistingTable.docx");
+            var docTemplate = new DocxTemplate(fileStream);
+            docTemplate.RegisterFormatter(new MarkdownFormatter());
+            docTemplate.BindModel("ds", new Dictionary<string, object>() { { "MyMarkdown", new ValueWithMetadata(markdown, new ValueMetadata("md")) } });
+
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.That(result, Is.Not.Null);
+            result.SaveAsFileAndOpenInWord();
+            result.Position = 0;
+            var document = WordprocessingDocument.Open(result, false);
         }
 
         [Test]
         public void MarkdownRenderDefinedInMetadata()
         {
             string markdown = """
-                        | Documents / Meetings | Date |
-                        | --- | ---:|
+                        - Die generelle Zielsetzung kann wie folgt umschrieben werden:  
+                        - Schulung/Training der Führungsunterstützung mit hohem Praxisbezug, auf Basis der Erkenntnisse aus der Krisenstabsübung 2025
+                        
+                        
+                        | Documents / Meetings | Date              |
+                        | --- | --------------------------------:|
                         | Risk Analysis Region X - Scenario Description and Assessment | 29.03.2010 |
                         | PLAN-X Guide - Regional Hazard Analysis and Preparedness | 01.01.2013 |
                         | Meeting between A. Sample (Dept. A) and B. Example (Dept. B) | 16.02.2023 |
                         | Meeting between A. Sample (Dept. A) and B. Example (Dept. B) | 15.03.2023 |
-
-                        
                         
                         Line 1
+                        - Die generelle Zielsetzung kann wie folgt umschrieben werden:  
+                        - Schulung/Training der Führungsunterstützung mit hohem Praxisbezug, auf Basis der Erkenntnisse aus der Krisenstabsübung 2025
+                                 
                         
                         
-                        A Line between the tables
+                        
+                        
+                        
+                        
+                        
+                        
+                        
+                        
+                        
+                        
+                        
+                        
+                        
+                        
+                        
                         
                         
                         Line 2
-                       
+                        
                         | Documents / Meetings | Date |
                         | --- | ---:|
                         | Email request from C. Example | 18.07.2024 |
@@ -63,7 +126,6 @@ namespace DocxTemplater.Test
             result.SaveAsFileAndOpenInWord();
             result.Position = 0;
             var document = WordprocessingDocument.Open(result, false);
-            var body = document.MainDocumentPart.Document.Body;
         }
 
         [Test]
