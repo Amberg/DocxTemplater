@@ -2,10 +2,7 @@
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using DocxTemplater.Markdown;
-using NUnit.Framework.Internal;
 using System.Text;
-using System.Text.Encodings.Web;
-using System.Web;
 
 namespace DocxTemplater.Test
 {

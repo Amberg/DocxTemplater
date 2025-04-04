@@ -38,8 +38,8 @@ namespace DocxTemplater.Markdown.Renderer
 
                     var numberingProps =
                         new NumberingProperties(
-                            new NumberingLevelReference() {Val = m_levelWithSameOrdering},
-                            new NumberingId() {Val = listStyleFactory.Numbering.NumberID}
+                            new NumberingLevelReference() { Val = m_levelWithSameOrdering },
+                            new NumberingId() { Val = listStyleFactory.Numbering.NumberID }
                         );
                     var listParagraph = new Paragraph();
                     var paragraphProperties = new ParagraphProperties(numberingProps)
