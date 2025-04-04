@@ -64,7 +64,16 @@ namespace DocxTemplater.Markdown.Renderer
                     var columnDefinition = mkTable.ColumnDefinitions[i];
                     var cell = (TableCell)row[i];
                     var cellProperties = new WP.TableCellProperties();
+
                     var cellWidth = new WP.TableCellWidth { Type = WP.TableWidthUnitValues.Auto };
+                    if (columnDefinition.Width > 0)
+                    {
+                        cellWidth = new WP.TableCellWidth
+                        {
+                            Type = WP.TableWidthUnitValues.Pct,
+                            Width = ((int)columnDefinition.Width * 50).ToString()
+                        };
+                    }
                     cellProperties.Append(cellWidth);
                     var cellElement = new WP.TableCell(cellProperties);
                     tableRow.AppendChild(cellElement);
