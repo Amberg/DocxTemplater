@@ -28,9 +28,11 @@ namespace DocxTemplater.Markdown.Renderer
             listStyleFactory.EnsureLevelDefinitionExists(m_levelWithSameOrdering);
             try
             {
-                if (m_level == 0)
+                if (!renderer.CurrentParagraphWasCreatedByMarkdown)
                 {
-                    renderer.ReplaceIfCurrentParagraphIsEmpty(new Paragraph());
+                    renderer.AddParagraph();
+                    renderer.AddParagraph();
+
                 }
 
                 foreach (var item in listBlock)

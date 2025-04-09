@@ -18,9 +18,9 @@ namespace DocxTemplater.Markdown
         private sealed record Format(bool Bold, bool Italic, string Style);
 
         private readonly Stack<Format> m_formatStack = new();
-        private OpenXmlCompositeElement m_parentElement;
-        private bool m_lastElemntWasNewLine;
+        private bool m_lastElementWasNewLine;
         private readonly RunProperties m_targetRunProperties;
+        private readonly Paragraph m_containingParagraphFromTemplate;
 
         public MarkdownToOpenXmlRenderer(
             Paragraph parentElement,
@@ -30,9 +30,10 @@ namespace DocxTemplater.Markdown
         {
             // extract style from target run element
             m_targetRunProperties = ((Run)target.Parent).RunProperties;
-            m_lastElemntWasNewLine = true;
+            m_lastElementWasNewLine = true;
             m_formatStack.Push(new Format(false, false, null));
-            m_parentElement = parentElement;
+            m_containingParagraphFromTemplate = parentElement;
+            CurrentParagraph = parentElement;
             ObjectRenderers.Add(new LiteralInlineRenderer());
             ObjectRenderers.Add(new ParagraphRenderer());
             ObjectRenderers.Add(new LineBreakLineRenderer());
@@ -43,7 +44,14 @@ namespace DocxTemplater.Markdown
             ObjectRenderers.Add(new ThematicBreakRenderer());
         }
 
-        public Paragraph CurrentParagraph => m_parentElement as Paragraph;
+        public Paragraph CurrentParagraph
+        {
+            get;
+            private set;
+        }
+
+        public bool CurrentParagraphWasCreatedByMarkdown => CurrentParagraph != m_containingParagraphFromTemplate;
+
         public MarkdownToOpenXmlRenderer Write(ref StringSlice slice)
         {
             Write(slice.AsSpan());
@@ -86,8 +94,8 @@ namespace DocxTemplater.Markdown
                         newRun.RunProperties.AddChild(runStyle);
                     }
                 }
-                m_parentElement.Append(newRun);
-                m_lastElemntWasNewLine = false;
+                CurrentParagraph.Append(newRun);
+                m_lastElementWasNewLine = false;
             }
         }
 
@@ -117,56 +125,56 @@ namespace DocxTemplater.Markdown
 
         public void NewLine()
         {
-            m_parentElement.Append(new Run(new Break()));
-            m_lastElemntWasNewLine = true;
+            CurrentParagraph.Append(new Run(new Break()));
+            m_lastElementWasNewLine = true;
         }
 
         public void EnsureNewLine()
         {
-            if (!m_lastElemntWasNewLine)
+            if (!m_lastElementWasNewLine)
             {
                 NewLine();
             }
         }
 
-        public void ReplaceIfCurrentParagraphIsEmpty(OpenXmlCompositeElement newParagraph)
+        public void ReplaceIfCurrentParagraphIsEmpty(Paragraph newParagraph)
         {
             var lastParagraph = CurrentParagraph;
             AddParagraph(newParagraph);
-            if (lastParagraph != null && lastParagraph.ChildElements.Count == 0)
+            if (lastParagraph != null && lastParagraph != m_containingParagraphFromTemplate && lastParagraph.ChildElements.Count == 0)
             {
                 lastParagraph.Remove();
             }
         }
 
-        public void AddParagraph(OpenXmlCompositeElement paragraph = null)
+        public void AddParagraph(Paragraph paragraph = null)
         {
             paragraph ??= new Paragraph();
-            m_parentElement = m_parentElement.InsertAfterSelf(paragraph);
-            m_lastElemntWasNewLine = false;
+            CurrentParagraph = CurrentParagraph.InsertAfterSelf(paragraph);
+            m_lastElementWasNewLine = false;
         }
 
         public IDisposable PushParagraph(Paragraph paragraph)
         {
-            m_lastElemntWasNewLine = true;
+            m_lastElementWasNewLine = true;
             return new ParagraphScope(this, paragraph);
         }
 
         private sealed class ParagraphScope : IDisposable
         {
             private readonly MarkdownToOpenXmlRenderer m_renderer;
-            private readonly OpenXmlCompositeElement m_previousParagraph;
+            private readonly Paragraph m_previousParagraph;
 
             public ParagraphScope(MarkdownToOpenXmlRenderer renderer, Paragraph element)
             {
                 m_renderer = renderer;
-                m_previousParagraph = m_renderer.m_parentElement;
-                m_renderer.m_parentElement = element;
+                m_previousParagraph = m_renderer.CurrentParagraph;
+                m_renderer.CurrentParagraph = element;
             }
 
             public void Dispose()
             {
-                m_renderer.m_parentElement = m_previousParagraph;
+                m_renderer.CurrentParagraph = m_previousParagraph;
             }
         }
 

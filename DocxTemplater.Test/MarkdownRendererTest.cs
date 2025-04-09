@@ -70,12 +70,11 @@ namespace DocxTemplater.Test
         public void MarkdownRenderDefinedInMetadata()
         {
             string markdown = """
-                        - Die generelle Zielsetzung kann wie folgt umschrieben werden:  
+                        - Die generelle Zielsetzung kann wie folgt umschrieben werden
                         - Schulung/Training der Führungsunterstützung mit hohem Praxisbezug, auf Basis der Erkenntnisse aus der Krisenstabsübung 2025
                         
-                        
                         | Documents / Meetings | Date              |
-                        | --- | --------------------------------:|
+                        | --- | --------------------------------|
                         | Risk Analysis Region X - Scenario Description and Assessment | 29.03.2010 |
                         | PLAN-X Guide - Regional Hazard Analysis and Preparedness | 01.01.2013 |
                         | Meeting between A. Sample (Dept. A) and B. Example (Dept. B) | 16.02.2023 |
@@ -84,22 +83,6 @@ namespace DocxTemplater.Test
                         Line 1
                         - Die generelle Zielsetzung kann wie folgt umschrieben werden:  
                         - Schulung/Training der Führungsunterstützung mit hohem Praxisbezug, auf Basis der Erkenntnisse aus der Krisenstabsübung 2025
-                                 
-                        
-                        
-                        
-                        
-                        
-                        
-                        
-                        
-                        
-                        
-                        
-                        
-                        
-                        
-                        
                         
                         
                         
@@ -262,9 +245,10 @@ namespace DocxTemplater.Test
             sb.AppendLine("This is not");
             sb.AppendLine("*This is italic*");
             sb.AppendLine("This is not");
+            sb.AppendLine("***This is bold and italic***");
             var body = CreateTemplateWithMarkdownAndReturnBody(sb.ToString());
             var lineCount = body.Descendants<Run>().Count(x => x.ChildElements.Any(x => x is Break));
-            Assert.That(lineCount, Is.EqualTo(7));
+            Assert.That(lineCount, Is.EqualTo(8));
         }
 
 
@@ -350,7 +334,7 @@ namespace DocxTemplater.Test
                 "</w:tcPr><w:p><w:pPr><w:jc w:val=\"right\" /></w:pPr><w:r><w:t>Row 1 Col 2</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:tcPr>" +
                 "<w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:pPr><w:jc w:val=\"left\" /></w:pPr><w:r><w:t>Row 2 Col 1</w:t></w:r></w:p>" +
                 "</w:tc><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:pPr><w:jc w:val=\"right\" />" +
-                "</w:pPr><w:r><w:t>Row 2 Col 2</w:t></w:r></w:p></w:tc></w:tr></w:tbl><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" />"));
+                "</w:pPr><w:r><w:t>Row 2 Col 2</w:t></w:r></w:p></w:tc></w:tr></w:tbl>"));
         }
 
         [Test]
@@ -368,7 +352,7 @@ namespace DocxTemplater.Test
                                                   "</w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Row 1 Col 1</w:t></w:r></w:p>" +
                                                   "</w:tc><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Row 1 Col 2</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc>" +
                                                   "<w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Row 2 Col 1</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:type=\"auto\" />" +
-                                                  "</w:tcPr><w:p><w:r><w:t>Row 2 Col 2</w:t></w:r></w:p></w:tc></w:tr></w:tbl><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" />"));
+                                                  "</w:tcPr><w:p><w:r><w:t>Row 2 Col 2</w:t></w:r></w:p></w:tc></w:tr></w:tbl>"));
         }
 
         [Test]
