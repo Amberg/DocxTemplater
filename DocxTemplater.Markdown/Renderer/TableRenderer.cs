@@ -100,8 +100,15 @@ namespace DocxTemplater.Markdown.Renderer
                     renderer.WriteChildren(cell);
                 }
             }
-            renderer.ReplaceIfCurrentParagraphIsEmpty(table);
-            renderer.AddParagraph();
+            if (renderer.CurrentParagraphWasCreatedByMarkdown && renderer.CurrentParagraph.ChildElements.Count == 0)
+            {
+                renderer.CurrentParagraph.InsertBeforeSelf(table);
+            }
+            else
+            {
+                renderer.CurrentParagraph.InsertAfterSelf(table);
+                renderer.AddParagraph();
+            }
         }
 
         public static WP.Style FindDefaultTableStyle(MainDocumentPart mainDocumentPart, MarkDownFormatterConfiguration markDownFormatterConfiguration)
