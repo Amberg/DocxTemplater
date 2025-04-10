@@ -5,6 +5,7 @@ using Markdig;
 using Markdig.Parsers;
 using System;
 using System.Linq;
+using DocxTemplater.Markdown.Parser;
 
 namespace DocxTemplater.Markdown
 {
@@ -12,10 +13,20 @@ namespace DocxTemplater.Markdown
     {
         private readonly MarkDownFormatterConfiguration m_configuration;
         private int m_nestingDepth;
+        private static readonly MarkdownPipeline MarkdownPipeline;
 
         public MarkdownFormatter(MarkDownFormatterConfiguration configuration = null)
         {
             m_configuration = configuration ?? MarkDownFormatterConfiguration.Default;
+        }
+
+        static MarkdownFormatter()
+        {
+            // s_mMarkdownPipeline = new MarkdownPipelineBuilder().UsePipeTables().UseGridTables().Build();
+            var builder = new MarkdownPipelineBuilder();
+            builder.Extensions.Add(new CustomPipeTableExtension());
+            builder.UseGridTables();
+            MarkdownPipeline = builder.Build();
         }
 
         public bool CanHandle(Type type, string prefix)
@@ -61,11 +72,10 @@ namespace DocxTemplater.Markdown
                 var root = target.GetRoot();
                 if (root is OpenXmlPartRootElement openXmlPartRootElement && openXmlPartRootElement.OpenXmlPart != null)
                 {
-                    var pipeline = new MarkdownPipelineBuilder().UsePipeTables().UseGridTables().Build();
                     // markdown treat multiple newlines as a single newline, we insert a space to keep the newlines
                     mdText = mdText.Replace("\r\n", "\r");
                     mdText = mdText.Replace("\r\r\r\r", "\r\r&nbsp;\r\r\r\r&nbsp;\r\r");
-                    var markdownDocument = MarkdownParser.Parse(mdText, pipeline);
+                    var markdownDocument = MarkdownParser.Parse(mdText, MarkdownPipeline);
 
 
                     // split the paragraph at the target
