@@ -64,6 +64,7 @@ namespace DocxTemplater.Test
             result.SaveAsFileAndOpenInWord();
             result.Position = 0;
             var document = WordprocessingDocument.Open(result, false);
+            Assert.That(TestHelper.ComputeSha256Hash(document.MainDocumentPart.Document.Body.InnerXml), Is.EqualTo("11a698a4f6eb4afb33d2815810f6160d29b4fe065156a2c5886a845af3ce5a55"));
         }
 
         [Test]
@@ -111,11 +112,85 @@ namespace DocxTemplater.Test
             var document = WordprocessingDocument.Open(result, false);
         }
 
+
+        [Test]
+        public void TestTwoListsWithoutGap()
+        {
+            string markdown = """
+                              * First
+                              * Second
+
+                              
+                              
+                              * A
+                              * B
+                              """;
+            var body = CreateTemplateWithMarkdownAndReturnBody(markdown);
+            Assert.That(body.InnerXml, Is.EqualTo("<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>First</w:t></w:r></w:p><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">" +
+                                                  "<w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>Second</w:t></w:r></w:p>" +
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" />" +
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" />" +
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>A</w:t></w:r></w:p>" +
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>B</w:t></w:r></w:p>" +
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" />"));
+        }
+
+        [Test]
+        public void TestTwoTablesWithoutGap()
+        {
+            string markdown = """
+                              +-----+:---:+----:+
+                              |  A  |  B  |  C  |
+                              +-----+-----+-----+
+                              |  1  |  2  |  3  |
+                              +-----+-----+-----+
+                              
+                              +-----+:---:+----:+
+                              |  D  |  E  |  F  |
+                              +-----+-----+-----+
+                              |  4  |  5  |  6  |
+                              +-----+-----+-----+
+                              
+                              First List
+                              * First
+                              * Second
+                              
+                              Second List
+                              * A
+                              * B
+                              """;
+
+            var body = CreateTemplateWithMarkdownAndReturnBody(markdown);
+            Assert.That(body.InnerXml, Is.EqualTo("<w:tbl xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:tblPr><w:tblW w:w=\"5000\" w:type=\"pct\" />" +
+                                                  "</w:tblPr><w:tblGrid><w:gridCol /><w:gridCol /><w:gridCol /></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:w=\"1650\" w:type=\"pct\" />" +
+                                                  "</w:tcPr><w:p><w:r><w:t>A</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:w=\"1650\" w:type=\"pct\" /></w:tcPr><w:p><w:pPr><w:jc w:val=\"center\" />" +
+                                                  "</w:pPr><w:r><w:t>B</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:w=\"1650\" w:type=\"pct\" /></w:tcPr><w:p><w:pPr><w:jc w:val=\"right\" />" +
+                                                  "</w:pPr><w:r><w:t>C</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:tcW w:w=\"1650\" w:type=\"pct\" /></w:tcPr><w:p><w:r><w:t>1</w:t>" +
+                                                  "</w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:w=\"1650\" w:type=\"pct\" /></w:tcPr><w:p><w:pPr><w:jc w:val=\"center\" /></w:pPr><w:r><w:t>2</w:t>" +
+                                                  "</w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:w=\"1650\" w:type=\"pct\" /></w:tcPr><w:p><w:pPr><w:jc w:val=\"right\" /></w:pPr><w:r><w:t>3</w:t>" +
+                                                  "</w:r></w:p></w:tc></w:tr></w:tbl><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" />" +
+                                                  "<w:tbl xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:tblPr><w:tblW w:w=\"5000\" w:type=\"pct\" /></w:tblPr><w:tblGrid>" +
+                                                  "<w:gridCol /><w:gridCol /><w:gridCol /></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:w=\"1650\" w:type=\"pct\" /></w:tcPr><w:p><w:r><w:t>D</w:t></w:r>" +
+                                                  "</w:p></w:tc><w:tc><w:tcPr><w:tcW w:w=\"1650\" w:type=\"pct\" /></w:tcPr><w:p><w:pPr><w:jc w:val=\"center\" /></w:pPr><w:r><w:t>E</w:t></w:r></w:p>" +
+                                                  "</w:tc><w:tc><w:tcPr><w:tcW w:w=\"1650\" w:type=\"pct\" /></w:tcPr><w:p><w:pPr><w:jc w:val=\"right\" /></w:pPr><w:r><w:t>F</w:t></w:r></w:p></w:tc>" +
+                                                  "</w:tr><w:tr><w:tc><w:tcPr><w:tcW w:w=\"1650\" w:type=\"pct\" /></w:tcPr><w:p><w:r><w:t>4</w:t></w:r></w:p></w:tc><w:tc><w:tcPr>" +
+                                                  "<w:tcW w:w=\"1650\" w:type=\"pct\" /></w:tcPr><w:p><w:pPr><w:jc w:val=\"center\" /></w:pPr><w:r><w:t>5</w:t></w:r></w:p></w:tc><w:tc><w:tcPr>" +
+                                                  "<w:tcW w:w=\"1650\" w:type=\"pct\" /></w:tcPr><w:p><w:pPr><w:jc w:val=\"right\" /></w:pPr><w:r><w:t>6</w:t></w:r></w:p></w:tc></w:tr></w:tbl>" +
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:r><w:t>First List</w:t></w:r></w:p>" +
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" />" +
+                                                  "<w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>First</w:t></w:r></w:p>" +
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" />" +
+                                                  "<w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>Second</w:t></w:r></w:p>" +
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:r><w:t>Second List</w:t></w:r></w:p>" +
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" />" +
+                                                  "<w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>A</w:t></w:r></w:p>" +
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" />" +
+                                                  "<w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>B</w:t></w:r></w:p><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" />"));
+        }
+
         [Test]
         public void DifferentTableStyleDefinedWithInlineSettings()
         {
-
-
             string markdown = """
                               | Documents / Meetings | Date |
                               | --- | ---:|
@@ -136,7 +211,8 @@ namespace DocxTemplater.Test
             result.SaveAsFileAndOpenInWord();
             result.Position = 0;
             var document = WordprocessingDocument.Open(result, false);
-            var body = document.MainDocumentPart.Document.Body;
+            Assert.That(TestHelper.ComputeSha256Hash(document.MainDocumentPart.Document.Body.InnerXml), Is.EqualTo("83fbf2ba90daddbb0d4fd1ae92b5e98f2c6f4f8a686f75b8813cf02a95d59fbe"));
+
         }
 
 
@@ -324,16 +400,15 @@ namespace DocxTemplater.Test
             sb.AppendLine("| Row 1 Col 1 | Row 1 Col 2 |");
             sb.AppendLine("| Row 2 Col 1 | Row 2 Col 2 |");
             var body = CreateTemplateWithMarkdownAndReturnBody(sb.ToString());
-            Assert.That(body.InnerXml, Is.EqualTo("<w:tbl xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:tblPr><w:tblW w:w=\"5000\" w:type=\"pct\" /></w:tblPr>" +
-                                                  "<w:tblGrid><w:gridCol /><w:gridCol /><w:gridCol />" +
-                                                  "</w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:w=\"2500\" w:type=\"pct\" /></w:tcPr><w:p><w:pPr><w:jc w:val=\"left\" /></w:pPr><w:r>" +
-                                                  "<w:t>Header 1</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:w=\"2500\" w:type=\"pct\" /></w:tcPr><w:p><w:pPr><w:jc w:val=\"right\" />" +
-                                                  "</w:pPr><w:r><w:t>Header 2</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:tcW w:w=\"2500\" w:type=\"pct\" />" +
-                                                  "</w:tcPr><w:p><w:pPr><w:jc w:val=\"left\" /></w:pPr><w:r><w:t>Row 1 Col 1</w:t></w:r></w:p></w:tc><w:tc><w:tcPr>" +
-                                                  "<w:tcW w:w=\"2500\" w:type=\"pct\" /></w:tcPr><w:p><w:pPr><w:jc w:val=\"right\" /></w:pPr><w:r><w:t>Row 1 Col 2</w:t></w:r>" +
-                                                  "</w:p></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:tcW w:w=\"2500\" w:type=\"pct\" /></w:tcPr><w:p><w:pPr><w:jc w:val=\"left\" />" +
-                                                  "</w:pPr><w:r><w:t>Row 2 Col 1</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:w=\"2500\" w:type=\"pct\" /></w:tcPr><w:p><w:pPr>" +
-                                                  "<w:jc w:val=\"right\" /></w:pPr><w:r><w:t>Row 2 Col 2</w:t></w:r></w:p></w:tc></w:tr></w:tbl>"));
+            Assert.That(body.InnerXml, Is.EqualTo("<w:tbl xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:tblPr><w:tblW w:w=\"5000\" w:type=\"pct\" />" +
+                                                  "</w:tblPr><w:tblGrid><w:gridCol /><w:gridCol /><w:gridCol /></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:w=\"2500\" w:type=\"pct\" />" +
+                                                  "</w:tcPr><w:p><w:pPr><w:jc w:val=\"left\" /></w:pPr><w:r><w:t>Header 1</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:w=\"2500\" w:type=\"pct\" />" +
+                                                  "</w:tcPr><w:p><w:pPr><w:jc w:val=\"right\" /></w:pPr><w:r><w:t>Header 2</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:tcPr>" +
+                                                  "<w:tcW w:w=\"2500\" w:type=\"pct\" /></w:tcPr><w:p><w:pPr><w:jc w:val=\"left\" /></w:pPr><w:r><w:t>Row 1 Col 1</w:t></w:r></w:p></w:tc><w:tc>" +
+                                                  "<w:tcPr><w:tcW w:w=\"2500\" w:type=\"pct\" /></w:tcPr><w:p><w:pPr><w:jc w:val=\"right\" /></w:pPr><w:r><w:t>Row 1 Col 2</w:t></w:r></w:p>" +
+                                                  "</w:tc></w:tr><w:tr><w:tc><w:tcPr><w:tcW w:w=\"2500\" w:type=\"pct\" /></w:tcPr><w:p><w:pPr><w:jc w:val=\"left\" />" +
+                                                  "</w:pPr><w:r><w:t>Row 2 Col 1</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:w=\"2500\" w:type=\"pct\" /></w:tcPr><w:p><w:pPr><w:jc w:val=\"right\" />" +
+                                                  "</w:pPr><w:r><w:t>Row 2 Col 2</w:t></w:r></w:p></w:tc></w:tr></w:tbl><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" />"));
         }
 
         [Test]
