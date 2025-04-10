@@ -7,6 +7,10 @@
 		<TargetFrameworks>net6.0;net7.0;net8.0;net9.0</TargetFrameworks>
 	</PropertyGroup>
 
+	<PropertyGroup>
+		<LangVersion>default</LangVersion>
+	</PropertyGroup>
+
 	<!--Code Analysis-->
 	<PropertyGroup>
 		<AnalysisLevelDocumentation>latest-minimum</AnalysisLevelDocumentation>
