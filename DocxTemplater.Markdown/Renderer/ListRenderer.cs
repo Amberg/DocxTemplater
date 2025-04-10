@@ -32,7 +32,6 @@ namespace DocxTemplater.Markdown.Renderer
                 {
                     renderer.AddParagraph();
                     renderer.AddParagraph();
-
                 }
 
                 foreach (var item in listBlock)

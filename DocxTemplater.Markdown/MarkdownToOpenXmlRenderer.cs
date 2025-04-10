@@ -154,6 +154,13 @@ namespace DocxTemplater.Markdown
             m_lastElementWasNewLine = false;
         }
 
+        public void InsertNonParagraphContainer(OpenXmlCompositeElement compositeElement)
+        {
+            CurrentParagraph.InsertAfterSelf(compositeElement);
+            CurrentParagraph = new Paragraph();
+            compositeElement.InsertAfterSelf(CurrentParagraph);
+        }
+
         public IDisposable PushParagraph(Paragraph paragraph)
         {
             m_lastElementWasNewLine = true;
