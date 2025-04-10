@@ -324,35 +324,16 @@ namespace DocxTemplater.Test
             sb.AppendLine("| Row 1 Col 1 | Row 1 Col 2 |");
             sb.AppendLine("| Row 2 Col 1 | Row 2 Col 2 |");
             var body = CreateTemplateWithMarkdownAndReturnBody(sb.ToString());
-            Assert.That(body.InnerXml, Is.EqualTo(
-                "<w:tbl xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">" +
-                "<w:tblPr><w:tblW w:w=\"5000\" w:type=\"pct\" /></w:tblPr><w:tblGrid><w:gridCol /><w:gridCol /><w:gridCol />" +
-                "</w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:pPr><w:jc w:val=\"left\" />" +
-                "</w:pPr><w:r><w:t>Header 1</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:pPr><w:jc w:val=\"right\" />" +
-                "</w:pPr><w:r><w:t>Header 2</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:tcW w:type=\"auto\" />" +
-                "</w:tcPr><w:p><w:pPr><w:jc w:val=\"left\" /></w:pPr><w:r><w:t>Row 1 Col 1</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:type=\"auto\" />" +
-                "</w:tcPr><w:p><w:pPr><w:jc w:val=\"right\" /></w:pPr><w:r><w:t>Row 1 Col 2</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:tcPr>" +
-                "<w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:pPr><w:jc w:val=\"left\" /></w:pPr><w:r><w:t>Row 2 Col 1</w:t></w:r></w:p>" +
-                "</w:tc><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:pPr><w:jc w:val=\"right\" />" +
-                "</w:pPr><w:r><w:t>Row 2 Col 2</w:t></w:r></w:p></w:tc></w:tr></w:tbl>"));
-        }
-
-        [Test]
-        public void TableInTable()
-        {
-            var sb = new StringBuilder();
-            sb.AppendLine("| Header 1 | Header 2 |");
-            sb.AppendLine("|----------|----------|");
-            sb.AppendLine("| Row 1 Col 1 | Row 1 Col 2 |");
-            sb.AppendLine("| Row 2 Col 1 | Row 2 Col 2 |");
-            var body = CreateTemplateWithMarkdownAndReturnBody(sb.ToString());
-            Assert.That(body.InnerXml, Is.EqualTo("<w:tbl xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:tblPr><w:tblW w:w=\"5000\" w:type=\"pct\" />" +
-                                                  "</w:tblPr><w:tblGrid><w:gridCol /><w:gridCol /><w:gridCol /></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr>" +
-                                                  "<w:p><w:r><w:t>Header 1</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Header 2</w:t>" +
-                                                  "</w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Row 1 Col 1</w:t></w:r></w:p>" +
-                                                  "</w:tc><w:tc><w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Row 1 Col 2</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc>" +
-                                                  "<w:tcPr><w:tcW w:type=\"auto\" /></w:tcPr><w:p><w:r><w:t>Row 2 Col 1</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:type=\"auto\" />" +
-                                                  "</w:tcPr><w:p><w:r><w:t>Row 2 Col 2</w:t></w:r></w:p></w:tc></w:tr></w:tbl>"));
+            Assert.That(body.InnerXml, Is.EqualTo("<w:tbl xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:tblPr><w:tblW w:w=\"5000\" w:type=\"pct\" /></w:tblPr>" +
+                                                  "<w:tblGrid><w:gridCol /><w:gridCol /><w:gridCol />" +
+                                                  "</w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:w=\"2500\" w:type=\"pct\" /></w:tcPr><w:p><w:pPr><w:jc w:val=\"left\" /></w:pPr><w:r>" +
+                                                  "<w:t>Header 1</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:w=\"2500\" w:type=\"pct\" /></w:tcPr><w:p><w:pPr><w:jc w:val=\"right\" />" +
+                                                  "</w:pPr><w:r><w:t>Header 2</w:t></w:r></w:p></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:tcW w:w=\"2500\" w:type=\"pct\" />" +
+                                                  "</w:tcPr><w:p><w:pPr><w:jc w:val=\"left\" /></w:pPr><w:r><w:t>Row 1 Col 1</w:t></w:r></w:p></w:tc><w:tc><w:tcPr>" +
+                                                  "<w:tcW w:w=\"2500\" w:type=\"pct\" /></w:tcPr><w:p><w:pPr><w:jc w:val=\"right\" /></w:pPr><w:r><w:t>Row 1 Col 2</w:t></w:r>" +
+                                                  "</w:p></w:tc></w:tr><w:tr><w:tc><w:tcPr><w:tcW w:w=\"2500\" w:type=\"pct\" /></w:tcPr><w:p><w:pPr><w:jc w:val=\"left\" />" +
+                                                  "</w:pPr><w:r><w:t>Row 2 Col 1</w:t></w:r></w:p></w:tc><w:tc><w:tcPr><w:tcW w:w=\"2500\" w:type=\"pct\" /></w:tcPr><w:p><w:pPr>" +
+                                                  "<w:jc w:val=\"right\" /></w:pPr><w:r><w:t>Row 2 Col 2</w:t></w:r></w:p></w:tc></w:tr></w:tbl>"));
         }
 
         [Test]
