@@ -1,5 +1,6 @@
 ﻿
 using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Drawing.Charts;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using DocxTemplater.Markdown.Renderer;
@@ -10,17 +11,18 @@ using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
 using System;
 using System.Collections.Generic;
+using System.Text;
 
 namespace DocxTemplater.Markdown
 {
     internal sealed class MarkdownToOpenXmlRenderer : RendererBase
     {
-        private sealed record Format(bool Bold, bool Italic, string Style);
+        private sealed record Format(bool Bold, bool Italic, string Style, bool Strike);
 
         private readonly Stack<Format> m_formatStack = new();
-        private bool m_lastElementWasNewLine;
         private readonly RunProperties m_targetRunProperties;
         private readonly Paragraph m_containingParagraphFromTemplate;
+        private readonly MarkdownDebugOutput m_debugOutput;
 
         public MarkdownToOpenXmlRenderer(
             Paragraph parentElement,
@@ -30,8 +32,7 @@ namespace DocxTemplater.Markdown
         {
             // extract style from target run element
             m_targetRunProperties = ((Run)target.Parent).RunProperties;
-            m_lastElementWasNewLine = true;
-            m_formatStack.Push(new Format(false, false, null));
+            m_formatStack.Push(new Format(false, false, null, false));
             m_containingParagraphFromTemplate = parentElement;
             CurrentParagraph = parentElement;
             ObjectRenderers.Add(new LiteralInlineRenderer());
@@ -42,6 +43,13 @@ namespace DocxTemplater.Markdown
             ObjectRenderers.Add(new ListRenderer(mainDocumentPart, configuration));
             ObjectRenderers.Add(new HeadingRenderer());
             ObjectRenderers.Add(new ThematicBreakRenderer());
+            ObjectRenderers.Add(new HtmlBlockRenderer());
+
+
+#if DEBUG
+            m_debugOutput = new MarkdownDebugOutput(this);
+#endif
+
         }
 
         public Paragraph CurrentParagraph
@@ -51,6 +59,8 @@ namespace DocxTemplater.Markdown
         }
 
         public bool CurrentParagraphWasCreatedByMarkdown => CurrentParagraph != m_containingParagraphFromTemplate;
+
+        public string MarkdownStructureAsString => m_debugOutput?.ToString();
 
         public MarkdownToOpenXmlRenderer Write(ref StringSlice slice)
         {
@@ -75,7 +85,7 @@ namespace DocxTemplater.Markdown
                     newRun.RunProperties = (RunProperties)m_targetRunProperties.CloneNode(true);
                 }
                 var format = m_formatStack.Peek();
-                if (format.Bold || format.Italic || format.Style != null)
+                if (format.Bold || format.Italic || format.Strike || format.Style != null)
                 {
                     newRun.RunProperties ??= new RunProperties();
 
@@ -87,6 +97,10 @@ namespace DocxTemplater.Markdown
                     {
                         newRun.RunProperties.AddChild(new Italic());
                     }
+                    if (format.Strike && newRun.RunProperties.Strike == null)
+                    {
+                        newRun.RunProperties.AddChild(new Strike());
+                    }
                     //add style
                     if (format.Style != null)
                     {
@@ -95,7 +109,6 @@ namespace DocxTemplater.Markdown
                     }
                 }
                 CurrentParagraph.Append(newRun);
-                m_lastElementWasNewLine = false;
             }
         }
 
@@ -115,33 +128,25 @@ namespace DocxTemplater.Markdown
             }
         }
 
-        public IDisposable PushFormat(bool? bold, bool? italic)
+        public IDisposable PushFormat(bool? bold, bool? italic, bool? strike)
         {
             var currentStyle = m_formatStack.Peek();
             bold ??= currentStyle.Bold;
             italic ??= currentStyle.Italic;
-            return new FormatScope(m_formatStack, bold.Value, italic.Value, currentStyle.Style);
+            strike ??= currentStyle.Strike;
+            return new FormatScope(m_formatStack, bold.Value, italic.Value, strike.Value, currentStyle.Style);
         }
 
         public void NewLine()
         {
             CurrentParagraph.Append(new Run(new Break()));
-            m_lastElementWasNewLine = true;
-        }
-
-        public void EnsureNewLine()
-        {
-            if (!m_lastElementWasNewLine)
-            {
-                NewLine();
-            }
         }
 
         public void ReplaceIfCurrentParagraphIsEmpty(Paragraph newParagraph)
         {
             var lastParagraph = CurrentParagraph;
             AddParagraph(newParagraph);
-            if (lastParagraph != null && lastParagraph != m_containingParagraphFromTemplate && lastParagraph.ChildElements.Count == 0)
+            if (lastParagraph != null && lastParagraph != m_containingParagraphFromTemplate && lastParagraph.HasOnlyPropertyChildren())
             {
                 lastParagraph.Remove();
             }
@@ -151,7 +156,6 @@ namespace DocxTemplater.Markdown
         {
             paragraph ??= new Paragraph();
             CurrentParagraph = CurrentParagraph.InsertAfterSelf(paragraph);
-            m_lastElementWasNewLine = false;
         }
 
         public void InsertNonParagraphContainer(OpenXmlCompositeElement compositeElement)
@@ -163,7 +167,6 @@ namespace DocxTemplater.Markdown
 
         public IDisposable PushParagraph(Paragraph paragraph)
         {
-            m_lastElementWasNewLine = true;
             return new ParagraphScope(this, paragraph);
         }
 
@@ -188,16 +191,64 @@ namespace DocxTemplater.Markdown
         private sealed class FormatScope : IDisposable
         {
             private readonly Stack<Format> m_formatStack;
-            public FormatScope(Stack<Format> formatStack, bool bold, bool italic, string style)
+            public FormatScope(Stack<Format> formatStack, bool bold, bool italic, bool strike, string style)
             {
                 m_formatStack = formatStack;
-                m_formatStack.Push(new Format(bold, italic, style));
+                m_formatStack.Push(new Format(bold, italic, style, strike));
             }
 
             public void Dispose()
             {
                 m_formatStack.Pop();
             }
+        }
+
+        private sealed class MarkdownDebugOutput
+        {
+            private readonly RendererBase m_renderer;
+            private int m_indent = 0;
+            private readonly StringBuilder m_buffer = new StringBuilder();
+
+            public MarkdownDebugOutput(RendererBase renderer)
+            {
+                m_renderer = renderer;
+                m_buffer.AppendLine("---------- Markdown Document ---------");
+                Register();
+            }
+
+            public override string ToString()
+            {
+                return m_buffer.ToString();
+            }
+
+            private void Register()
+            {
+                m_renderer.ObjectWriteBefore += (_, markdownObject) =>
+                {
+                    m_indent++;
+                    m_buffer.Append(new string(' ', m_indent * 2));
+                    m_buffer.Append(markdownObject.GetType().Name);
+                    if (markdownObject is LiteralInline)
+                    {
+                        m_buffer.Append($" : '{markdownObject.ToString()}'");
+                    }
+                    m_buffer.AppendLine();
+                };
+
+                m_renderer.ObjectWriteAfter += (renderer, markdownObject) =>
+                {
+                    m_indent--;
+                    if (markdownObject is MarkdownDocument)
+                    {
+                        m_buffer.AppendLine("---------- END Markdown Document ---------");
+                    }
+                };
+            }
+        }
+
+        public ParagraphProperties GetTemplateParagraphProperties()
+        {
+            return (ParagraphProperties) m_containingParagraphFromTemplate?.ParagraphProperties?.CloneNode(true);
         }
     }
 
