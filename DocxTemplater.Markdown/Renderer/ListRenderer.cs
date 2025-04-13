@@ -70,18 +70,20 @@ namespace DocxTemplater.Markdown.Renderer
             }
         }
 
-        private bool PreviousBlockWasList(ListBlock listBlock)
+        private static bool PreviousBlockWasList(ListBlock listBlock)
         {
-            if(listBlock.Parent == null)
+            if (listBlock.Parent == null)
             {
                 return false;
             }
+
             var index = listBlock.Parent.IndexOf(listBlock);
             if (index > 0)
             {
                 var previousBlock = listBlock.Parent[index - 1];
                 return previousBlock is ListBlock;
             }
+
             return false;
         }
 

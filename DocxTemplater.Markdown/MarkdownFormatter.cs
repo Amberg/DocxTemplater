@@ -1,14 +1,12 @@
 ﻿using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Wordprocessing;
 using DocxTemplater.Formatter;
+using DocxTemplater.Markdown.Parser;
 using Markdig;
+using Markdig.Extensions.EmphasisExtras;
 using Markdig.Parsers;
 using System;
 using System.Linq;
-using DocxTemplater.Markdown.Parser;
-using Markdig.Extensions.EmphasisExtras;
-using Markdig.Syntax;
-using Markdig.Syntax.Inlines;
 
 namespace DocxTemplater.Markdown
 {

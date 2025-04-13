@@ -1,6 +1,5 @@
 ﻿
 using DocumentFormat.OpenXml;
-using DocumentFormat.OpenXml.Drawing.Charts;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using DocxTemplater.Markdown.Renderer;
@@ -22,7 +21,9 @@ namespace DocxTemplater.Markdown
         private readonly Stack<Format> m_formatStack = new();
         private readonly RunProperties m_targetRunProperties;
         private readonly Paragraph m_containingParagraphFromTemplate;
+#if DEBUG
         private readonly MarkdownDebugOutput m_debugOutput;
+#endif
 
         public MarkdownToOpenXmlRenderer(
             Paragraph parentElement,
@@ -52,15 +53,13 @@ namespace DocxTemplater.Markdown
 
         }
 
-        public Paragraph CurrentParagraph
-        {
-            get;
-            private set;
-        }
+        public Paragraph CurrentParagraph { get; private set; }
 
         public bool CurrentParagraphWasCreatedByMarkdown => CurrentParagraph != m_containingParagraphFromTemplate;
 
+#if DEBUG
         public string MarkdownStructureAsString => m_debugOutput?.ToString();
+#endif
 
         public MarkdownToOpenXmlRenderer Write(ref StringSlice slice)
         {
@@ -84,6 +83,7 @@ namespace DocxTemplater.Markdown
                     // we merge existing styles with styles from markdown
                     newRun.RunProperties = (RunProperties)m_targetRunProperties.CloneNode(true);
                 }
+
                 var format = m_formatStack.Peek();
                 if (format.Bold || format.Italic || format.Strike || format.Style != null)
                 {
@@ -93,14 +93,17 @@ namespace DocxTemplater.Markdown
                     {
                         newRun.RunProperties.AddChild(new Bold());
                     }
+
                     if (format.Italic && newRun.RunProperties.Italic == null)
                     {
                         newRun.RunProperties.AddChild(new Italic());
                     }
+
                     if (format.Strike && newRun.RunProperties.Strike == null)
                     {
                         newRun.RunProperties.AddChild(new Strike());
                     }
+
                     //add style
                     if (format.Style != null)
                     {
@@ -108,6 +111,7 @@ namespace DocxTemplater.Markdown
                         newRun.RunProperties.AddChild(runStyle);
                     }
                 }
+
                 CurrentParagraph.Append(newRun);
             }
         }
@@ -146,7 +150,8 @@ namespace DocxTemplater.Markdown
         {
             var lastParagraph = CurrentParagraph;
             AddParagraph(newParagraph);
-            if (lastParagraph != null && lastParagraph != m_containingParagraphFromTemplate && lastParagraph.HasOnlyPropertyChildren())
+            if (lastParagraph != null && lastParagraph != m_containingParagraphFromTemplate &&
+                lastParagraph.HasOnlyPropertyChildren())
             {
                 lastParagraph.Remove();
             }
@@ -191,6 +196,7 @@ namespace DocxTemplater.Markdown
         private sealed class FormatScope : IDisposable
         {
             private readonly Stack<Format> m_formatStack;
+
             public FormatScope(Stack<Format> formatStack, bool bold, bool italic, bool strike, string style)
             {
                 m_formatStack = formatStack;
@@ -206,8 +212,8 @@ namespace DocxTemplater.Markdown
         private sealed class MarkdownDebugOutput
         {
             private readonly RendererBase m_renderer;
-            private int m_indent = 0;
-            private readonly StringBuilder m_buffer = new StringBuilder();
+            private int m_indent;
+            private readonly StringBuilder m_buffer = new();
 
             public MarkdownDebugOutput(RendererBase renderer)
             {
@@ -232,6 +238,7 @@ namespace DocxTemplater.Markdown
                     {
                         m_buffer.Append($" : '{markdownObject.ToString()}'");
                     }
+
                     m_buffer.AppendLine();
                 };
 
@@ -248,8 +255,7 @@ namespace DocxTemplater.Markdown
 
         public ParagraphProperties GetTemplateParagraphProperties()
         {
-            return (ParagraphProperties) m_containingParagraphFromTemplate?.ParagraphProperties?.CloneNode(true);
+            return (ParagraphProperties)m_containingParagraphFromTemplate?.ParagraphProperties?.CloneNode(true);
         }
     }
-
 }

@@ -24,16 +24,14 @@ namespace DocxTemplater.Test
         [Test]
         public void TestRandomString()
         {
-            // var markdown = "| col1 |\r| --- |\r| line 1<br>line 2 |";
-             var markdown = """
-                            test
-                            
-                            * * *
-                            
-                            test
-                            """;
-            //var markdown = "- Schulung Führungsunterstützung\r- Schulung Krisenstab";
-            var body = CreateTemplateWithMarkdownAndReturnBody(markdown);
+            var markdown = """
+                           test
+
+                           * * *
+
+                           test
+                           """;
+            var _ = CreateTemplateWithMarkdownAndReturnBody(markdown);
         }
 
         [Test]
