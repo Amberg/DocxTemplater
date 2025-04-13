@@ -387,8 +387,7 @@ namespace DocxTemplater
                 }
                 else
                 {
-                    removeParent = !element.ChildElements.Any(x =>
-                        x is not Languages and not RunProperties and not ParagraphProperties);
+                    removeParent = element.HasOnlyPropertyChildren();
                 }
 
                 if (removeParent)
@@ -397,6 +396,15 @@ namespace DocxTemplater
                     RemoveWithEmptyParent(parent);
                 }
             }
+        }
+
+        public static bool HasOnlyPropertyChildren(this OpenXmlElement element)
+        {
+            if (element == null)
+            {
+                return false;
+            }
+            return !element.ChildElements.Any(x => x is not Languages and not RunProperties and not ParagraphProperties);
         }
 
         public static uint GetMaxDocPropertyId(this OpenXmlPart doc)

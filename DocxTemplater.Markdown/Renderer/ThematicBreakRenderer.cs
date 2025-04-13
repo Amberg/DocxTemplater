@@ -8,7 +8,7 @@ namespace DocxTemplater.Markdown.Renderer
     {
         protected override void Write(MarkdownToOpenXmlRenderer renderer, ThematicBreakBlock obj)
         {
-            renderer.AddParagraph(CreateParagraphWithBorder());
+            renderer.ReplaceIfCurrentParagraphIsEmpty(CreateParagraphWithBorder());
             renderer.AddParagraph();
         }
 

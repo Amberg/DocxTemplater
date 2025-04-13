@@ -11,14 +11,37 @@ namespace DocxTemplater.Test
         [Test]
         public void PlainText_4NewLinesCeratesEmptyParagraph()
         {
-            var markdown = "Hello\r\nSecond Line\r\n\r\nSecond Paragraph First Line\r\n\r\n\r\n\r\nThird Line after Empty Paragraph";
+            var markdown = "Hello\r\nSecond Line\r\n\r\nSecond Paragraph First Line\r\n\r\n\r\n\r\n Line after 4 newlines --> only one paragraph\r\n\\\r\n\\\r\nLine after 2 Line breaks without paragraph\\\r\\\rLine after 2 Line breaks Linux style without paragraph";
             var body = CreateTemplateWithMarkdownAndReturnBody(markdown);
-            Assert.That(body.Descendants<Paragraph>().Count(), Is.EqualTo(5));
+            Assert.That(body.Descendants<Paragraph>().Count(), Is.EqualTo(3));
 
             Assert.That(body.InnerXml, Is.EqualTo("<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:r><w:t>Hello</w:t></w:r><w:r><w:br /></w:r><w:r><w:t>Second Line</w:t></w:r></w:p>" +
                                                   "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:r><w:t>Second Paragraph First Line</w:t></w:r></w:p>" +
-                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" /><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" />" +
-                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:r><w:t>Third Line after Empty Paragraph</w:t></w:r></w:p>"));
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:r><w:t>Line after 4 newlines --&gt; only one paragraph</w:t></w:r><w:r><w:br /></w:r><w:r><w:br /></w:r><w:r><w:br /></w:r><w:r><w:t>Line after 2 Line breaks without paragraph</w:t></w:r><w:r><w:br /></w:r><w:r><w:br /></w:r><w:r><w:t>Line after 2 Line breaks Linux style without paragraph</w:t></w:r></w:p>"));
+        }
+
+        [Explicit]
+        [Test]
+        public void TestRandomString()
+        {
+            var markdown = """
+                           test
+
+                           * * *
+
+                           test
+                           """;
+            var _ = CreateTemplateWithMarkdownAndReturnBody(markdown);
+        }
+
+        [Test]
+        public void ListAfterNewline()
+        {
+            var markdown = "**Krisenmanagement**\r- Schulung Führungsunterstützung\r- Schulung Krisenstab";
+            var body = CreateTemplateWithMarkdownAndReturnBody(markdown);
+            Assert.That(body.InnerXml, Is.EqualTo("<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:r><w:rPr><w:b /></w:rPr><w:t>Krisenmanagement</w:t></w:r></w:p>" +
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>Schulung Führungsunterstützung</w:t></w:r></w:p>" +
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>Schulung Krisenstab</w:t></w:r></w:p>"));
         }
 
         [Test]
@@ -38,8 +61,7 @@ namespace DocxTemplater.Test
             Assert.That(body.InnerXml, Is.EqualTo("<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>Die generelle Zielsetzung kann wie folgt umschrieben werden:</w:t></w:r></w:p>" +
                                                   "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>Schulung/Training der Führungsunterstützung mit hohem Praxisbezug, auf Basis der Erkenntnisse aus der Krisenstabsübung 2025</w:t></w:r></w:p>" +
                                                   "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:r><w:t>Text</w:t></w:r></w:p><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>Die generelle Zielsetzung kann wie folgt umschrieben werden:</w:t></w:r></w:p>" +
-                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>Schulung/Training der Führungsunterstützung mit hohem Praxisbezug, auf Basis der Erkenntnisse aus der Krisenstabsübung 2025</w:t></w:r></w:p>" +
-                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" />"));
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>Schulung/Training der Führungsunterstützung mit hohem Praxisbezug, auf Basis der Erkenntnisse aus der Krisenstabsübung 2025</w:t></w:r></w:p>"));
         }
 
         [Test]
@@ -119,20 +141,16 @@ namespace DocxTemplater.Test
             string markdown = """
                               * First
                               * Second
-
                               
-                              
-                              * A
-                              * B
+                              - A
+                              - B
                               """;
             var body = CreateTemplateWithMarkdownAndReturnBody(markdown);
-            Assert.That(body.InnerXml, Is.EqualTo("<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>First</w:t></w:r></w:p><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">" +
-                                                  "<w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>Second</w:t></w:r></w:p>" +
-                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" />" +
+            Assert.That(body.InnerXml, Is.EqualTo("<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>First</w:t></w:r></w:p>" +
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>Second</w:t></w:r></w:p>" +
                                                   "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" />" +
                                                   "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>A</w:t></w:r></w:p>" +
-                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>B</w:t></w:r></w:p>" +
-                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" />"));
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>B</w:t></w:r></w:p>"));
         }
 
         [Test]
@@ -185,7 +203,7 @@ namespace DocxTemplater.Test
                                                   "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" />" +
                                                   "<w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>A</w:t></w:r></w:p>" +
                                                   "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" />" +
-                                                  "<w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>B</w:t></w:r></w:p><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" />"));
+                                                  "<w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>B</w:t></w:r></w:p>"));
         }
 
         [Test]
@@ -251,6 +269,15 @@ namespace DocxTemplater.Test
             // {{ds.markdown}:md} --> "_Hello_ **{{ds:Name}}**" --> "Hello John"
             Assert.That(body.InnerText, Is.EqualTo("Line Before Hello JOHN DoeLine After"));
             Assert.That(body.Descendants<Paragraph>().Count(), Is.EqualTo(1));
+        }
+
+        [TestCase("~~Hello~~")]
+        public void XXText(string markdown)
+        {
+            var body = CreateTemplateWithMarkdownAndReturnBody(markdown);
+            var runWithHello = (Run)body.Descendants<Text>().Single(x => x.Text == "Hello").Parent;
+            Assert.That(runWithHello?.RunProperties?.Strike, Is.Not.Null);
+            Assert.That(runWithHello.RunProperties.Italic, Is.Null);
         }
 
         [TestCase("**Hello**")]
@@ -333,7 +360,7 @@ namespace DocxTemplater.Test
         {
             var markdown = "1. First\n2. Second\n3. Third\n 4. Fourth\n 5. Fifth";
             var body = CreateTemplateWithMarkdownAndReturnBody(markdown);
-            Assert.That(body.InnerXml, Is.EqualTo("<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>First</w:t></w:r></w:p><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>Second</w:t></w:r></w:p><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>Third</w:t></w:r></w:p><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>Fourth</w:t></w:r></w:p><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>Fifth</w:t></w:r></w:p><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" />"));
+            Assert.That(body.InnerXml, Is.EqualTo("<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>First</w:t></w:r></w:p><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>Second</w:t></w:r></w:p><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>Third</w:t></w:r></w:p><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>Fourth</w:t></w:r></w:p><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>Fifth</w:t></w:r></w:p>"));
         }
 
         [Test]
@@ -341,7 +368,7 @@ namespace DocxTemplater.Test
         {
             var markdown = "* First\n* Second\n* Third";
             var body = CreateTemplateWithMarkdownAndReturnBody(markdown);
-            Assert.That(body.InnerXml, Is.EqualTo("<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>First</w:t></w:r></w:p><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>Second</w:t></w:r></w:p><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>Third</w:t></w:r></w:p><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" />"));
+            Assert.That(body.InnerXml, Is.EqualTo("<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>First</w:t></w:r></w:p><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>Second</w:t></w:r></w:p><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>Third</w:t></w:r></w:p>"));
         }
 
         [Test]
@@ -358,7 +385,14 @@ namespace DocxTemplater.Test
             sb.AppendLine("* Third");
 
             var body = CreateTemplateWithMarkdownAndReturnBody(sb.ToString());
-            Assert.That(body.InnerXml, Is.EqualTo("<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>First</w:t></w:r></w:p><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>Second</w:t></w:r></w:p><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"1\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>First First</w:t></w:r></w:p><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"1\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>First Second</w:t></w:r></w:p><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"2\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>First Second First</w:t></w:r></w:p><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"2\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>First Second Second</w:t></w:r></w:p><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"1\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>First Third</w:t></w:r></w:p><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>Third</w:t></w:r></w:p><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" />"));
+            Assert.That(body.InnerXml, Is.EqualTo("<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>First</w:t></w:r></w:p>" +
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>Second</w:t></w:r></w:p>" +
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"1\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>First First</w:t></w:r></w:p>" +
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"1\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>First Second</w:t></w:r></w:p>" +
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"2\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>First Second First</w:t></w:r></w:p>" +
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"2\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>First Second Second</w:t></w:r></w:p>" +
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"1\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>First Third</w:t></w:r></w:p>" +
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>Third</w:t></w:r></w:p>"));
         }
 
         [Test]
@@ -374,21 +408,14 @@ namespace DocxTemplater.Test
             sb.AppendLine("   3. First Third");
             sb.AppendLine("3. Third");
             var body = CreateTemplateWithMarkdownAndReturnBody(sb.ToString());
-            Assert.That(body.InnerXml, Is.EqualTo("<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" " +
-                                                  "/><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>First</w:t></w:r></w:p>" +
-                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" />" +
-                                                  "<w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>Second</w:t></w:r></w:p>" +
-                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"1\" />" +
-                                                  "<w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>First First</w:t></w:r></w:p><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">" +
-                                                  "<w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"1\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>First Second</w:t></w:r></w:p>" +
-                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"2\" /><w:numId w:val=\"1\" />" +
-                                                  "</w:numPr></w:pPr><w:r><w:t>First Second First</w:t></w:r></w:p><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><" +
-                                                  "w:numPr><w:ilvl w:val=\"2\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>First Second Second</w:t></w:r>" +
-                                                  "</w:p><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" />" +
-                                                  "<w:numPr><w:ilvl w:val=\"1\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>First Third</w:t></w:r>" +
-                                                  "</w:p><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">" +
-                                                  "<w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /" +
-                                                  "></w:numPr></w:pPr><w:r><w:t>Third</w:t></w:r></w:p><w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" />"));
+            Assert.That(body.InnerXml, Is.EqualTo("<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>First</w:t></w:r></w:p>" +
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>Second</w:t></w:r></w:p>" +
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"1\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>First First</w:t></w:r></w:p>" +
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"1\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>First Second</w:t></w:r></w:p>" +
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"2\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>First Second First</w:t></w:r></w:p>" +
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"2\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>First Second Second</w:t></w:r></w:p>" +
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"1\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>First Third</w:t></w:r></w:p>" +
+                                                  "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>Third</w:t></w:r></w:p>"));
         }
 
         [Test]

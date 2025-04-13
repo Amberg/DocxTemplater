@@ -28,15 +28,18 @@ namespace DocxTemplater.Markdown.Renderer
             listStyleFactory.EnsureLevelDefinitionExists(m_levelWithSameOrdering);
             try
             {
-                if (!renderer.CurrentParagraphWasCreatedByMarkdown)
+                if (!renderer.CurrentParagraphWasCreatedByMarkdown && !renderer.CurrentParagraph.HasOnlyPropertyChildren())
                 {
                     renderer.AddParagraph();
+                    renderer.AddParagraph();
+                }
+                else if (PreviousBlockWasList(listBlock))
+                {
                     renderer.AddParagraph();
                 }
 
                 foreach (var item in listBlock)
                 {
-
                     var numberingProps =
                         new NumberingProperties(
                             new NumberingLevelReference() { Val = m_levelWithSameOrdering },
@@ -61,10 +64,27 @@ namespace DocxTemplater.Markdown.Renderer
                 EndListLevel();
             }
 
-            if (m_level == -1)
+            if (m_level == -1 && !renderer.IsLastInContainer)
             {
                 renderer.AddParagraph();
             }
+        }
+
+        private static bool PreviousBlockWasList(ListBlock listBlock)
+        {
+            if (listBlock.Parent == null)
+            {
+                return false;
+            }
+
+            var index = listBlock.Parent.IndexOf(listBlock);
+            if (index > 0)
+            {
+                var previousBlock = listBlock.Parent[index - 1];
+                return previousBlock is ListBlock;
+            }
+
+            return false;
         }
 
 

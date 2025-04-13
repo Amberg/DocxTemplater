@@ -1,11 +1,12 @@
 ﻿using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Wordprocessing;
 using DocxTemplater.Formatter;
+using DocxTemplater.Markdown.Parser;
 using Markdig;
+using Markdig.Extensions.EmphasisExtras;
 using Markdig.Parsers;
 using System;
 using System.Linq;
-using DocxTemplater.Markdown.Parser;
 
 namespace DocxTemplater.Markdown
 {
@@ -26,6 +27,7 @@ namespace DocxTemplater.Markdown
             var builder = new MarkdownPipelineBuilder();
             builder.Extensions.Add(new CustomPipeTableExtension());
             builder.UseGridTables();
+            builder.UseEmphasisExtras(EmphasisExtraOptions.Strikethrough);
             MarkdownPipeline = builder.Build();
         }
 
@@ -74,9 +76,7 @@ namespace DocxTemplater.Markdown
                 {
                     // markdown treat multiple newlines as a single newline, we insert a space to keep the newlines
                     mdText = mdText.Replace("\r\n", "\r");
-                    mdText = mdText.Replace("\r\r\r\r", "\r\r&nbsp;\r\r\r\r&nbsp;\r\r");
                     var markdownDocument = MarkdownParser.Parse(mdText, MarkdownPipeline);
-
 
                     // split the paragraph at the target
                     var split = target.GetFirstAncestor<Paragraph>().SplitAfterElement(target);
@@ -90,6 +90,11 @@ namespace DocxTemplater.Markdown
 
                     var renderer = new MarkdownToOpenXmlRenderer(containerParagraph, target, templateContext.MainDocumentPart, contextSpecificConfiguration);
                     renderer.Render(markdownDocument);
+
+#if DEBUG
+                    Console.WriteLine(renderer.MarkdownStructureAsString);
+#endif
+
                     try
                     {
                         DoVariableReplacementInParagraphs(renderedMarkdownContainer, templateContext);
