@@ -24,13 +24,7 @@ namespace DocxTemplater.Test
         [Test]
         public void TestRandomString()
         {
-            var markdown = """
-                           test
-
-                           * * *
-
-                           test
-                           """;
+            var markdown = "test\r\rich hbe ttest\r\rtest";
             var _ = CreateTemplateWithMarkdownAndReturnBody(markdown);
         }
 
@@ -42,6 +36,28 @@ namespace DocxTemplater.Test
             Assert.That(body.InnerXml, Is.EqualTo("<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:r><w:rPr><w:b /></w:rPr><w:t>Krisenmanagement</w:t></w:r></w:p>" +
                                                   "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>Schulung Führungsunterstützung</w:t></w:r></w:p>" +
                                                   "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:pPr><w:pStyle w:val=\"ListParagraph\" /><w:numPr><w:ilvl w:val=\"0\" /><w:numId w:val=\"1\" /></w:numPr></w:pPr><w:r><w:t>Schulung Krisenstab</w:t></w:r></w:p>"));
+        }
+
+
+        [Test]
+        public void ListAfterHeading()
+        {
+            string markdown = """
+                              * First
+                              * Second
+                              """;
+            using var fileStream = File.OpenRead("Resources/ListTest.docx");
+            var docTemplate = new DocxTemplate(fileStream);
+            docTemplate.RegisterFormatter(new MarkdownFormatter());
+            docTemplate.BindModel("ds", new Dictionary<string, object>() { { "MyMarkdown", new ValueWithMetadata(markdown, new ValueMetadata("md")) } });
+
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.That(result, Is.Not.Null);
+            result.SaveAsFileAndOpenInWord();
+            result.Position = 0;
+            var document = WordprocessingDocument.Open(result, false);
+            Assert.That(TestHelper.ComputeSha256Hash(document.MainDocumentPart.Document.Body.InnerXml), Is.EqualTo("09ea0bc7feaf0322847cc90a18594dea401adec7f0c7e22f2a9c1b2ec2ef1891"));
         }
 
         [Test]

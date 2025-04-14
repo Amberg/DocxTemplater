@@ -28,7 +28,7 @@ namespace DocxTemplater.Markdown.Renderer
             listStyleFactory.EnsureLevelDefinitionExists(m_levelWithSameOrdering);
             try
             {
-                if (!renderer.CurrentParagraphWasCreatedByMarkdown && !renderer.CurrentParagraph.HasOnlyPropertyChildren())
+                if (!renderer.CurrentParagraphWasCreatedByMarkdown && (renderer.CurrentParagraph.ChildElements.Count == 0 || !renderer.CurrentParagraph.HasOnlyPropertyChildren()))
                 {
                     renderer.AddParagraph();
                     renderer.AddParagraph();
