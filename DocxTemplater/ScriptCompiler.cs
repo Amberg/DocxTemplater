@@ -11,14 +11,17 @@ namespace DocxTemplater
         private readonly IModelLookup m_modelDictionary;
 
         private static readonly Regex RegexWordStartingWithDot = new(@"
-                                                                    (?x)                          # Enable verbose mode - allows comments and whitespace in pattern
-                                                                    (?:                           # Non-capturing group for all possible prefixes:
-                                                                        ^                         # Either start of string
+                                                                    (?x)                         # Enable verbose mode - allows comments and whitespace in pattern
+                                                                    (?:                          # Non-capturing group for all possible prefixes:
+                                                                        ^                        # Either start of string
                                                                         |                        
                                                                         (?<unary>[+\-!])         # Capture unary operators (+, -, !) in 'unary' group
                                                                         |                       
                                                                         (?<=[^.\p{L}\p{N}_])     # Position after any char that's not a dot, letter, number, or underscore
                                                                                                  # (lookbehind - ensures we don't break existing identifiers)
+
+                                                                        (?<!\(.*\))              # Also try to start after any function call with zero to many arguments.
+                                                                                                 # NOTE: While this isn't industrial grade combinatorial parsing, the results seem fine.
                                                                     )
                                                                     (?<dots>\.+)                 # Capture one or more dots in 'dots' group
                                                                     (?<prop>                     # Start 'prop' group for the property name
@@ -164,6 +167,5 @@ namespace DocxTemplater
                 return false;
             }
         }
-
     }
 }
