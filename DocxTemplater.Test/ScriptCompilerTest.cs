@@ -142,7 +142,7 @@
             Assert.That(m_scriptCompiler.CompileScript("a.b.c.Trim().EndsWith('there')")(), Is.True);
             Assert.That(m_scriptCompiler.CompileScript("a.b.c.Substring(2, 4).ToUpper().EndsWith(\"THE\")")(), Is.True);
 
-            // Also check dot notation with multiple chained string operations.
+            // Also check scope access / dot notation with multiple chained string operations.
             m_modelDictionary.OpenScope().AddVariable("a", a);
             Assert.That(m_scriptCompiler.CompileScript(".b.c.Substring(2).EndsWith('there')")(), Is.True);
             Assert.That(m_scriptCompiler.CompileScript("!.b.c.Substring(0, 2).EndsWith('hello')")(), Is.True);

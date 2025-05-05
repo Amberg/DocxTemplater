@@ -544,6 +544,33 @@ namespace DocxTemplater.Test
         }
 
         [Test]
+        public void ScopeAccessWithPropertyAndChainedStringOperationsInCondition()
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(
+                new Paragraph(new Run(new Text("{{#ds.Items}}"))),
+                new Paragraph(new Run(new Text("{{.Value}}{?{.Value.ToUpper().EndsWith(\"LLO\")}} World!{{/}}"))),
+                new Paragraph(new Run(new Text("{{/ds.Items}}")))
+            ));
+            wpDocument.Save();
+            memStream.Position = 0;
+            var docTemplate = new DocxTemplate(memStream);
+            docTemplate.BindModel("ds", new { Items = new[] { new { Value = "Hello" } } });
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.That(result, Is.Not.Null);
+            result.Position = 0;
+            result.SaveAsFileAndOpenInWord();
+            result.Position = 0;
+            // there should only be 4 paragraphs after processing
+            var document = WordprocessingDocument.Open(result, false);
+            var text = document.MainDocumentPart.Document.Body.InnerText;
+            Assert.That(text, Is.EqualTo("Hello World!"));
+        }
+
+        [Test]
         public void ScopeAccessVarInConditionNested()
         {
             using var memStream = new MemoryStream();
@@ -685,14 +712,16 @@ namespace DocxTemplater.Test
         }
 
         [Test]
-        public void ConditionWithStringOperators()
+        public void ConditionWithStringOperations()
         {
             using var memStream = new MemoryStream();
             using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
             MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
             mainPart.Document = new Document(new Body(
                 new Paragraph(new Run(new Text("{?{ ds.Test.Contains(\"here\") }} 1 {{/}}"))),
-                new Paragraph(new Run(new Text("{?{ ds.Test.StartsWith('String') }} 2 {{/}}")))
+                new Paragraph(new Run(new Text("{?{ ds.Test.StartsWith('String') }} 2 {{/}}"))),
+                // Also make sure that multiple chained string operations are processed correctly.
+                new Paragraph(new Run(new Text("{?{ ds.Test.ToUpper().EndsWith('ERE') }} 3 {{/}}")))
             ));
             wpDocument.Save();
             memStream.Position = 0;
@@ -707,7 +736,7 @@ namespace DocxTemplater.Test
             // check result text
             var document = WordprocessingDocument.Open(result, false);
             var body = document.MainDocumentPart.Document.Body;
-            Assert.That(body.InnerText, Is.EqualTo(" 1  2 "));
+            Assert.That(body.InnerText, Is.EqualTo(" 1  2  3 "));
         }
 
         [Test]
