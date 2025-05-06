@@ -38,7 +38,7 @@ namespace DocxTemplater.Test
             var body = document.MainDocumentPart.Document.Body;
             var table = body.Descendants<Table>().First();
             var rows = table.Descendants<TableRow>().ToList();
-            Assert.That(rows.Count, Is.EqualTo(5));
+            Assert.That(rows, Has.Count.EqualTo(5));
             Assert.That(rows[0].InnerText, Is.EqualTo("Header1Header2Header3"));
             Assert.That(rows[2].InnerText, Is.EqualTo("Value1Value2Value3"));
             Assert.That(rows[3].InnerText, Is.EqualTo("Value4Value5Value6"));
@@ -137,13 +137,12 @@ namespace DocxTemplater.Test
             var body = document.MainDocumentPart.Document.Body;
             var table = body.Descendants<Table>().First();
             var rows = table.Descendants<TableRow>().ToList();
-            Assert.That(rows.Count, Is.EqualTo(5));
+            Assert.That(rows, Has.Count.EqualTo(5));
             Assert.That(rows[0].InnerText, Is.EqualTo("HEADER1HEADER2HEADER3"));
             Assert.That(rows[2].InnerText, Is.EqualTo("20.00  11/12/200730.00  9/12/200740.00  11/14/2001"));
             Assert.That(rows[3].InnerText, Is.EqualTo("50.00  11/12/200760.00  9/12/200770.00  11/9/2002"));
             Assert.That(rows[4].InnerText, Is.EqualTo("80.00  11/12/200790.00  9/12/2007100.00  11/12/2003"));
         }
-
 
         [Test]
         public void NoMatchesInDocument()
@@ -309,7 +308,7 @@ namespace DocxTemplater.Test
             var document = WordprocessingDocument.Open(result, false);
             var body = document.MainDocumentPart.Document.Body;
             var altChunks = body.Descendants<AltChunk>().ToList();
-            Assert.That(altChunks.Count, Is.EqualTo(2));
+            Assert.That(altChunks, Has.Count.EqualTo(2));
         }
 
 
@@ -564,7 +563,7 @@ namespace DocxTemplater.Test
             result.Position = 0;
             result.SaveAsFileAndOpenInWord();
             result.Position = 0;
-            // there should only be 4 paragraphs after processing
+            // Check result text.
             var document = WordprocessingDocument.Open(result, false);
             var text = document.MainDocumentPart.Document.Body.InnerText;
             Assert.That(text, Is.EqualTo("Hello World!"));
@@ -646,7 +645,6 @@ namespace DocxTemplater.Test
             Assert.That(body.InnerText, Is.EqualTo("Item1,Item2,Item3"));
         }
 
-
         [Test]
         public void ConditionsWithAndWithoutPrefix()
         {
@@ -679,7 +677,6 @@ namespace DocxTemplater.Test
             var body = document.MainDocumentPart.Document.Body;
             Assert.That(body.InnerText, Is.EqualTo("Test1Test2Test3Test4Test5"));
         }
-
 
         [Test]
         public void ConditionWithLogicalOperators()
@@ -717,10 +714,10 @@ namespace DocxTemplater.Test
             using var memStream = new MemoryStream();
             using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
             MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            // Assure that single string operations and multiple chained string operations process correctly.
             mainPart.Document = new Document(new Body(
                 new Paragraph(new Run(new Text("{?{ ds.Test.Contains(\"here\") }} 1 {{/}}"))),
                 new Paragraph(new Run(new Text("{?{ ds.Test.StartsWith('String') }} 2 {{/}}"))),
-                // Also make sure that multiple chained string operations are processed correctly.
                 new Paragraph(new Run(new Text("{?{ ds.Test.ToUpper().EndsWith('ERE') }} 3 {{/}}")))
             ));
             wpDocument.Save();
@@ -846,9 +843,7 @@ namespace DocxTemplater.Test
             yield return new TestCaseData(":F(c)", new CultureInfo("en-us"), 50000.45).Returns("$50,000.45");
             yield return new TestCaseData(":F(n)", new CultureInfo("de"), 50000.45).Returns("50.000,450");
             yield return new TestCaseData(":F(c)", new CultureInfo("de-ch"), 50000.45).Returns("CHF 50’000.45");
-
         }
-
 
         [Test]
         public void BindCollection()
@@ -913,8 +908,6 @@ namespace DocxTemplater.Test
                                                    "I'm only here if NumericValue is greater than 0 -  INNERVALUE2B will be replaced X"));
         }
 
-
-
         [Test]
         public void SupTemplateTest()
         {
@@ -969,10 +962,7 @@ namespace DocxTemplater.Test
             var body = document.MainDocumentPart.Document.Body;
             //check values have been replaced
             Assert.That(body.InnerText, Is.EqualTo("Start of DocumentItem1 Test Item1  55Item2 Test Item2  96"));
-
-
         }
-
 
         [Test]
         public void BindCollectionToTable()
@@ -1039,7 +1029,7 @@ namespace DocxTemplater.Test
             var body = document.MainDocumentPart.Document.Body;
             var table = body.Descendants<Table>().First();
             var rows = table.Descendants<TableRow>().ToList();
-            Assert.That(rows.Count, Is.EqualTo(3));
+            Assert.That(rows, Has.Count.EqualTo(3));
             Assert.That(rows[0].InnerText, Is.EqualTo("Header Col 1Header Col 2"));
             Assert.That(rows[1].InnerText, Is.EqualTo("CC_11CC_12"));
             Assert.That(rows[2].InnerText, Is.EqualTo("CC_21CC_22"));
@@ -1103,7 +1093,7 @@ namespace DocxTemplater.Test
             var document = WordprocessingDocument.Open(result, false);
             var body = document.MainDocumentPart.Document.Body;
             var paragraphs = body.Descendants<Paragraph>().ToList();
-            Assert.That(paragraphs.Count, Is.EqualTo(61));
+            Assert.That(paragraphs, Has.Count.EqualTo(61));
             // check some replacements
             Assert.That(body.InnerText.Contains("John Doe"), Is.EqualTo(true));
             Assert.That(body.InnerText.Contains("Main Street 42"), Is.EqualTo(true));
@@ -1272,7 +1262,6 @@ namespace DocxTemplater.Test
             result.SaveAsFileAndOpenInWord();
         }
 
-
         [Test]
         public void TestWithNestedITemplateModel()
         {
@@ -1304,7 +1293,6 @@ namespace DocxTemplater.Test
                                                   "<w:t xml:space=\"preserve\">Value1</w:t>" +
                                                   "<w:t xml:space=\"preserve\"> End</w:t>" +
                                                   "</w:r></w:p>"));
-
         }
 
         [Test]
@@ -1336,7 +1324,6 @@ namespace DocxTemplater.Test
                                                   "<w:t xml:space=\"preserve\" />" +
                                                   "<w:t xml:space=\"preserve\"> End</w:t>" +
                                                   "</w:r></w:p>"));
-
         }
 
         private static DriveStudentOverviewReportingModel CrateBillTemplate2Model()
