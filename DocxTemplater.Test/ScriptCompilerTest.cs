@@ -116,7 +116,6 @@
             m_modelDictionary.Add("d", 4);
             m_modelDictionary.Add("e", 4m); // decimal returns false for IsPrimitive
 
-
             Assert.That(m_scriptCompiler.CompileScript("x.a.b == \"hi\"")());
             Assert.That(m_scriptCompiler.CompileScript("x.a.b == 'by'")(), Is.False);
             Assert.That(m_scriptCompiler.CompileScript("x.a.b.Contains('hi')")());
@@ -130,7 +129,31 @@
             Assert.That(m_scriptCompiler.CompileScript("x.a.myDecimal > 2")()); // decimal returns false for IsPrimitive
             Assert.That(m_scriptCompiler.CompileScript("d % 2 == 0")());
             Assert.That(m_scriptCompiler.CompileScript("e % 2 == 0")());
+        }
 
+        [Test]
+        public void ChainedStringOperations()
+        {
+            // Setup model.
+            var a = new { b = new { c = "hi there" } };
+            m_modelDictionary.Add("a", a);
+
+            // Check parsing and execution of multiple chained string operations.
+            Assert.That(m_scriptCompiler.CompileScript("a.b.c.Trim().EndsWith('there')")(), Is.True);
+            Assert.That(m_scriptCompiler.CompileScript("a.b.c.Substring(2, 4).ToUpper().EndsWith(\"THE\")")(), Is.True);
+
+            // Also check scope access / dot notation with multiple chained string operations.
+            m_modelDictionary.OpenScope().AddVariable("a", a);
+            Assert.That(m_scriptCompiler.CompileScript(".b.c.Substring(2).EndsWith('there')")(), Is.True);
+            Assert.That(m_scriptCompiler.CompileScript("!.b.c.Substring(0, 2).EndsWith('hello')")(), Is.True);
+
+            m_modelDictionary.OpenScope().AddVariable("b", a.b);
+            Assert.That(m_scriptCompiler.CompileScript(".c.Substring(2).EndsWith('there')")(), Is.True);
+            Assert.That(m_scriptCompiler.CompileScript("!.c.Substring(0, 2).EndsWith('hello')")(), Is.True);
+
+            m_modelDictionary.OpenScope().AddVariable("c", a.b.c);
+            Assert.That(m_scriptCompiler.CompileScript(".Substring(2).EndsWith('there')")(), Is.True);
+            Assert.That(m_scriptCompiler.CompileScript("!.Substring(0, 2).EndsWith('hello')")(), Is.True);
         }
     }
 }
