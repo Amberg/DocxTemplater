@@ -64,21 +64,25 @@ The syntax is case insensitive.
 
 ### Quick Reference Examples
 
-| Syntax                              | Description                                                    |
-|-------------------------------------|----------------------------------------------------------------|
-| `{{SomeVar}}`                       | Simple Variable replacement                                    |
-| `{?{someVar > 5}}...{{:}}...{{/}}`  | Conditional blocks                                             |                                         |
-| `{{#Items}}...{{Items.Name}} ... {{/Items}}` | Text block bound to collection of complex items          |
-| `{{#Items}}...{{.Name}} ... {{/Items}}` | Same as above with dot notation - implicit iterator          |
-| `{{#Items}}...{{.}:toUpper} ... {{/Items}}` | A list of string all upper case - dot notation              |
-| `{{#Items}}{{.}}{{:s:}},{{/Items}}` | A list of strings comma separated - dot notation              |
-| `{{SomeString}:ToUpper()}`          | Variable with formatter to upper                               |
-| `{{SomeDate}:Format('MM/dd/yyyy')}` | Date variable with formatting                                  |
-| `{?{!.IsHw && .Name.Contains('Item')}}...{{}}`  | Logical Expression with string operation - Carefull Word Replaces ' with ‘ and " ”  |
-| `{{SomeDate}:F('MM/dd/yyyy')}`      | Date variable with formatting - short syntax                   |
-| `{{SomeBytes}:img()}`               | Image Formatter for image data                                 |
-| `{{SomeHtmlString}:html()}`         | Inserts HTML string into the word document                     |
-| `{{#Items}}{?{Items._Idx % 2 == 0}}{{.}}{{/}}{{/Items}}`         | Renders every second item in a list                 |
+| Syntax                                                   | Description                                                                                     |
+| -------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `{{SomeVar}}`                                            | Simple Variable replacement.                                                                    |
+| `{?{someVar > 5}}...{{:}}...{{/}}`                       | Conditional blocks.                                                                             |
+| `{{#Items}}...{{Items.Name}} ... {{/Items}}`             | Text block bound to collection of complex items.                                                |
+| `{{#Items}}...{{.Name}} ... {{/Items}}`                  | Same as above with dot notation - implicit iterator.                                            |
+| `{{#Items}}...{{.}:toUpper} ... {{/Items}}`              | A list of string all upper case - dot notation.                                                 |
+| `{{#Items}}{{.}}{{:s:}},{{/Items}}`                      | A list of strings comma separated - dot notation.                                               |
+| `{{SomeString}:ToUpper()}`                               | Variable with formatter to upper.                                                               |
+| `{{SomeDate}:Format('MM/dd/yyyy')}`                      | Date variable with formatting.                                                                  |
+| `{?{!.IsHw && .Name.Contains('Item')}}...{{}}`           | Logical Expression with string operation. Careful; Word Replaces `'` with `‘` and `"` with `”`. |
+| `{{SomeDate}:F('MM/dd/yyyy')}`                           | Date variable with formatting - short syntax.                                                   |
+| `{{SomeBytes}:img()}`                                    | Image Formatter for image data.                                                                 |
+| `{{SomeHtmlString}:html()}`                              | Inserts HTML string into the word document.                                                     |
+| `{{#Items}}{?{Items._Idx % 2 == 0}}{{.}}{{/}}{{/Items}}` | Renders every second item in a list.                                                            |
+| `{{:ignore}} ... {{/:ignore}}`                           | Ignore DocxTemplater syntax, which is helpful around a Table of Contents.                       |
+| `{{:break}}`                                             | Insert a line break after this keyword block.                                                   |
+| `{{:PageBreak}}`                                         | Start a new page after this keyword block.                                                      |
+| `{{:SectionBreak}}`                                      | Start a new "Section Break" on the next page after this keyword block.                          |
 ---
 ### Collections
 
