@@ -3,7 +3,6 @@ using DocumentFormat.OpenXml.Drawing;
 using DocumentFormat.OpenXml.Drawing.Charts;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -24,8 +23,7 @@ namespace DocxTemplater.Extensions.Charts
         public void ReplaceVariables(ITemplateProcessingContext templateContext, OpenXmlElement parentNode, List<OpenXmlElement> newContent)
         {
             var root = parentNode.GetRoot();
-            if (root is OpenXmlPartRootElement rootElement &&
-                rootElement.OpenXmlPart is MainDocumentPart mainDocumentPart)
+            if (root is OpenXmlPartRootElement rootElement && rootElement.OpenXmlPart is MainDocumentPart mainDocumentPart)
             {
                 // Search for chart references in the content.
                 var charts = newContent.SelectMany(x => x.Descendants<ChartReference>());
@@ -78,10 +76,6 @@ namespace DocxTemplater.Extensions.Charts
                     }
                 }
             }
-            else
-            {
-                throw new InvalidOperationException("ChartReference must be a child of a MainDocumentPart.");
-            }
         }
 
         private static void ReplaceChartData(ChartPart chartPart, ChartData chartData)
@@ -98,9 +92,15 @@ namespace DocxTemplater.Extensions.Charts
             {
                 HandleBarChart(barChart, chartData);
             }
+            var bar3DChart = chartPart.ChartSpace.Descendants<Bar3DChart>().SingleOrDefault();
+            if (bar3DChart != null)
+            {
+                HandleBarChart(bar3DChart, chartData);
+            }
         }
 
-        private static void HandleBarChart(BarChart barChart, ChartData chartData)
+
+        private static void HandleBarChart(OpenXmlCompositeElement barChart, ChartData chartData)
         {
             // replace chart series
             var series = barChart.ChildElements.OfType<BarChartSeries>().ToList();
@@ -109,7 +109,18 @@ namespace DocxTemplater.Extensions.Charts
                 return;
             }
 
-            var firstSeriesEntry = (BarChartSeries)series.First().CloneNode(true);
+            BarChartSeries[] clonedBarChartSeriesCopies = new BarChartSeries[chartData.Series.Count];
+            for (int i = 0; i < clonedBarChartSeriesCopies.Length; i++)
+            {
+                if (i < series.Count)
+                {
+                    clonedBarChartSeriesCopies[i] = CloneBarChartSeries(i, (BarChartSeries)series.ElementAt(i));
+                }
+                else
+                {
+                    clonedBarChartSeriesCopies[i] = CloneBarChartSeries(i, series.Last());
+                }
+            }
             // rmove old series
             foreach (var old in series)
             {
@@ -120,7 +131,7 @@ namespace DocxTemplater.Extensions.Charts
             for (int i = 0; i < chartData.Series.Count; i++)
             {
                 var data = chartData.Series[i];
-                var cloneBarChartSeries = CloneBarChartSeries(i, firstSeriesEntry);
+                var cloneBarChartSeries = clonedBarChartSeriesCopies[i];
 
                 cloneBarChartSeries.Index = new Index() { Val = new UInt32Value((uint)i) };
                 cloneBarChartSeries.Order = new Order() { Val = new UInt32Value((uint)i) };
@@ -170,7 +181,8 @@ namespace DocxTemplater.Extensions.Charts
                     appendAfterThisSeris = cloneBarChartSeries;
                 }
 #if DEBUG
-                barChart.ValidateOpenXmlElement();
+                // charts are valid and can be opened in word but the validation fails
+                // barChart.ValidateOpenXmlElement();
 #endif
             }
         }

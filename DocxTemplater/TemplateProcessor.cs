@@ -45,6 +45,10 @@ namespace DocxTemplater
             Console.WriteLine(rootElement.ToPrettyPrintXml());
 #endif
             Context.VariableReplacer.ReplaceVariables(rootElement, Context);
+            foreach (var extensions in Context.Extensions)
+            {
+                extensions.ReplaceVariables(Context, rootElement, [.. rootElement]);
+            }
             foreach (var loop in loops)
             {
                 loop.Expand(Context.ModelLookup, rootElement);
