@@ -12,7 +12,8 @@ namespace DocxTemplater.Test
         public void RenderTemplateWithBarChart_ModelMissing_HighlightError()
         {
             using var fileStream = File.OpenRead("Resources/BarChart.docx");
-            var docTemplate = new DocxTemplate(fileStream, new ProcessSettings() { BindingErrorHandling = BindingErrorHandling.HighlightErrorsInDocument });
+            var docTemplate = new DocxTemplate(fileStream,
+                new ProcessSettings() { BindingErrorHandling = BindingErrorHandling.HighlightErrorsInDocument });
             var charts = new[]
             {
                 new
@@ -140,6 +141,67 @@ namespace DocxTemplater.Test
             var document = WordprocessingDocument.Open(result, false);
             var body = document.MainDocumentPart.Document.Body;
             Assert.That(body.Descendants<ChartReference>().Count(), Is.EqualTo(2));
+        }
+
+
+        [Test]
+        public void RenderDifferentChartType()
+        {
+            using var fileStream = File.OpenRead("Resources/ChartTypesTest.docx");
+            var docTemplate = new DocxTemplate(fileStream,
+                new ProcessSettings() { BindingErrorHandling = BindingErrorHandling.ThrowException });
+            var model = new
+            {
+                Chart = new ChartData()
+                {
+                    ChartTitle = "Foo 1",
+                    Categories = ["2022", "2023", "2024", "2025"],
+                    Series =
+                    [
+                        new()
+                        {
+                            Name = "serie 1",
+                            Values = [22.0]
+                        },
+                        new()
+                        {
+                            Name = "serie 2",
+                            Values = [55.0]
+                        },
+                        new()
+                        {
+                            Name = "serie 3",
+                            Values = [66.0]
+                        },
+                        new()
+                        {
+                            Name = "serie 4",
+                            Values = [44]
+                        },
+                        new()
+                        {
+                            Name = "serie 5",
+                            Values = [12]
+                        },
+                        new()
+                        {
+                            Name = "serie 6",
+                            Values = [90]
+                        }
+                    ]
+                }
+            };
+
+            docTemplate.BindModel("ds", model);
+            var result = docTemplate.Process();
+
+            result.SaveAsFileAndOpenInWord();
+            result.Position = 0;
+
+
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            Assert.That(body.Descendants<ChartReference>().Count(), Is.EqualTo(4));
         }
     }
 }
