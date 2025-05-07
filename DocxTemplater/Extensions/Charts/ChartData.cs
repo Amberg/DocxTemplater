@@ -14,7 +14,7 @@ namespace DocxTemplater.Extensions.Charts
         /// <summary>
         /// X - Labels for the series.
         /// </summary>
-        public IEnumerable<string> Categories { get; set; }
+        public IEnumerable<string> Categories { get; set; } = [];
     }
 
 }
