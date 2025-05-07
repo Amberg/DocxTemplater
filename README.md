@@ -12,6 +12,7 @@ _DocxTemplater is a library to generate docx documents from a docx template. The
 - Markdown Support - Converts Markdown to OpenXML
 - HTML Snippets - Replace placeholder with HTML Content
 - Images - Replace placeholder with Image data
+- Chart Data Binding - Bind a chart to a data source
 
 ## Quickstart
 
