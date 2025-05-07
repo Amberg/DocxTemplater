@@ -2,19 +2,25 @@
 using DocumentFormat.OpenXml.Drawing;
 using DocumentFormat.OpenXml.Drawing.Charts;
 using DocumentFormat.OpenXml.Packaging;
-using DocumentFormat.OpenXml.Wordprocessing;
+using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using Drawing = DocumentFormat.OpenXml.Wordprocessing.Drawing;
+using ExternalData = DocumentFormat.OpenXml.Drawing.Charts.ExternalData;
+using Formula = DocumentFormat.OpenXml.Drawing.Charts.Formula;
 using Index = DocumentFormat.OpenXml.Drawing.Charts.Index;
+using NumericValue = DocumentFormat.OpenXml.Drawing.Charts.NumericValue;
 using Path = System.IO.Path;
+using Values = DocumentFormat.OpenXml.Drawing.Charts.Values;
 
 namespace DocxTemplater.Extensions.Charts
 {
     public class ChartProcessor : ITemplateProcessorExtension
     {
         private readonly Dictionary<string, ChartReference> m_insertedChartReferences = new();
-
+        private const string spreadsheetContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
         public void PreProcess(OpenXmlCompositeElement content)
         {
             m_insertedChartReferences.Clear();
@@ -31,6 +37,7 @@ namespace DocxTemplater.Extensions.Charts
                 {
                     if (!m_insertedChartReferences.TryAdd(chartReference.Id, chartReference))
                     {
+                        // if this chart already used - clone it
                         CloneChart(chartReference, mainDocumentPart);
                     }
 
@@ -50,10 +57,30 @@ namespace DocxTemplater.Extensions.Charts
                             {
                                 try
                                 {
+
                                     var model = templateContext.ModelLookup.GetValue(found.Variable);
                                     if (model is ChartData chartData)
                                     {
-                                        ReplaceChartData(chartPart, chartData);
+                                        chartData.Series ??= [new ChartSeries() { Name = "-", Values = [] }]; // no data fallback
+                                        chartData.Categories ??= []; // no data fallback
+
+                                        ReplaceChartTitle(chartPart, chartData);
+
+                                        var externalData = chartPart.ChartSpace.GetFirstChild<ExternalData>();
+                                        if (externalData?.Id != null) //  add check it is spead- sheet
+                                        {
+                                            var part = chartPart.GetPartById(externalData.Id);
+                                            if (part is EmbeddedPackagePart embeddedPart && embeddedPart.ContentType.Equals(spreadsheetContentType, StringComparison.OrdinalIgnoreCase))
+                                            {
+                                                string sheetName = SpreadSheetHelper.ReplaceDataInSpreadSheet(embeddedPart, chartData);
+                                                PopulateSeriesWithReferences(chartPart, chartData, sheetName);
+                                                continue;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            HandleBarChart(GetBarChartChild(chartPart.ChartSpace), chartData);
+                                        }
                                     }
                                 }
                                 catch (OpenXmlTemplateException e)
@@ -78,7 +105,80 @@ namespace DocxTemplater.Extensions.Charts
             }
         }
 
-        private static void ReplaceChartData(ChartPart chartPart, ChartData chartData)
+        private static OpenXmlCompositeElement GetBarChartChild(OpenXmlCompositeElement root)
+        {
+            if (root == null)
+            {
+                return null;
+            }
+            return (OpenXmlCompositeElement)root.Descendants<BarChart>().SingleOrDefault() ?? root.Descendants<Bar3DChart>().SingleOrDefault();
+        }
+
+        private static void PopulateSeriesWithReferences(ChartPart chartPart, ChartData chartData, string sheetName)
+        {
+            var barChart = GetBarChartChild(chartPart.ChartSpace.GetFirstChild<DocumentFormat.OpenXml.Drawing.Charts.Chart>()?.PlotArea);
+            if (barChart == null)
+            {
+                return;
+            }
+            var clonedBarChartSeriesCopies = CloneBarChartSeriesAndRemoveOld(barChart, chartData);
+            for (uint i = 0; i < chartData.Series.Count; i++)
+            {
+
+                var series = clonedBarChartSeriesCopies[i];
+                var data = chartData.Series[(int)i];
+                string col = SpreadSheetHelper.GetColumnName((int)i + 1);  // 1 → A, 2 → B, 3 → C ...
+
+                // index and order
+                series.Index = new Index { Val = i };
+                series.Order = new Order { Val = i };
+
+                // serie name cell ${col}1
+                series.SeriesText = new SeriesText(
+                    new StringReference(
+                        new Formula($"{sheetName}!${col}$1"),
+                        new StringCache(
+                            new PointCount { Val = 1 },
+                            new StringPoint { Index = 0, NumericValue = new NumericValue(data.Name) }
+                        )
+                    )
+                );
+
+                // categories from A2:A{n+1}
+                var catCount = (uint)chartData.Categories.Count();
+                var strCache = new StringCache();
+                strCache.Append(new PointCount { Val = catCount });
+                for (uint idx = 0; idx < catCount; idx++)
+                {
+                    strCache.Append(new StringPoint { Index = idx, NumericValue = new NumericValue(chartData.Categories.ElementAt((int)idx)) });
+                }
+
+                var axisData = new CategoryAxisData(new StringReference(new Formula($"{sheetName}!$A$2:$A${catCount + 1}"), strCache));
+                series.Append(axisData);
+
+                // values aus {col}2:{col}{n+1}
+                var valCount = (uint)data.Values.Count();
+                var numCache = new NumberingCache();
+                numCache.Append(new FormatCode("General"));
+                numCache.Append(new PointCount { Val = valCount });
+                for (uint idx = 0; idx < valCount; idx++)
+                {
+                    numCache.Append(new NumericPoint { Index = idx, NumericValue = new NumericValue(data.Values.ElementAt((int)idx).ToString("F1", CultureInfo.InvariantCulture)) });
+                }
+
+                series.Append(new Values(
+                    new NumberReference(
+                        new Formula($"{sheetName}!${col}$2:${col}${valCount + 1}"),
+                        numCache
+                    )
+                ));
+
+                barChart.Append(series);
+
+            }
+        }
+
+        private static void ReplaceChartTitle(ChartPart chartPart, ChartData chartData)
         {
             var chartTitle = chartPart.ChartSpace.Descendants<Title>().FirstOrDefault();
             var title = chartTitle.Descendants<DocumentFormat.OpenXml.Drawing.Text>().FirstOrDefault();
@@ -86,29 +186,13 @@ namespace DocxTemplater.Extensions.Charts
             {
                 title.Text = chartData.ChartTitle;
             }
-
-            var barChart = chartPart.ChartSpace.Descendants<BarChart>().SingleOrDefault();
-            if (barChart != null)
-            {
-                HandleBarChart(barChart, chartData);
-            }
-            var bar3DChart = chartPart.ChartSpace.Descendants<Bar3DChart>().SingleOrDefault();
-            if (bar3DChart != null)
-            {
-                HandleBarChart(bar3DChart, chartData);
-            }
         }
 
 
-        private static void HandleBarChart(OpenXmlCompositeElement barChart, ChartData chartData)
+        private static BarChartSeries[] CloneBarChartSeriesAndRemoveOld(OpenXmlCompositeElement barChart, ChartData chartData)
         {
             // replace chart series
             var series = barChart.ChildElements.OfType<BarChartSeries>().ToList();
-            if (series.Count == 0)
-            {
-                return;
-            }
-
             BarChartSeries[] clonedBarChartSeriesCopies = new BarChartSeries[chartData.Series.Count];
             for (int i = 0; i < clonedBarChartSeriesCopies.Length; i++)
             {
@@ -126,7 +210,12 @@ namespace DocxTemplater.Extensions.Charts
             {
                 old.Remove();
             }
+            return clonedBarChartSeriesCopies;
+        }
 
+        private static void HandleBarChart(OpenXmlCompositeElement barChart, ChartData chartData)
+        {
+            var clonedBarChartSeriesCopies = CloneBarChartSeriesAndRemoveOld(barChart, chartData);
             BarChartSeries appendAfterThisSeris = null;
             for (int i = 0; i < chartData.Series.Count; i++)
             {
@@ -215,6 +304,10 @@ namespace DocxTemplater.Extensions.Charts
 
         private static string GetCategoryName(ChartData data, int index)
         {
+            if (data.Categories == null || !data.Categories.Any())
+            {
+                return string.Empty;
+            }
             if (data.Categories.Count() > index)
             {
                 return data.Categories.ElementAt(index);

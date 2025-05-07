@@ -81,7 +81,7 @@ namespace DocxTemplater.Test
             {
                 new
                 {
-                    Text = "Test 1",
+                    Text = "One serie",
                     MyChart = new ChartData()
                     {
                         ChartTitle = "Foo 1",
@@ -99,7 +99,7 @@ namespace DocxTemplater.Test
                 },
                 new
                 {
-                    Text = "Test 2",
+                    Text = "Not all cats in ervery S",
                     MyChart = new ChartData()
                     {
                         ChartTitle = "Foo 2",
@@ -108,19 +108,48 @@ namespace DocxTemplater.Test
                         [
                             new()
                             {
-                                Name = "serie 2",
+                                Name = "serie 1",
                                 Values = [2200.0, 5500.0, 4600.25, 9560.56],
                             },
 
                             new()
                             {
-                                Name = "serie 3",
+                                Name = "serie 2",
                                 Values = [1200.0, 2500.0, 8600.25, 4560.56],
                             },
 
                             new()
                             {
-                                Name = "serie 4",
+                                Name = "serie 3",
+                                Values = [1000.0, 2000.0, 8000.25],
+                            }
+                        ]
+                    }
+                },
+                new
+                {
+                    Text = "Move values than categories",
+                    MyChart = new ChartData()
+                    {
+                        ChartTitle = "Foo 2",
+                        Categories = ["Cat1", "Cat2", "Cat3"],
+                        Series =
+                        [
+                            new()
+                            {
+                                Name = "serie 1",
+                                Values = [2200.0, 5500.0, 4600.25, 9560.56],
+                            },
+
+                            new()
+                            {
+                                Name = "serie 2",
+                                Values = [1200.0, 2500.0, 8600.25, 4560.56],
+                            },
+
+                            new()
+                            {
+                                Name = "serie 3",
                                 Values = [1000.0, 2000.0, 8000.25],
                             }
                         ]
@@ -140,7 +169,7 @@ namespace DocxTemplater.Test
 
             var document = WordprocessingDocument.Open(result, false);
             var body = document.MainDocumentPart.Document.Body;
-            Assert.That(body.Descendants<ChartReference>().Count(), Is.EqualTo(2));
+            Assert.That(body.Descendants<ChartReference>().Count(), Is.EqualTo(3));
         }
 
 
@@ -148,8 +177,7 @@ namespace DocxTemplater.Test
         public void RenderDifferentChartType()
         {
             using var fileStream = File.OpenRead("Resources/ChartTypesTest.docx");
-            var docTemplate = new DocxTemplate(fileStream,
-                new ProcessSettings() { BindingErrorHandling = BindingErrorHandling.ThrowException });
+            var docTemplate = new DocxTemplate(fileStream, new ProcessSettings() { BindingErrorHandling = BindingErrorHandling.ThrowException });
             var model = new
             {
                 Chart = new ChartData()
@@ -188,6 +216,68 @@ namespace DocxTemplater.Test
                             Name = "serie 6",
                             Values = [90]
                         }
+                    ]
+                }
+            };
+
+            docTemplate.BindModel("ds", model);
+            var result = docTemplate.Process();
+
+            result.SaveAsFileAndOpenInWord();
+            result.Position = 0;
+
+
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            Assert.That(body.Descendants<ChartReference>().Count(), Is.EqualTo(4));
+        }
+
+
+
+        [Test]
+        public void RenderChartWithoutSeries()
+        {
+            using var fileStream = File.OpenRead("Resources/ChartTypesTest.docx");
+            var docTemplate = new DocxTemplate(fileStream, new ProcessSettings() { BindingErrorHandling = BindingErrorHandling.ThrowException });
+            var model = new
+            {
+                Chart = new ChartData()
+                {
+                    ChartTitle = "Foo 1",
+                    Categories = ["2022", "2023", "2024", "2025"],
+                    Series = null,
+                }
+            };
+
+            docTemplate.BindModel("ds", model);
+            var result = docTemplate.Process();
+
+            result.SaveAsFileAndOpenInWord();
+            result.Position = 0;
+
+
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            Assert.That(body.Descendants<ChartReference>().Count(), Is.EqualTo(4));
+        }
+
+        [Test]
+        public void RenderChartWithoutCategories()
+        {
+            using var fileStream = File.OpenRead("Resources/ChartTypesTest.docx");
+            var docTemplate = new DocxTemplate(fileStream, new ProcessSettings() { BindingErrorHandling = BindingErrorHandling.ThrowException });
+            var model = new
+            {
+                Chart = new ChartData()
+                {
+                    ChartTitle = "Foo 1",
+                    Categories = null,
+                    Series =
+                    [
+                        new(){
+                            Name = "serie",
+                            Values = [1, 2, 3]
+                        },
                     ]
                 }
             };
