@@ -133,6 +133,38 @@ To access the outer item in a nested collection, use the dot notation `{{..}}` T
 To access the index of the current item, use the special variable `Items._Idx` In this example, the collection is called "Items".
 
 ---
+### Chart Data binding
+
+Charts can be fully styled within the template, and a data source can then be bound to each chart.
+To bind a chart to a data source, the chart’s title in the template must match the property name in the model. `MyChart`
+![alt text](docs/chartTemplate.png)
+
+To bind the chart correctly, the corresponding model property must be of th `ChartData` type.
+
+*Currently, only bar charts are supported.*
+
+```
+            using var fileStream = File.OpenRead("MyTemplate.docx");
+            var docTemplate = new DocxTemplate(fileStream);
+            var model = new
+            {
+                MyChart = new ChartData()
+                {
+                    ChartTitle = "Foo 2",
+                    Categories = ["Cat1", "Cat2", "Cat3", "Cat4", "Cat5"],
+                    Series =
+                    [
+                        new() {Name = "serie 1", Values = [2200.0, 5500.0, 4600.25, 9560.56],},
+                        new() {Name = "serie 2", Values = [1200.0, 2500.0, 8600.25, 4560.56],},
+                    ]
+                }
+            };
+
+            docTemplate.BindModel("ds", model);
+            var resultStream = docTemplate.Process();
+```
+
+---
 ### Separator
 
 To render a separator between the items in the collection, use the separator syntax:
