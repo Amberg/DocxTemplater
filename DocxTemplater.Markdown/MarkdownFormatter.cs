@@ -1,12 +1,13 @@
 ﻿using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Wordprocessing;
 using DocxTemplater.Formatter;
-using DocxTemplater.Markdown.Parser;
 using Markdig;
 using Markdig.Extensions.EmphasisExtras;
 using Markdig.Parsers;
 using System;
 using System.Linq;
+using Markdig.Extensions.Tables;
+using Table = DocumentFormat.OpenXml.Wordprocessing.Table;
 
 namespace DocxTemplater.Markdown
 {
@@ -23,11 +24,10 @@ namespace DocxTemplater.Markdown
 
         static MarkdownFormatter()
         {
-            // s_mMarkdownPipeline = new MarkdownPipelineBuilder().UsePipeTables().UseGridTables().Build();
             var builder = new MarkdownPipelineBuilder();
-            builder.Extensions.Add(new CustomPipeTableExtension());
-            builder.UseGridTables();
-            builder.UseEmphasisExtras(EmphasisExtraOptions.Strikethrough);
+            builder.UseGridTables()
+                .UsePipeTables(new PipeTableOptions() { InferColumnWidthsFromSeparator = true })
+                .UseEmphasisExtras(EmphasisExtraOptions.Strikethrough);
             MarkdownPipeline = builder.Build();
         }
 
