@@ -43,6 +43,32 @@ namespace DocxTemplater
             return part.Styles?.Elements<Style>().FirstOrDefault(x => x.StyleId == name);
         }
 
+        public static IEnumerable<OpenXmlElement> ElementsSameLevelAfterInDocument(this OpenXmlElement element)
+        {
+            while (element != null)
+            {
+                var next = element.NextSibling() ?? element.Parent?.NextSibling()?.FirstChild;
+                element = next;
+                if (element != null)
+                {
+                    yield return element;
+                }
+            }
+        }
+
+        public static IEnumerable<OpenXmlElement> ElementsSameLevelBeforeInDocument(this OpenXmlElement element)
+        {
+            while (element != null)
+            {
+                var next = element.PreviousSibling() ?? element.Parent?.PreviousSibling()?.LastChild;
+                element = next;
+                if (element != null)
+                {
+                    yield return element;
+                }
+            }
+        }
+
 
         /// <summary>
         /// Traverses the tree upwards and returns the first element of the given type.

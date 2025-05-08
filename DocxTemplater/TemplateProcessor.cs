@@ -34,6 +34,8 @@ namespace DocxTemplater
 
             var matches = DocxTemplate.IsolateAndMergeTextTemplateMarkers(rootElement);
 
+            RemoveLineBreaksAroundSyntaxPatterns(matches);
+
 #if DEBUG
             Console.WriteLine("----------- Isolate Texts --------");
             Console.WriteLine(rootElement.ToPrettyPrintXml());
@@ -82,6 +84,39 @@ namespace DocxTemplater
             foreach (var extension in Context.Extensions)
             {
                 extension.PreProcess(content);
+            }
+        }
+
+        private void RemoveLineBreaksAroundSyntaxPatterns(IReadOnlyCollection<(PatternMatch, Text)> matches)
+        {
+            if (!Context.ProcessSettings.IgnoreLineBreaksAroundTags)
+            {
+                return;
+            }
+            static bool RemoveBreakAndCheckForText(OpenXmlElement openXmlElement)
+            {
+                if (openXmlElement is Break)
+                {
+                    openXmlElement.Remove();
+                }
+                return openXmlElement is Text;
+            }
+            foreach (var (_, text) in matches)
+            {
+                foreach (var next in text.ElementsSameLevelAfterInDocument())
+                {
+                    if (RemoveBreakAndCheckForText(next))
+                    {
+                        break;
+                    }
+                }
+                foreach (var next in text.ElementsSameLevelBeforeInDocument())
+                {
+                    if (RemoveBreakAndCheckForText(next))
+                    {
+                        break;
+                    }
+                }
             }
         }
 

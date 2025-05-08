@@ -138,6 +138,14 @@ To access the outer item in a nested collection, use the dot notation `{{..}}` T
 To access the index of the current item, use the special variable `Items._Idx` In this example, the collection is called "Items".
 
 ---
+### Separator
+
+To render a separator between the items in the collection, use the separator syntax:
+```
+{{#Items}} This text {{.Name}} is rendered for each element in the items collection {{:s:}} This is rendered between each element {{/Items}}
+```
+
+---
 ### Chart Data binding
 
 Charts can be fully styled within the template, and a data source can then be bound to each chart.
@@ -169,13 +177,6 @@ To bind the chart correctly, the corresponding model property must be of th `Cha
             var resultStream = docTemplate.Process();
 ```
 
----
-### Separator
-
-To render a separator between the items in the collection, use the separator syntax:
-```
-{{#Items}} This text {{.Name}} is rendered for each element in the items collection {{:s:}} This is rendered between each element {{/Items}}
-```
 ---
 ### Conditional Blocks
 
@@ -291,8 +292,18 @@ In your template, you would have a placeholder like this:
 ```
 {{ds.MarkdownContent:MD}}
 ```
+---
+### Whitespace Trimming Around Directives
 
-
+To improve template readability without affecting the final output, line breaks before and after template directives (e.g., `{{#...}}, {{/}}, {{:}}`) can be automatically removed.
+This behavior can be enabled via the ProcessSettings:
+```csharp
+var docTemplate = new DocxTemplate(memStream, new ProcessSettings()
+{
+    IgnoreLineBreaksAroundTags = true
+});
+var result = docTemplate.Process();
+```
 ---
 ### Error Handling
 
