@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
+using System.Xml.Linq;
 
 
 namespace DocxTemplater.Test
@@ -42,6 +43,16 @@ namespace DocxTemplater.Test
             using var sha256 = SHA256.Create();
             var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(rawData));
             return BitConverter.ToString(bytes).Replace("-", "").ToLowerInvariant();
+        }
+
+        public static void ExpectXmlIsEqual(string actual, string expected)
+        {
+            var expectedParsed = XElement.Parse(expected);
+            var actualParsed = XElement.Parse(actual);
+            if (!XNode.DeepEquals(expectedParsed, actualParsed))
+            {
+                Assert.That(actualParsed.ToString(), Is.EqualTo(expectedParsed.ToString()));
+            }
         }
 
     }
