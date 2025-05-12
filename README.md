@@ -2,17 +2,20 @@
 
 _DocxTemplater is a library to generate docx documents from a docx template. The template can be **bound to multiple datasources** and be edited by non-programmers. It supports placeholder **replacement**, **loops**, and **images**._
 
+[![NuGet](https://img.shields.io/nuget/v/DocxTemplater.svg)](https://www.nuget.org/packages/DocxTemplater/)
+[![MIT](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/Amberg/DocxTemplater/blob/main/LICENSE)
 [![CI-Build](https://github.com/Amberg/DocxTemplater/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Amberg/DocxTemplater/actions/workflows/ci.yml)
+[![Sponsor](https://img.shields.io/github/sponsors/Amberg?logo=GitHub&color=ff69b4)](https://github.com/sponsors/Amberg)
 
 ## Features
 - Variable Replacement
 - Collections - Bind to collections
 - Conditional Blocks
-- Dynamic Tables - Columns are defined by the datasource
-- Markdown Support - Converts Markdown to OpenXML
-- HTML Snippets - Replace placeholder with HTML Content
 - Images - Replace placeholder with Image data
 - Chart Data Binding - Bind a chart to a data source
+- Markdown Support - Converts Markdown to OpenXML
+- HTML Snippets - Replace placeholder with HTML Content
+- Dynamic Tables - Columns are defined by the datasource
 
 ## Quickstart
 
