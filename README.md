@@ -5,7 +5,6 @@ _DocxTemplater is a library to generate docx documents from a docx template. The
 [![NuGet](https://img.shields.io/nuget/v/DocxTemplater.svg)](https://www.nuget.org/packages/DocxTemplater/)
 [![MIT](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/Amberg/DocxTemplater/blob/main/LICENSE)
 [![CI-Build](https://github.com/Amberg/DocxTemplater/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Amberg/DocxTemplater/actions/workflows/ci.yml)
-[![Sponsor](https://img.shields.io/github/sponsors/Amberg?logo=GitHub&color=ff69b4)](https://github.com/sponsors/Amberg)
 
 ## Features
 - Variable Replacement
@@ -327,3 +326,10 @@ var docTemplate = new DocxTemplate(memStream, new ProcessSettings()
 });
 var result = docTemplate.Process();
 ```
+
+## Support This Project
+
+If you find DocxTemplater useful, please consider supporting its development:
+
+[![Sponsor](https://img.shields.io/github/sponsors/Amberg?logo=GitHub&color=ff69b4)](https://github.com/sponsors/Amberg)
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support-%23FFDD00?style=flat&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/amstutz)
