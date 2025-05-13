@@ -2,17 +2,19 @@
 
 _DocxTemplater is a library to generate docx documents from a docx template. The template can be **bound to multiple datasources** and be edited by non-programmers. It supports placeholder **replacement**, **loops**, and **images**._
 
+[![NuGet](https://img.shields.io/nuget/v/DocxTemplater.svg)](https://www.nuget.org/packages/DocxTemplater/)
+[![MIT](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/Amberg/DocxTemplater/blob/main/LICENSE)
 [![CI-Build](https://github.com/Amberg/DocxTemplater/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Amberg/DocxTemplater/actions/workflows/ci.yml)
 
 ## Features
 - Variable Replacement
 - Collections - Bind to collections
 - Conditional Blocks
-- Dynamic Tables - Columns are defined by the datasource
-- Markdown Support - Converts Markdown to OpenXML
-- HTML Snippets - Replace placeholder with HTML Content
 - Images - Replace placeholder with Image data
 - Chart Data Binding - Bind a chart to a data source
+- Markdown Support - Converts Markdown to OpenXML
+- HTML Snippets - Replace placeholder with HTML Content
+- Dynamic Tables - Columns are defined by the datasource
 
 ## Quickstart
 
@@ -138,6 +140,14 @@ To access the outer item in a nested collection, use the dot notation `{{..}}` T
 To access the index of the current item, use the special variable `Items._Idx` In this example, the collection is called "Items".
 
 ---
+### Separator
+
+To render a separator between the items in the collection, use the separator syntax:
+```
+{{#Items}} This text {{.Name}} is rendered for each element in the items collection {{:s:}} This is rendered between each element {{/Items}}
+```
+
+---
 ### Chart Data binding
 
 Charts can be fully styled within the template, and a data source can then be bound to each chart.
@@ -169,13 +179,6 @@ To bind the chart correctly, the corresponding model property must be of th `Cha
             var resultStream = docTemplate.Process();
 ```
 
----
-### Separator
-
-To render a separator between the items in the collection, use the separator syntax:
-```
-{{#Items}} This text {{.Name}} is rendered for each element in the items collection {{:s:}} This is rendered between each element {{/Items}}
-```
 ---
 ### Conditional Blocks
 
@@ -291,8 +294,18 @@ In your template, you would have a placeholder like this:
 ```
 {{ds.MarkdownContent:MD}}
 ```
+---
+### Whitespace Trimming Around Directives
 
-
+To improve template readability without affecting the final output, line breaks before and after template directives (e.g., `{{#...}}, {{/}}, {{:}}`) can be automatically removed.
+This behavior can be enabled via the ProcessSettings:
+```csharp
+var docTemplate = new DocxTemplate(memStream, new ProcessSettings()
+{
+    IgnoreLineBreaksAroundTags = true
+});
+var result = docTemplate.Process();
+```
 ---
 ### Error Handling
 
@@ -313,3 +326,10 @@ var docTemplate = new DocxTemplate(memStream, new ProcessSettings()
 });
 var result = docTemplate.Process();
 ```
+
+## Support This Project
+
+If you find DocxTemplater useful, please consider supporting its development:
+
+[![Sponsor](https://img.shields.io/github/sponsors/Amberg?logo=GitHub&color=ff69b4)](https://github.com/sponsors/Amberg)
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support-%23FFDD00?style=flat&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/amstutz)
