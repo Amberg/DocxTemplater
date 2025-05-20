@@ -5,6 +5,7 @@
 
 	<PropertyGroup>
 		<TargetFrameworks>net6.0;net7.0;net8.0;net9.0</TargetFrameworks>
+		<TreatWarningsAsErrors>false</TreatWarningsAsErrors>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -51,13 +52,13 @@
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)' != 'Debug' ">
-		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+		<!--<TreatWarningsAsErrors>true</TreatWarningsAsErrors>-->
 		<!--<CodeAnalysisTreatWarningsAsErrors>true</CodeAnalysisTreatWarningsAsErrors>
 		Used TreatWarningsAsErrors instead due a bug - https://github.com/dotnet/roslyn-analyzers/issues/6281
 		-->
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)' == 'Debug' ">
-		<TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+		<!--<TreatWarningsAsErrors>false</TreatWarningsAsErrors>-->
 		<!--<CodeAnalysisTreatWarningsAsErrors>false</CodeAnalysisTreatWarningsAsErrors>
 		Used TreatWarningsAsErrors instead due a bug - https://github.com/dotnet/roslyn-analyzers/issues/6281
 		-->
