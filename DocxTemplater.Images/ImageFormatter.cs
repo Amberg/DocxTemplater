@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using A = DocumentFormat.OpenXml.Drawing;
 using DW = DocumentFormat.OpenXml.Drawing.Wordprocessing;
@@ -19,7 +20,7 @@ namespace DocxTemplater.Images
     public class ImageFormatter : IFormatter
     {
         private static readonly Regex ArgumentRegex = new(@"(?<key>[whr]):(?<value>\d+)(?<unit>px|cm|in|pt)?", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
-        private sealed record ImageInfo(int PixelWidth, int PixelHeight, string ImagePartRelationId, int? Orientation);
+        private sealed record ImageInfo(int PixelWidth, int PixelHeight, string ImagePartRelationId, int? Orientation, bool IsSvg = false);
         private readonly Dictionary<byte[], ImageInfo> m_imagePartRelIdCache = new();
         private OpenXmlPartRootElement m_currentRoot;
 
@@ -52,33 +53,67 @@ namespace DocxTemplater.Images
 
                     if (!TryGetImageIdFromCache(imageBytes, openXmlPartRootElement, out var imageInfo))
                     {
-                        using var image = Image.Load(imageBytes);
-                        int? orientation = null;
-                        if (image.Metadata?.ExifProfile?.TryGetValue(ExifTag.Orientation, out var orientationValue) == true)
+                        if (IsSvgImage(imageBytes))
                         {
-                            orientation = orientationValue.Value;
+                            // Handle SVG specifically
+                            string imagePartRelId = null;
+                            
+                            if (openXmlPartRootElement.OpenXmlPart is HeaderPart headerPart)
+                            {
+                                imagePartRelId = CreateSvgPart(headerPart, imageBytes);
+                            }
+                            else if (openXmlPartRootElement.OpenXmlPart is FooterPart footerPart)
+                            {
+                                imagePartRelId = CreateSvgPart(footerPart, imageBytes);
+                            }
+                            else if (openXmlPartRootElement.OpenXmlPart is MainDocumentPart mainDocumentPart)
+                            {
+                                imagePartRelId = CreateSvgPart(mainDocumentPart, imageBytes);
+                            }
+                            
+                            if (imagePartRelId == null)
+                            {
+                                throw new OpenXmlTemplateException("Could not create SVG part");
+                            }
+                            
+                            // Parse size arguments from SVG if possible or use defaults
+                            int defaultWidth = ExtractSvgWidth(imageBytes) ?? 300;
+                            int defaultHeight = ExtractSvgHeight(imageBytes) ?? 300;
+                            
+                            imageInfo = new ImageInfo(defaultWidth, defaultHeight, imagePartRelId, null, true);
+                            m_imagePartRelIdCache[imageBytes] = imageInfo;
                         }
+                        else
+                        {
+                            // Handle regular images with ImageSharp
+                            using var image = Image.Load(imageBytes);
+                            int? orientation = null;
+                            if (image.Metadata?.ExifProfile?.TryGetValue(ExifTag.Orientation, out var orientationValue) == true)
+                            {
+                                orientation = orientationValue.Value;
+                            }
 
-                        string imagePartRelId = null;
-                        var imagePartType = DetectPartTypeInfo(formatterContext.Placeholder, image.Metadata);
-                        if (openXmlPartRootElement.OpenXmlPart is HeaderPart headerPart)
-                        {
-                            imagePartRelId = CreateImagePart(headerPart, imageBytes, imagePartType);
+                            string imagePartRelId = null;
+                            var imagePartType = DetectPartTypeInfo(formatterContext.Placeholder, image.Metadata);
+                            if (openXmlPartRootElement.OpenXmlPart is HeaderPart headerPart)
+                            {
+                                imagePartRelId = CreateImagePart(headerPart, imageBytes, imagePartType);
+                            }
+                            else if (openXmlPartRootElement.OpenXmlPart is FooterPart footerPart)
+                            {
+                                imagePartRelId = CreateImagePart(footerPart, imageBytes, imagePartType);
+                            }
+                            else if (openXmlPartRootElement.OpenXmlPart is MainDocumentPart mainDocumentPart)
+                            {
+                                imagePartRelId = CreateImagePart(mainDocumentPart, imageBytes, imagePartType);
+                            }
+                            if (imagePartRelId == null)
+                            {
+                                throw new OpenXmlTemplateException("Could not find a valid image part");
+                            }
+                            imageInfo = new ImageInfo(image.Width, image.Height, imagePartRelId, orientation);
+                            m_imagePartRelIdCache[imageBytes] = imageInfo;
                         }
-                        else if (openXmlPartRootElement.OpenXmlPart is FooterPart footerPart)
-                        {
-                            imagePartRelId = CreateImagePart(footerPart, imageBytes, imagePartType);
-                        }
-                        else if (openXmlPartRootElement.OpenXmlPart is MainDocumentPart mainDocumentPart)
-                        {
-                            imagePartRelId = CreateImagePart(mainDocumentPart, imageBytes, imagePartType);
-                        }
-                        if (imagePartRelId == null)
-                        {
-                            throw new OpenXmlTemplateException("Could not find a valid image part");
-                        }
-                        imageInfo = new ImageInfo(image.Width, image.Height, imagePartRelId, orientation);
-                        m_imagePartRelIdCache[imageBytes] = imageInfo;
                     }
 
                     if (TryHandleImageInWordprocessingShape(target, imageInfo, formatterContext.Args.FirstOrDefault() ?? string.Empty, maxPropertyId))
@@ -107,6 +142,74 @@ namespace DocxTemplater.Images
                 m_currentRoot = root;
             }
             return m_imagePartRelIdCache.TryGetValue(imageBytes, out imageInfo);
+        }
+
+        private static bool IsSvgImage(byte[] imageBytes)
+        {
+            // Check for SVG XML signature at the beginning of the file
+            try
+            {
+                // Check the first portion of the file for SVG signature
+                string content = Encoding.UTF8.GetString(imageBytes, 0, Math.Min(imageBytes.Length, 1000)).Trim();
+                return (content.StartsWith("<?xml", StringComparison.OrdinalIgnoreCase) || 
+                        content.StartsWith("<svg", StringComparison.OrdinalIgnoreCase)) && 
+                       content.Contains("<svg", StringComparison.OrdinalIgnoreCase) && 
+                       content.Contains("xmlns", StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static int? ExtractSvgWidth(byte[] svgBytes)
+        {
+            try
+            {
+                string svgContent = Encoding.UTF8.GetString(svgBytes);
+                var widthMatch = Regex.Match(svgContent, @"<svg[^>]*\s+width\s*=\s*[""']?(\d+)(?:px)?[""']?");
+                if (widthMatch.Success && int.TryParse(widthMatch.Groups[1].Value, out int width))
+                {
+                    return width;
+                }
+                
+                // Check for viewBox as fallback
+                var viewBoxMatch = Regex.Match(svgContent, @"<svg[^>]*\s+viewBox\s*=\s*[""']?(\d+)\s+(\d+)\s+(\d+)\s+(\d+)[""']?");
+                if (viewBoxMatch.Success && int.TryParse(viewBoxMatch.Groups[3].Value, out int viewBoxWidth))
+                {
+                    return viewBoxWidth;
+                }
+            }
+            catch
+            {
+                // Ignore parsing errors and use default
+            }
+            return null;
+        }
+
+        private static int? ExtractSvgHeight(byte[] svgBytes)
+        {
+            try
+            {
+                string svgContent = Encoding.UTF8.GetString(svgBytes);
+                var heightMatch = Regex.Match(svgContent, @"<svg[^>]*\s+height\s*=\s*[""']?(\d+)(?:px)?[""']?");
+                if (heightMatch.Success && int.TryParse(heightMatch.Groups[1].Value, out int height))
+                {
+                    return height;
+                }
+                
+                // Check for viewBox as fallback
+                var viewBoxMatch = Regex.Match(svgContent, @"<svg[^>]*\s+viewBox\s*=\s*[""']?(\d+)\s+(\d+)\s+(\d+)\s+(\d+)[""']?");
+                if (viewBoxMatch.Success && int.TryParse(viewBoxMatch.Groups[4].Value, out int viewBoxHeight))
+                {
+                    return viewBoxHeight;
+                }
+            }
+            catch
+            {
+                // Ignore parsing errors and use default
+            }
+            return null;
         }
 
         private static PartTypeInfo DetectPartTypeInfo(string modelPath, ImageMetadata imageMetadata)
@@ -436,6 +539,16 @@ namespace DocxTemplater.Images
             var imagePart = parent.AddImagePart(partType);
             var relationshipId = parent.GetIdOfPart(imagePart);
             var memStream = new MemoryStream(imageBytes);
+            imagePart.FeedData(memStream);
+            return relationshipId;
+        }
+
+        private static string CreateSvgPart<T>(T parent, byte[] svgBytes)
+            where T : OpenXmlPartContainer, ISupportedRelationship<ImagePart>
+        {
+            var imagePart = parent.AddImagePart(ImagePartType.Svg);
+            var relationshipId = parent.GetIdOfPart(imagePart);
+            var memStream = new MemoryStream(svgBytes);
             imagePart.FeedData(memStream);
             return relationshipId;
         }

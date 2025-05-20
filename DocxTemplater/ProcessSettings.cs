@@ -19,6 +19,14 @@ namespace DocxTemplater
         /// </summary>
         public bool IgnoreLineBreaksAroundTags { get; set; }
 
+        /// <summary>
+        /// When enabled, this option removes paragraphs that only contain conditional blocks or loops when these blocks
+        /// don't render any content (e.g., when a condition is false or a collection is empty).
+        /// This helps to avoid empty paragraphs in the final document.
+        /// default: false
+        /// </summary>
+        public bool RemoveParagraphsContainingOnlyBlocks { get; set; }
+
         public static ProcessSettings Default { get; } = new();
     }
 }

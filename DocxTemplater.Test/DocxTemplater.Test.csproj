@@ -87,6 +87,9 @@
     <None Update="Resources\NestedCollectionsInTable.docx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="Resources\RemoveParagraphsContainingOnlyBlocks.docx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Resources\RemoveLineBreaksAroundSyntax.docx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
