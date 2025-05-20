@@ -134,7 +134,37 @@ namespace DocxTemplater.Blocks
         public void RemoveAnchor(OpenXmlElement parentNode)
         {
             var element = m_insertionPoint.GetElement(parentNode) ?? throw new OpenXmlTemplateException($"Insertion point {m_insertionPoint.Id} not found");
-            element.Remove();
+
+            if (m_context?.ProcessSettings.RemoveParagraphsContainingOnlyBlocks == true)
+            {
+                RemoveParagraphIfEmpty(element);
+            }
+            else
+            {
+                element.Remove();
+            }
+        }
+
+        protected static void RemoveParagraphIfEmpty(OpenXmlElement element)
+        {
+            var paragraph = element.GetFirstAncestor<Paragraph>();
+            if (paragraph != null)
+            {
+                // First, remove the insertion point element
+                element.Remove();
+
+                // Check if the paragraph is now empty (contains only properties or no content)
+                if (paragraph.HasOnlyPropertyChildren() || paragraph.ChildElements.Count == 0)
+                {
+                    // Remove the entire paragraph
+                    paragraph.Remove();
+                }
+            }
+            else
+            {
+                // If not in a paragraph, just remove the element
+                element.Remove();
+            }
         }
 
         public override string ToString()

@@ -1,7 +1,7 @@
-﻿using System.Diagnostics;
-using System.Linq;
-using DocumentFormat.OpenXml;
+﻿using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Wordprocessing;
+using System.Diagnostics;
+using System.Linq;
 
 namespace DocxTemplater.Blocks
 {
@@ -33,14 +33,16 @@ namespace DocxTemplater.Blocks
 
             var elseBlock = m_childBlocks.Count > 1 ? m_childBlocks[1] : null;
             var conditionBlock = m_childBlocks[0];
+
             if (conditionResult)
             {
                 conditionBlock.Expand(models, parentNode);
             }
-            else if (m_childBlocks.Count > 1)
+            else
             {
                 elseBlock?.Expand(models, parentNode);
             }
+
             conditionBlock.RemoveAnchor(parentNode);
             elseBlock?.RemoveAnchor(parentNode);
         }
