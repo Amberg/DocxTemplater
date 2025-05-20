@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using DocumentFormat.OpenXml;
 
@@ -31,6 +32,10 @@ namespace DocxTemplater
         public static PatternType GetMarker(this OpenXmlElement element)
         {
             var attribute = element.ExtendedAttributes.FirstOrDefault(a => a.LocalName == MarkerAttribute);
+            if (attribute == null)
+            {
+                throw new InvalidOperationException($"Element does not have a marker attribute '{MarkerAttribute}'");
+            }
             return (PatternType)System.Enum.Parse<PatternType>(attribute.Value);
         }
 

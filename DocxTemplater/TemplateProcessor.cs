@@ -56,7 +56,7 @@ namespace DocxTemplater
                 loop.Expand(Context.ModelLookup, rootElement);
             }
 
-            Cleanup(rootElement, removeEmptyElements: true);
+            Cleanup(rootElement, Context, removeEmptyElements: true);
 #if DEBUG
             Console.WriteLine("----------- Completed --------");
             Console.WriteLine(rootElement.ToPrettyPrintXml());
@@ -137,12 +137,53 @@ namespace DocxTemplater
             return patternMatches;
         }
 
-        private static void Cleanup(OpenXmlCompositeElement element, bool removeEmptyElements)
+        private static void Cleanup(OpenXmlCompositeElement element, ITemplateProcessingContextAccess context, bool removeEmptyElements)
         {
             InsertionPoint.RemoveAll(element);
+            
+            // Get all paragraphs that contain marked text
+            var paragraphsWithMarkedText = element.Descendants<Text>()
+                .Where(x => x.IsMarked())
+                .Select(x => x.GetFirstAncestor<Paragraph>())
+                .Where(p => p != null)
+                .Distinct()
+                .ToList();
+                
+            // Mark paragraphs that only contain blocks - if a paragraph only contains marked text
+            foreach (var paragraph in paragraphsWithMarkedText)
+            {
+                bool containsOnlyMarkedText = true;
+                foreach (var textElement in paragraph.Descendants<Text>())
+                {
+                    // If there's any unmarked text or variable text, the paragraph doesn't contain only blocks
+                    if (!textElement.IsMarked() || textElement.GetMarker() == PatternType.Variable)
+                    {
+                        containsOnlyMarkedText = false;
+                        break;
+                    }
+                }
+                
+                if (containsOnlyMarkedText)
+                {
+                    paragraph.MarkAsContainingOnlyBlocks();
+                }
+            }
+            
+            // Process marked text
             foreach (var markedText in element.Descendants<Text>().Where(x => x.IsMarked()).ToList())
             {
                 var value = markedText.GetMarker();
+                
+                // If it's a closing tag (end tag), mark its paragraph for potential removal
+                if (value is PatternType.ConditionEnd or PatternType.CollectionEnd or PatternType.IgnoreEnd)
+                {
+                    var paragraph = markedText.GetFirstAncestor<Paragraph>();
+                    if (paragraph != null)
+                    {
+                        paragraph.MarkAsContainingOnlyBlocks();
+                    }
+                }
+                
                 if (removeEmptyElements && value is not PatternType.Variable)
                 {
                     var parent = markedText.Parent;
@@ -150,10 +191,125 @@ namespace DocxTemplater
                 }
                 else
                 {
-                    markedText.RemoveAttribute("mrk", null);
+                    markedText.RemoveMarker();
                 }
             }
-
+            
+            // Handle paragraphs marked as containing only blocks
+            if (context?.ProcessSettings?.RemoveParagraphsContainingOnlyBlocks == true)
+            {
+                // First pass: remove paragraphs explicitly marked as containing only blocks
+                foreach (var paragraph in element.Descendants<Paragraph>()
+                    .Where(p => p.IsMarkedAsContainingOnlyBlocks())
+                    .ToList())
+                {
+                    // Check if the paragraph has any actual content after processing
+                    bool isEmpty = true;
+                    
+                    // Skip checking paragraph properties
+                    foreach (var child in paragraph.ChildElements)
+                    {
+                        if (child is ParagraphProperties)
+                            continue;
+                            
+                        // If it has any content elements that are not properties
+                        if (child is Run run)
+                        {
+                            // Check if run has any non-empty text
+                            if (run.ChildElements.Any(c => 
+                                (c is Text text && !string.IsNullOrWhiteSpace(text.Text))))
+                            {
+                                isEmpty = false;
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            // If there's any non-property element
+                            isEmpty = false;
+                            break;
+                        }
+                    }
+                    
+                    if (isEmpty)
+                    {
+                        paragraph.Remove();
+                    }
+                }
+                
+                // Second pass: Check for empty paragraphs with just IpId attributes
+                // These are usually left after insertion points for blocks are processed
+                foreach (var paragraph in element.Descendants<Paragraph>().ToList())
+                {
+                    // Fix GetAttribute to use try/catch to avoid exception
+                    bool hasIpId = false;
+                    try 
+                    {
+                        hasIpId = paragraph.GetAttribute("IpId", null) != null;
+                    }
+                    catch (KeyNotFoundException)
+                    {
+                        // Attribute not allowed on this element, skip it
+                        continue;
+                    }
+                    
+                    // If there's an IpId attribute and no visible content
+                    if (hasIpId && 
+                        !paragraph.Descendants<Text>().Any(t => !string.IsNullOrWhiteSpace(t.Text)))
+                    {
+                        paragraph.Remove();
+                    }
+                }
+                
+                // Third pass: Look for any remaining completely empty paragraphs
+                foreach (var paragraph in element.Descendants<Paragraph>().ToList())
+                {
+                    bool isEmpty = true;
+                    
+                    // Skip checking paragraph properties
+                    foreach (var child in paragraph.ChildElements)
+                    {
+                        if (child is ParagraphProperties)
+                            continue;
+                            
+                        // If it has any content elements that are not properties
+                        if (child is Run run)
+                        {
+                            // Check if run has any non-empty text or other elements that aren't properties
+                            if (run.ChildElements.Any(c => 
+                                (c is Text text && !string.IsNullOrWhiteSpace(text.Text)) || 
+                                !(c is RunProperties)))
+                            {
+                                isEmpty = false;
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            // If there's any non-property element
+                            isEmpty = false;
+                            break;
+                        }
+                    }
+                    
+                    if (isEmpty)
+                    {
+                        paragraph.Remove();
+                    }
+                }
+            }
+            
+            // Clean up any remaining marks
+            foreach (var paragraph in element.Descendants<Paragraph>()
+                .Where(p => p.IsMarkedAsContainingOnlyBlocks())
+                .ToList())
+            {
+                paragraph.RemoveContainsOnlyBlocksMarker();
+            }
+            
+            // Clean up all markers from the dictionary
+            ParagraphExtensions.CleanupAllMarkers();
+            
             // make dock properties ids unique
             uint id = 1;
             var dockProperties = element.Descendants<DocProperties>().ToList();

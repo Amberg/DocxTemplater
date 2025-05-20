@@ -154,7 +154,34 @@ namespace DocxTemplater.Blocks
                 element.Remove();
 
                 // Check if the paragraph is now empty (contains only properties or no content)
-                if (paragraph.HasOnlyPropertyChildren() || paragraph.ChildElements.Count == 0)
+                bool isEmpty = true;
+                
+                // Skip checking paragraph properties
+                foreach (var child in paragraph.ChildElements)
+                {
+                    if (child is ParagraphProperties)
+                        continue;
+                        
+                    // If it has any content elements that are not properties
+                    if (child is Run run)
+                    {
+                        // Check if run has any non-empty text
+                        if (run.ChildElements.Any(c => 
+                            (c is Text text && !string.IsNullOrWhiteSpace(text.Text))))
+                        {
+                            isEmpty = false;
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        // Any other non-property element
+                        isEmpty = false;
+                        break;
+                    }
+                }
+                
+                if (isEmpty)
                 {
                     // Remove the entire paragraph
                     paragraph.Remove();
