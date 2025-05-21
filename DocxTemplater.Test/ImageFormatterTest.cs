@@ -9,14 +9,15 @@ namespace DocxTemplater.Test
 {
     internal class ImageFormatterTest
     {
-        [TestCase("jpg")]
-        [TestCase("tiff")]
-        [TestCase("png")]
-        [TestCase("bmp")]
-        [TestCase("gif")]
-        public void ProcessTemplateWithDifferentImageTypes(string extension)
+        [TestCase("jpg", "testImage")]
+        [TestCase("tiff", "testImage")]
+        [TestCase("png", "testImage")]
+        [TestCase("png", "testImage_rot")]
+        [TestCase("bmp", "testImage")]
+        [TestCase("gif", "testImage")]
+        public void ProcessTemplateWithDifferentImageTypes(string extension, string image)
         {
-            var imageBytes = File.ReadAllBytes("Resources/testImage.jpg");
+            var imageBytes = File.ReadAllBytes($"Resources/{image}.jpg");
             var img = Image.Load(imageBytes);
             Assert.That(img.Configuration.ImageFormatsManager.TryFindFormatByFileExtension(extension, out var format));
             var memStream = new MemoryStream();
@@ -32,6 +33,7 @@ namespace DocxTemplater.Test
             docTemplate.Validate();
             result.SaveAsFileAndOpenInWord();
         }
+
 
         [TestCase("w:14cm,h:3cm")]
         [TestCase("w:14cm")]
