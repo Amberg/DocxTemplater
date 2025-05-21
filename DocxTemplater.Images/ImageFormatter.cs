@@ -18,7 +18,7 @@ namespace DocxTemplater.Images
 {
     public class ImageFormatter : IFormatter
     {
-        private static readonly Regex ArgumentRegex = new(@"(?<key>[whr]):(?<value>\d+)(?<unit>px|cm|in|pt)?", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
+        private static readonly Regex ArgumentRegex = new(@"(?<key>[whr]):(?<value>\d+)(?<unit>px|cm|in|pt|mm)?", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
         private sealed record ImageInfo(int PixelWidth, int PixelHeight, string ImagePartRelationId, ImageRotation ExifRotation);
         private readonly Dictionary<byte[], ImageInfo> m_imagePartRelIdCache = new();
         private OpenXmlPartRootElement m_currentRoot;

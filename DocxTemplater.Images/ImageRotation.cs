@@ -4,7 +4,7 @@ namespace DocxTemplater.Images
 {
     internal sealed class ImageRotation
     {
-        private const double MUnitsToDegree = 60000.0; // 1/60000 degree
+        private const int MUnitsToDegree = 60000; // 1/60000 degree
 
         private ImageRotation(int units)
         {
@@ -13,11 +13,9 @@ namespace DocxTemplater.Images
 
         public int Units { get; private set; }
 
-        public double Degree => Units / MUnitsToDegree; // 1/60000 degree
-
-        public static ImageRotation CreateFromDegree(double degree)
+        public static ImageRotation CreateFromDegree(int degree)
         {
-            int units = (int)(Mod(degree, 360) * MUnitsToDegree);
+            int units = Mod(degree, 360) * MUnitsToDegree;
             return new ImageRotation(units);
         }
 
@@ -29,7 +27,7 @@ namespace DocxTemplater.Images
         /// <summary>
         /// -90 degree is 270 degree - not normal C# % operator because it returns negative value
         /// </summary>
-        private static double Mod(double a, double n)
+        private static int Mod(int a, int n)
         {
             return ((a % n) + n) % n;
         }
