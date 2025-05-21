@@ -40,6 +40,7 @@ namespace DocxTemplater.Test
         [TestCase("h:1cm, r:90")]
         [TestCase("w:1cm")]
         [TestCase("h:1cm")]
+        [TestCase("h:15mm")]
         public void InsertHugeImageInsertWithoutContainerFitsToPage(string argument)
         {
             var imageBytes = File.ReadAllBytes("Resources/testImage.jpg");
