@@ -12,14 +12,14 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using A = DocumentFormat.OpenXml.Drawing;
 using DW = DocumentFormat.OpenXml.Drawing.Wordprocessing;
-using PIC = DocumentFormat.OpenXml.Drawing.Pictures;
+using PIC = DocumentFormat.OpenXml.Drawing.Pictures; // http://schemas.openxmlformats.org/drawingml/2006/picture"
 
 namespace DocxTemplater.Images
 {
     public class ImageFormatter : IFormatter
     {
         private static readonly Regex ArgumentRegex = new(@"(?<key>[whr]):(?<value>\d+)(?<unit>px|cm|in|pt)?", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
-        private sealed record ImageInfo(int PixelWidth, int PixelHeight, string ImagePartRelationId, int? Orientation);
+        private sealed record ImageInfo(int PixelWidth, int PixelHeight, string ImagePartRelationId, ImageRotation ExifRotation);
         private readonly Dictionary<byte[], ImageInfo> m_imagePartRelIdCache = new();
         private OpenXmlPartRootElement m_currentRoot;
 
@@ -53,12 +53,11 @@ namespace DocxTemplater.Images
                     if (!TryGetImageIdFromCache(imageBytes, openXmlPartRootElement, out var imageInfo))
                     {
                         using var image = Image.Load(imageBytes);
-                        int? orientation = null;
+                        ImageRotation exifRotation = ImageRotation.CreateFromUnits(0);
                         if (image.Metadata?.ExifProfile?.TryGetValue(ExifTag.Orientation, out var orientationValue) == true)
                         {
-                            orientation = orientationValue.Value;
+                            exifRotation = ImageRotation.CreateFromExifRotation((ExifRotation)orientationValue.Value);
                         }
-
                         string imagePartRelId = null;
                         var imagePartType = DetectPartTypeInfo(formatterContext.Placeholder, image.Metadata);
                         if (openXmlPartRootElement.OpenXmlPart is HeaderPart headerPart)
@@ -77,15 +76,16 @@ namespace DocxTemplater.Images
                         {
                             throw new OpenXmlTemplateException("Could not find a valid image part");
                         }
-                        imageInfo = new ImageInfo(image.Width, image.Height, imagePartRelId, orientation);
+                        imageInfo = new ImageInfo(image.Width, image.Height, imagePartRelId, exifRotation);
                         m_imagePartRelIdCache[imageBytes] = imageInfo;
                     }
 
+                    // Image ist a child element of a <wps:wsp> (TextBox)
                     if (TryHandleImageInWordprocessingShape(target, imageInfo, formatterContext.Args.FirstOrDefault() ?? string.Empty, maxPropertyId))
                     {
                         return;
                     }
-
+                    // Image is not a child element of a <wps:wsp> (TextBox) - rotation and scale is determined by the arguments
                     AddInlineGraphicToRun(target, imageInfo, maxPropertyId, formatterContext.Args);
                 }
                 else
@@ -161,7 +161,7 @@ namespace DocxTemplater.Images
                     targetExtent.Cy = (long)(imageCy * scale);
                 }
 
-                ReplaceAnchorContentWithPicture(imageInfo.ImagePartRelationId, maxPropertyId, drawing, imageInfo.Orientation);
+                ReplaceAnchorContentWithPicture(imageInfo.ImagePartRelationId, maxPropertyId, drawing, imageInfo.ExifRotation);
             }
 
             target.Remove();
@@ -169,15 +169,14 @@ namespace DocxTemplater.Images
         }
 
 
-        private static void ReplaceAnchorContentWithPicture(string impagepartRelationShipId, uint maxDocumentPropertyId,
-            Drawing original, int? originalOrientation)
+        private static void ReplaceAnchorContentWithPicture(string impagepartRelationShipId, uint maxDocumentPropertyId, Drawing original, ImageRotation imageInfoExifRotation)
         {
             var propertyId = maxDocumentPropertyId + 1;
             var inlineOrAnchor = (OpenXmlElement)original.GetFirstChild<DW.Anchor>() ??
                                  (OpenXmlElement)original.GetFirstChild<DW.Inline>();
             var originaleExtent = inlineOrAnchor.GetFirstChild<DW.Extent>();
             var transform = inlineOrAnchor.Descendants<A.Transform2D>().FirstOrDefault();
-            int rotation = transform?.Rotation ?? 0;
+            var rotation = imageInfoExifRotation.AddUnits(transform?.Rotation ?? 0);
             var clonedInlineOrAnchor = inlineOrAnchor.CloneNode(false);
 
             if (inlineOrAnchor is DW.Anchor anchor)
@@ -221,7 +220,7 @@ namespace DocxTemplater.Images
                     new A.GraphicFrameLocks {NoChangeAspect = true}),
                 new A.Graphic(
                     new A.GraphicData(
-                            CreatePicture(impagepartRelationShipId, propertyId, originaleExtent.Cx, originaleExtent.Cy, rotation, originalOrientation)
+                            CreatePicture(impagepartRelationShipId, propertyId, originaleExtent.Cx, originaleExtent.Cy, rotation)
                         )
                         {Uri = "http://schemas.openxmlformats.org/drawingml/2006/picture"})
             });
@@ -238,6 +237,7 @@ namespace DocxTemplater.Images
             var propertyId = maxDocumentPropertyId + 1;
 
             TransformSize(imageInfo.PixelWidth, imageInfo.PixelHeight, arguments, out var cx, out var cy, out var rotation);
+            rotation = rotation.AddUnits(imageInfo.ExifRotation.Units);
 
             // Define the reference of the image.
             var drawing =
@@ -260,7 +260,7 @@ namespace DocxTemplater.Images
                             new A.GraphicFrameLocks { NoChangeAspect = true }),
                         new A.Graphic(
                             new A.GraphicData(
-                                    CreatePicture(imageInfo.ImagePartRelationId, propertyId, cx, cy, rotation, imageInfo.Orientation)
+                                    CreatePicture(imageInfo.ImagePartRelationId, propertyId, cx, cy, rotation)
                                 )
                             { Uri = "http://schemas.openxmlformats.org/drawingml/2006/picture" })
                     )
@@ -287,17 +287,16 @@ namespace DocxTemplater.Images
         /// "w:90cm;h:90cm;r:90"
         /// available units are px, cm, in, pt
         /// </summary>
-        private static void TransformSize(int pixelWidth, int pixelHeight, string[] arguments, out int outCxEmu, out int outCyEmu, out int rot)
+        private static void TransformSize(int pixelWidth, int pixelHeight, string[] arguments, out int outCxEmu, out int outCyEmu, out ImageRotation rotationInDegree)
         {
             var cxEmu = -1;
             var cyEmu = -1;
-            var rotation = 0;
+            rotationInDegree = ImageRotation.CreateFromDegree(0);
 
             if (arguments == null || arguments.Length == 0)
             {
                 outCxEmu = OpenXmlHelper.PixelsToEmu(pixelWidth);
                 outCyEmu = OpenXmlHelper.PixelsToEmu(pixelHeight);
-                rot = rotation;
                 return;
             }
 
@@ -310,7 +309,6 @@ namespace DocxTemplater.Images
                     {
                         outCxEmu = OpenXmlHelper.PixelsToEmu(pixelWidth);
                         outCyEmu = OpenXmlHelper.PixelsToEmu(pixelHeight);
-                        rot = rotation;
                         return;
                     }
 
@@ -328,7 +326,7 @@ namespace DocxTemplater.Images
                                 cyEmu = OpenXmlHelper.LengthToEmu(value, unit);
                                 break;
                             case "r":
-                                rotation = value;
+                                rotationInDegree = ImageRotation.CreateFromDegree(value);
                                 break;
                         }
                     }
@@ -343,7 +341,6 @@ namespace DocxTemplater.Images
             {
                 outCxEmu = OpenXmlHelper.PixelsToEmu(pixelWidth);
                 outCyEmu = OpenXmlHelper.PixelsToEmu(pixelHeight);
-                rot = rotation;
                 return;
             }
 
@@ -357,6 +354,7 @@ namespace DocxTemplater.Images
             }
             else
             {
+                // if both are set, the aspect ratio is kept
                 var aspectRatio = (double)pixelWidth / pixelHeight;
                 var newAspectRatio = (double)cxEmu / cyEmu;
                 if (aspectRatio > newAspectRatio)
@@ -370,30 +368,11 @@ namespace DocxTemplater.Images
             }
             outCxEmu = cxEmu;
             outCyEmu = cyEmu;
-            rot = rotation;
         }
 
-        private static PIC.Picture CreatePicture(string impagepartRelationShipId, uint propertyId, long cx, long cy, int rotation, int? originalOrientation = null)
+
+        private static PIC.Picture CreatePicture(string impagepartRelationShipId, uint propertyId, long cx, long cy, ImageRotation rotation)
         {
-            int finalRotation = rotation;
-            if (originalOrientation.HasValue)
-            {
-                switch (originalOrientation.Value)
-                {
-                    case 6: // Rotated 90 degrees right
-                        finalRotation = (rotation + 90) % 360;
-                        break;
-                    case 3: // Rotated 180 degrees
-                        finalRotation = (rotation + 180) % 360;
-                        break;
-                    case 8: // Rotated 90 degrees left
-                        finalRotation = (rotation + 270) % 360;
-                        break;
-                }
-            }
-
-            finalRotation *= 60000; // Convert to OpenXML rotation units
-
             return new PIC.Picture(
                 new PIC.NonVisualPictureProperties(
                     new PIC.NonVisualDrawingProperties
@@ -420,7 +399,7 @@ namespace DocxTemplater.Images
                         new A.Offset { X = 0L, Y = 0L },
                         new A.Extents { Cx = cx, Cy = cy })
                     {
-                        Rotation = finalRotation
+                        Rotation = rotation.Units
                     },
                     new A.PresetGeometry(
                             new A.AdjustValueList()
