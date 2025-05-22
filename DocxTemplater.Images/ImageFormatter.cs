@@ -57,7 +57,7 @@ namespace DocxTemplater.Images
                         {
                             // Handle SVG specifically
                             string imagePartRelId = null;
-                            
+
                             if (openXmlPartRootElement.OpenXmlPart is HeaderPart headerPart)
                             {
                                 imagePartRelId = CreateSvgPart(headerPart, imageBytes);
@@ -70,16 +70,16 @@ namespace DocxTemplater.Images
                             {
                                 imagePartRelId = CreateSvgPart(mainDocumentPart, imageBytes);
                             }
-                            
+
                             if (imagePartRelId == null)
                             {
                                 throw new OpenXmlTemplateException("Could not create SVG part");
                             }
-                            
+
                             // Parse size arguments from SVG if possible or use defaults
                             int defaultWidth = ExtractSvgWidth(imageBytes) ?? 300;
                             int defaultHeight = ExtractSvgHeight(imageBytes) ?? 300;
-                            
+
                             imageInfo = new ImageInfo(defaultWidth, defaultHeight, imagePartRelId, null, true);
                             m_imagePartRelIdCache[imageBytes] = imageInfo;
                         }
@@ -151,9 +151,9 @@ namespace DocxTemplater.Images
             {
                 // Check the first portion of the file for SVG signature
                 string content = Encoding.UTF8.GetString(imageBytes, 0, Math.Min(imageBytes.Length, 1000)).Trim();
-                return (content.StartsWith("<?xml", StringComparison.OrdinalIgnoreCase) || 
-                        content.StartsWith("<svg", StringComparison.OrdinalIgnoreCase)) && 
-                       content.Contains("<svg", StringComparison.OrdinalIgnoreCase) && 
+                return (content.StartsWith("<?xml", StringComparison.OrdinalIgnoreCase) ||
+                        content.StartsWith("<svg", StringComparison.OrdinalIgnoreCase)) &&
+                       content.Contains("<svg", StringComparison.OrdinalIgnoreCase) &&
                        content.Contains("xmlns", StringComparison.OrdinalIgnoreCase);
             }
             catch
@@ -172,7 +172,7 @@ namespace DocxTemplater.Images
                 {
                     return width;
                 }
-                
+
                 // Check for viewBox as fallback
                 var viewBoxMatch = Regex.Match(svgContent, @"<svg[^>]*\s+viewBox\s*=\s*[""']?(\d+)\s+(\d+)\s+(\d+)\s+(\d+)[""']?");
                 if (viewBoxMatch.Success && int.TryParse(viewBoxMatch.Groups[3].Value, out int viewBoxWidth))
@@ -197,7 +197,7 @@ namespace DocxTemplater.Images
                 {
                     return height;
                 }
-                
+
                 // Check for viewBox as fallback
                 var viewBoxMatch = Regex.Match(svgContent, @"<svg[^>]*\s+viewBox\s*=\s*[""']?(\d+)\s+(\d+)\s+(\d+)\s+(\d+)[""']?");
                 if (viewBoxMatch.Success && int.TryParse(viewBoxMatch.Groups[4].Value, out int viewBoxHeight))
