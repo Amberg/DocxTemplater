@@ -1,27 +1,19 @@
 ﻿using DocumentFormat.OpenXml;
-using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using DocxTemplater.Formatter;
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Metadata;
-using SixLabors.ImageSharp.Metadata.Profiles.Exif;
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Text.RegularExpressions;
+using DocxTemplater.ImageBase;
 using A = DocumentFormat.OpenXml.Drawing;
 using DW = DocumentFormat.OpenXml.Drawing.Wordprocessing;
-using PIC = DocumentFormat.OpenXml.Drawing.Pictures; // http://schemas.openxmlformats.org/drawingml/2006/picture"
+using System.Linq;
 
 namespace DocxTemplater.Images
 {
-    public class ImageFormatter : IFormatter
+    public class ImageFormatter : IFormatter, IImageServiceProvider
     {
         private static readonly Regex ArgumentRegex = new(@"(?<key>[whr]):(?<value>\d+)(?<unit>px|cm|in|pt|mm)?", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
-        private sealed record ImageInfo(int PixelWidth, int PixelHeight, string ImagePartRelationId, ImageRotation ExifRotation);
-        private readonly Dictionary<byte[], ImageInfo> m_imagePartRelIdCache = new();
-        private OpenXmlPartRootElement m_currentRoot;
 
         public bool CanHandle(Type type, string prefix)
         {
@@ -29,8 +21,7 @@ namespace DocxTemplater.Images
             return prefixUpper is "IMAGE" or "IMG" && type == typeof(byte[]);
         }
 
-        public void ApplyFormat(ITemplateProcessingContext templateContext, FormatterContext formatterContext,
-            Text target)
+        public void ApplyFormat(ITemplateProcessingContext templateContext, FormatterContext formatterContext, Text target)
         {
             // TODO: handle other ppi values than default 96
             // see https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.wordprocessing.pixelsperinch?view=openxml-2.8.1#remarks
@@ -46,52 +37,13 @@ namespace DocxTemplater.Images
             try
             {
                 var root = target.GetRoot();
-                if (root is OpenXmlPartRootElement openXmlPartRootElement && openXmlPartRootElement.OpenXmlPart != null)
-                {
-                    var maxPropertyId = openXmlPartRootElement.OpenXmlPart.GetMaxDocPropertyId();
-
-                    if (!TryGetImageIdFromCache(imageBytes, openXmlPartRootElement, out var imageInfo))
-                    {
-                        using var image = Image.Load(imageBytes);
-                        ImageRotation exifRotation = ImageRotation.CreateFromUnits(0);
-                        if (image.Metadata?.ExifProfile?.TryGetValue(ExifTag.Orientation, out var orientationValue) == true)
-                        {
-                            exifRotation = ImageRotation.CreateFromExifRotation((ExifRotation)orientationValue.Value);
-                        }
-                        string imagePartRelId = null;
-                        var imagePartType = DetectPartTypeInfo(formatterContext.Placeholder, image.Metadata);
-                        if (openXmlPartRootElement.OpenXmlPart is HeaderPart headerPart)
-                        {
-                            imagePartRelId = CreateImagePart(headerPart, imageBytes, imagePartType);
-                        }
-                        else if (openXmlPartRootElement.OpenXmlPart is FooterPart footerPart)
-                        {
-                            imagePartRelId = CreateImagePart(footerPart, imageBytes, imagePartType);
-                        }
-                        else if (openXmlPartRootElement.OpenXmlPart is MainDocumentPart mainDocumentPart)
-                        {
-                            imagePartRelId = CreateImagePart(mainDocumentPart, imageBytes, imagePartType);
-                        }
-                        if (imagePartRelId == null)
-                        {
-                            throw new OpenXmlTemplateException("Could not find a valid image part");
-                        }
-                        imageInfo = new ImageInfo(image.Width, image.Height, imagePartRelId, exifRotation);
-                        m_imagePartRelIdCache[imageBytes] = imageInfo;
-                    }
-
-                    // Image ist a child element of a <wps:wsp> (TextBox)
-                    if (TryHandleImageInWordprocessingShape(target, imageInfo, formatterContext.Args.FirstOrDefault() ?? string.Empty, maxPropertyId))
-                    {
-                        return;
-                    }
-                    // Image is not a child element of a <wps:wsp> (TextBox) - rotation and scale is determined by the arguments
-                    AddInlineGraphicToRun(target, imageInfo, maxPropertyId, formatterContext.Args);
+                var maxPropertyId = templateContext.ImageService.GetImage(root, imageBytes, out ImageInformation imageInfo);
+                // Image ist a child element of a <wps:wsp> (TextBox)
+                if (!TryHandleImageInWordprocessingShape(target, imageInfo, formatterContext.Args.FirstOrDefault() ?? string.Empty, maxPropertyId, templateContext.ImageService))
+                {// Image is not a child element of a <wps:wsp> (TextBox) - rotation and scale is determined by the arguments
+                    AddInlineGraphicToRun(target, imageInfo, maxPropertyId, formatterContext.Args, templateContext.ImageService);
                 }
-                else
-                {
-                    throw new OpenXmlTemplateException("Could not find root to insert image");
-                }
+
             }
             catch (Exception e) when (e is InvalidImageContentException or UnknownImageFormatException)
             {
@@ -99,35 +51,54 @@ namespace DocxTemplater.Images
             }
         }
 
-        private bool TryGetImageIdFromCache(byte[] imageBytes, OpenXmlPartRootElement root, out ImageInfo imageInfo)
-        {
-            if (m_currentRoot != root)
-            {
-                m_imagePartRelIdCache.Clear();
-                m_currentRoot = root;
-            }
-            return m_imagePartRelIdCache.TryGetValue(imageBytes, out imageInfo);
-        }
-
-        private static PartTypeInfo DetectPartTypeInfo(string modelPath, ImageMetadata imageMetadata)
-        {
-            return imageMetadata switch
-            {
-                { DecodedImageFormat.Name: "TIFF" } => ImagePartType.Tiff,
-                { DecodedImageFormat.Name: "BMP" } => ImagePartType.Bmp,
-                { DecodedImageFormat.Name: "GIF" } => ImagePartType.Gif,
-                { DecodedImageFormat.Name: "JPEG" } => ImagePartType.Jpeg,
-                { DecodedImageFormat.Name: "PNG" } => ImagePartType.Png,
-                _ => throw new OpenXmlTemplateException($"Could not detect image format for image in {modelPath}")
-            };
-        }
-
         /// <summary>
-        ///     If the image is contained in a "wsp" element (TextBox), the text box is used as a container for the image.
-        ///     the size of the text box is adjusted to the size of the image.
+        /// If image is not part of a textbox this method is used to add the image to the run.
         /// </summary>
-        private static bool TryHandleImageInWordprocessingShape(Text target, ImageInfo imageInfo,
-            string firstArgument, uint maxPropertyId)
+        private static void AddInlineGraphicToRun(Text target, ImageInformation imageInfo, uint maxDocumentPropertyId, string[] arguments, IImageService imageService)
+        {
+            var propertyId = maxDocumentPropertyId + 1;
+
+            TransformSize(imageInfo.PixelWidth, imageInfo.PixelHeight, arguments, out var cx, out var cy, out var rotation);
+            rotation = rotation.AddUnits(imageInfo.ExifRotation.Units);
+
+            // Define the reference of the image.
+            var drawing =
+                new Drawing(
+                    new DW.Inline(
+                        new DW.Extent { Cx = cx, Cy = cy },
+                        new DW.EffectExtent
+                        {
+                            LeftEdge = 0L,
+                            TopEdge = 0L,
+                            RightEdge = 0L,
+                            BottomEdge = 0L
+                        },
+                        new DW.DocProperties
+                        {
+                            Id = propertyId,
+                            Name = $"Picture {propertyId}"
+                        },
+                        new DW.NonVisualGraphicFrameDrawingProperties(
+                            new A.GraphicFrameLocks { NoChangeAspect = true }),
+                        new A.Graphic(
+                            new A.GraphicData(
+                                    imageService.CreatePicture(imageInfo.ImagePartRelationId, propertyId, cx, cy, rotation)
+                                )
+                            { Uri = "http://schemas.openxmlformats.org/drawingml/2006/picture" })
+                    )
+                    {
+                        DistanceFromTop = (UInt32Value)0U,
+                        DistanceFromBottom = (UInt32Value)0U,
+                        DistanceFromLeft = (UInt32Value)0U,
+                        DistanceFromRight = (UInt32Value)0U
+                    });
+
+            target.InsertAfterSelf(drawing);
+            target.Remove();
+        }
+
+        private static bool TryHandleImageInWordprocessingShape(Text target, ImageInformation imageInfo,
+            string firstArgument, uint maxPropertyId, IImageService imageService)
         {
             var drawing = target.GetFirstAncestor<Drawing>();
             if (drawing == null)
@@ -161,15 +132,14 @@ namespace DocxTemplater.Images
                     targetExtent.Cy = (long)(imageCy * scale);
                 }
 
-                ReplaceAnchorContentWithPicture(imageInfo.ImagePartRelationId, maxPropertyId, drawing, imageInfo.ExifRotation);
+                ReplaceAnchorContentWithPicture(imageInfo.ImagePartRelationId, maxPropertyId, drawing, imageInfo.ExifRotation, imageService);
             }
 
             target.Remove();
             return true;
         }
 
-
-        private static void ReplaceAnchorContentWithPicture(string impagepartRelationShipId, uint maxDocumentPropertyId, Drawing original, ImageRotation imageInfoExifRotation)
+        private static void ReplaceAnchorContentWithPicture(string impagepartRelationShipId, uint maxDocumentPropertyId, Drawing original, ImageRotation imageInfoExifRotation, IImageService imageService)
         {
             var propertyId = maxDocumentPropertyId + 1;
             var inlineOrAnchor = (OpenXmlElement)original.GetFirstChild<DW.Anchor>() ??
@@ -220,59 +190,13 @@ namespace DocxTemplater.Images
                     new A.GraphicFrameLocks {NoChangeAspect = true}),
                 new A.Graphic(
                     new A.GraphicData(
-                            CreatePicture(impagepartRelationShipId, propertyId, originaleExtent.Cx, originaleExtent.Cy, rotation)
+                            imageService.CreatePicture(impagepartRelationShipId, propertyId, originaleExtent.Cx, originaleExtent.Cy, rotation)
                         )
                         {Uri = "http://schemas.openxmlformats.org/drawingml/2006/picture"})
             });
             var dw = new Drawing(clonedInlineOrAnchor);
             original.InsertAfterSelf(dw);
             original.Remove();
-        }
-
-        /// <summary>
-        /// If image is not part of a textbox this method is used to add the image to the run.
-        /// </summary>
-        private static void AddInlineGraphicToRun(Text target, ImageInfo imageInfo, uint maxDocumentPropertyId, string[] arguments)
-        {
-            var propertyId = maxDocumentPropertyId + 1;
-
-            TransformSize(imageInfo.PixelWidth, imageInfo.PixelHeight, arguments, out var cx, out var cy, out var rotation);
-            rotation = rotation.AddUnits(imageInfo.ExifRotation.Units);
-
-            // Define the reference of the image.
-            var drawing =
-                new Drawing(
-                    new DW.Inline(
-                        new DW.Extent { Cx = cx, Cy = cy },
-                        new DW.EffectExtent
-                        {
-                            LeftEdge = 0L,
-                            TopEdge = 0L,
-                            RightEdge = 0L,
-                            BottomEdge = 0L
-                        },
-                        new DW.DocProperties
-                        {
-                            Id = propertyId,
-                            Name = $"Picture {propertyId}"
-                        },
-                        new DW.NonVisualGraphicFrameDrawingProperties(
-                            new A.GraphicFrameLocks { NoChangeAspect = true }),
-                        new A.Graphic(
-                            new A.GraphicData(
-                                    CreatePicture(imageInfo.ImagePartRelationId, propertyId, cx, cy, rotation)
-                                )
-                            { Uri = "http://schemas.openxmlformats.org/drawingml/2006/picture" })
-                    )
-                    {
-                        DistanceFromTop = (UInt32Value)0U,
-                        DistanceFromBottom = (UInt32Value)0U,
-                        DistanceFromLeft = (UInt32Value)0U,
-                        DistanceFromRight = (UInt32Value)0U
-                    });
-
-            target.InsertAfterSelf(drawing);
-            target.Remove();
         }
 
 
@@ -370,53 +294,9 @@ namespace DocxTemplater.Images
             outCyEmu = cyEmu;
         }
 
-
-        private static PIC.Picture CreatePicture(string impagepartRelationShipId, uint propertyId, long cx, long cy, ImageRotation rotation)
+        public IImageService CreateImageService()
         {
-            return new PIC.Picture(
-                new PIC.NonVisualPictureProperties(
-                    new PIC.NonVisualDrawingProperties
-                    {
-                        Id = (UInt32Value)0U,
-                        Name = $"Image{propertyId}.jpg"
-                    },
-                    new PIC.NonVisualPictureDrawingProperties()),
-                new PIC.BlipFill(
-                    new A.Blip(new A.BlipExtensionList(
-                        new A.BlipExtension
-                        {
-                            Uri = "{28A0092B-C50C-407E-A947-70E740481C1C}"
-                        })
-                    )
-                    {
-                        Embed = impagepartRelationShipId,
-                        CompressionState = A.BlipCompressionValues.Print
-                    },
-                    new A.Stretch(
-                        new A.FillRectangle())),
-                new PIC.ShapeProperties(
-                    new A.Transform2D(
-                        new A.Offset { X = 0L, Y = 0L },
-                        new A.Extents { Cx = cx, Cy = cy })
-                    {
-                        Rotation = rotation.Units
-                    },
-                    new A.PresetGeometry(
-                            new A.AdjustValueList()
-                        )
-                    {
-                        Preset = A.ShapeTypeValues.Rectangle
-                    }));
-        }
-
-        private static string CreateImagePart<T>(T parent, byte[] imageBytes, PartTypeInfo partType)
-            where T : OpenXmlPartContainer, ISupportedRelationship<ImagePart>
-        {
-            var imagePart = parent.AddImagePart(partType);
-            var relationshipId = parent.GetIdOfPart(imagePart);
-            var memStream = new MemoryStream(imageBytes);
-            imagePart.FeedData(memStream);
-            return relationshipId;
+            return new ImageService();
         }
     }
 }

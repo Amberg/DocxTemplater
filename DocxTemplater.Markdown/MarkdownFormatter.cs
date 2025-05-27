@@ -26,8 +26,9 @@ namespace DocxTemplater.Markdown
         {
             var builder = new MarkdownPipelineBuilder();
             builder.UseGridTables()
-                .UsePipeTables(new PipeTableOptions() { InferColumnWidthsFromSeparator = true })
-                .UseEmphasisExtras(EmphasisExtraOptions.Strikethrough);
+                .UsePipeTables(new PipeTableOptions { InferColumnWidthsFromSeparator = true })
+                .UseEmphasisExtras(EmphasisExtraOptions.Strikethrough)
+                .UseFigures();
             MarkdownPipeline = builder.Build();
         }
 
@@ -88,7 +89,7 @@ namespace DocxTemplater.Markdown
                     var containerParagraph = new Paragraph();
                     renderedMarkdownContainer.Append(containerParagraph);
 
-                    var renderer = new MarkdownToOpenXmlRenderer(containerParagraph, target, templateContext.MainDocumentPart, contextSpecificConfiguration);
+                    var renderer = new MarkdownToOpenXmlRenderer(containerParagraph, target, templateContext.MainDocumentPart, contextSpecificConfiguration, templateContext.ImageService);
                     renderer.Render(markdownDocument);
 
 #if DEBUG
