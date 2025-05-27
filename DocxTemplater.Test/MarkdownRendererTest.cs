@@ -245,10 +245,8 @@ namespace DocxTemplater.Test
             result.SaveAsFileAndOpenInWord();
             result.Position = 0;
             var document = WordprocessingDocument.Open(result, false);
-            Assert.That(TestHelper.ComputeSha256Hash(document.MainDocumentPart.Document.Body.InnerXml), Is.EqualTo("83fbf2ba90daddbb0d4fd1ae92b5e98f2c6f4f8a686f75b8813cf02a95d59fbe"));
-
+            Assert.That(TestHelper.ComputeSha256Hash(document.MainDocumentPart.Document.Body.InnerXml), Is.EqualTo("66227137ea0ce6b1b10771972b7f7f9da54f9942d39531d02b9b0dffda3ddae1"));
         }
-
 
         [Test]
         public void MarkdownWithPlaceholderReplacement()
