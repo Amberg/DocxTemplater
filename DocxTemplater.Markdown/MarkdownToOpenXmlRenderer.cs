@@ -11,6 +11,7 @@ using Markdig.Syntax.Inlines;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using DocxTemplater.ImageBase;
 
 namespace DocxTemplater.Markdown
 {
@@ -25,11 +26,11 @@ namespace DocxTemplater.Markdown
         private readonly MarkdownDebugOutput m_debugOutput;
 #endif
 
-        public MarkdownToOpenXmlRenderer(
-            Paragraph parentElement,
+        public MarkdownToOpenXmlRenderer(Paragraph parentElement,
             Text target,
             MainDocumentPart mainDocumentPart,
-            MarkDownFormatterConfiguration configuration)
+            MarkDownFormatterConfiguration configuration,
+            IImageService imageService)
         {
             // extract style from target run element
             m_targetRunProperties = ((Run)target.Parent).RunProperties;
@@ -45,6 +46,10 @@ namespace DocxTemplater.Markdown
             ObjectRenderers.Add(new HeadingRenderer());
             ObjectRenderers.Add(new ThematicBreakRenderer());
             ObjectRenderers.Add(new HtmlBlockRenderer());
+            if (imageService != null)
+            {
+                ObjectRenderers.Add(new ImageInlineRenderer(mainDocumentPart, imageService));
+            }
 
 
 #if DEBUG

@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using DocxTemplater.Extensions;
+using DocxTemplater.ImageBase;
 
 namespace DocxTemplater
 {
@@ -15,6 +16,7 @@ namespace DocxTemplater
         IModelLookup ModelLookup { get; }
         IVariableReplacer VariableReplacer { get; }
         IReadOnlyCollection<ITemplateProcessorExtension> Extensions { get; }
+        IImageService ImageService { get; }
     }
 
     public interface ITemplateProcessingContextAccess : ITemplateProcessingContext
@@ -22,6 +24,8 @@ namespace DocxTemplater
         void Initialize(MainDocumentPart mainDocumentPart);
 
         void RegisterExtension(ITemplateProcessorExtension extension);
+
+        void SetImageService(IImageService imageService);
     }
 
     internal class TemplateProcessingContext : ITemplateProcessingContextAccess
@@ -44,6 +48,7 @@ namespace DocxTemplater
         public IVariableReplacer VariableReplacer { get; }
 
         public IReadOnlyCollection<ITemplateProcessorExtension> Extensions => m_extensions;
+        public IImageService ImageService { get; private set; }
 
         public void Initialize(MainDocumentPart mainDocumentPart)
         {
@@ -61,6 +66,11 @@ namespace DocxTemplater
                 throw new InvalidOperationException($"Extension of type {extension.GetType()} is already registered");
             }
             m_extensions.Add(extension);
+        }
+
+        public void SetImageService(IImageService imageService)
+        {
+            ImageService = imageService;
         }
     }
 }

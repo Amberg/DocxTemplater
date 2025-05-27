@@ -111,7 +111,7 @@ namespace DocxTemplater.Markdown.Renderer
                 return null;
             }
 
-            // First search for style by name
+            // First search for style by name or id
             if (markDownFormatterConfiguration.TableStyle != null)
             {
                 var style = mainDocumentPart.FindTableStyleByName(markDownFormatterConfiguration.TableStyle);

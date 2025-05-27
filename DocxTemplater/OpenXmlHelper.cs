@@ -10,7 +10,6 @@ using System.Xml.Linq;
 using DocumentFormat.OpenXml.Drawing.Wordprocessing;
 using DocumentFormat.OpenXml.Validation;
 
-
 namespace DocxTemplater
 {
     public static class OpenXmlHelper
@@ -40,7 +39,7 @@ namespace DocxTemplater
             {
                 return null;
             }
-            return part.Styles?.Elements<Style>().FirstOrDefault(x => x.StyleId == name);
+            return part.Styles?.Elements<Style>().FirstOrDefault(x => x.StyleId == name || x.StyleName?.Val == name);
         }
 
         public static IEnumerable<OpenXmlElement> ElementsSameLevelAfterInDocument(this OpenXmlElement element)

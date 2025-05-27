@@ -3,6 +3,13 @@ using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using DocxTemplater.Markdown;
 using System.Text;
+using DocumentFormat.OpenXml.Drawing;
+using DocxTemplater.Images;
+using Break = DocumentFormat.OpenXml.Wordprocessing.Break;
+using Paragraph = DocumentFormat.OpenXml.Wordprocessing.Paragraph;
+using Run = DocumentFormat.OpenXml.Wordprocessing.Run;
+using Text = DocumentFormat.OpenXml.Wordprocessing.Text;
+
 
 namespace DocxTemplater.Test
 {
@@ -245,10 +252,86 @@ namespace DocxTemplater.Test
             result.SaveAsFileAndOpenInWord();
             result.Position = 0;
             var document = WordprocessingDocument.Open(result, false);
-            Assert.That(TestHelper.ComputeSha256Hash(document.MainDocumentPart.Document.Body.InnerXml), Is.EqualTo("83fbf2ba90daddbb0d4fd1ae92b5e98f2c6f4f8a686f75b8813cf02a95d59fbe"));
-
+            Assert.That(TestHelper.ComputeSha256Hash(document.MainDocumentPart.Document.Body.InnerXml), Is.EqualTo("66227137ea0ce6b1b10771972b7f7f9da54f9942d39531d02b9b0dffda3ddae1"));
         }
 
+        [Test]
+        public void MarkdownWithBase64ImageWithoutImageFormatter()
+        {
+            var imageBytes = File.ReadAllBytes($"Resources/testImage_rot.jpg");
+            var base64 = Convert.ToBase64String(imageBytes);
+            string markdownTextAndPic = $"""
+                                         **Hallo**
+
+                                         ![Rotes Quadrat](data:image/png;base64,{base64})
+
+                                         *Hallo*
+                                         """;
+
+            using var fileStream = File.OpenRead("Resources/MarkdownBase64Image.docx");
+            var docTemplate = new DocxTemplate(fileStream);
+            docTemplate.RegisterFormatter(new MarkdownFormatter());
+            docTemplate.BindModel("ds", new Dictionary<string, object>()
+            {
+                { "MyMarkdown", new ValueWithMetadata(markdownTextAndPic, new ValueMetadata("md")) },
+                { "MyOtherMarkdown", new ValueWithMetadata(markdownTextAndPic, new ValueMetadata("md")) },
+                { "MyNextMarkdown", new ValueWithMetadata(markdownTextAndPic, new ValueMetadata("md")) }
+            });
+
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.That(result, Is.Not.Null);
+            result.SaveAsFileAndOpenInWord();
+            result.Position = 0;
+            var document = WordprocessingDocument.Open(result, false);
+            Assert.That(TestHelper.ComputeSha256Hash(document.MainDocumentPart.Document.Body.InnerXml), Is.EqualTo("80cefc6cbda5140f0196de9df6812c9db046bf7a59cee756e34348f4fba1b8d4"));
+        }
+
+        [Test]
+        public void MarkdownWithBase64ImageShouldRenderPicture()
+        {
+            var imageBytes = File.ReadAllBytes($"Resources/testImage_rot.jpg");
+            var base64 = Convert.ToBase64String(imageBytes);
+            string markdownTextAndPic = $"""
+                              **Hallo**
+                              
+                              ![Rotes Quadrat](data:image/png;base64,{base64})
+                              
+                              *Hallo*
+                              """;
+
+            var sb = new StringBuilder();
+            sb.AppendLine("| Header 1 | Header 2 |");
+            sb.AppendLine("|:----------|----------:|");
+            sb.AppendLine($"| Row 1 ![](data:image/png;base64,{base64}) Col 1 | Row 1 Col 2 |");
+            sb.AppendLine($"| Row 2 Col 1 | Row 2 ![](data:image/png;base64,{base64}) Col 2 |");
+            var markdownTableAndPic = sb.ToString();
+
+            var markdownPicOnly = $"![](data:image/png;base64,{base64})";
+            using var fileStream = File.OpenRead("Resources/MarkdownBase64Image.docx");
+            var docTemplate = new DocxTemplate(fileStream);
+            docTemplate.RegisterFormatter(new MarkdownFormatter());
+            docTemplate.RegisterFormatter(new ImageFormatter());
+            docTemplate.BindModel("ds", new Dictionary<string, object>()
+            {
+                { "MyMarkdown", new ValueWithMetadata(markdownTextAndPic, new ValueMetadata("md")) },
+                { "MyOtherMarkdown", new ValueWithMetadata(markdownPicOnly, new ValueMetadata("md")) },
+                { "MyNextMarkdown", new ValueWithMetadata(markdownTableAndPic, new ValueMetadata("md")) }
+            });
+
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.That(result, Is.Not.Null);
+            result.SaveAsFileAndOpenInWord();
+            result.Position = 0;
+            var document = WordprocessingDocument.Open(result, false);
+            var drawings = document.MainDocumentPart.Document.Body.Descendants<Drawing>();
+            int imageCount = drawings
+                .Select(d => d.Descendants<GraphicData>()
+                    .Any(gd => gd.Uri == "http://schemas.openxmlformats.org/drawingml/2006/picture"))
+                .Count(b => b);
+            Assert.That(imageCount, Is.EqualTo(10), "Expected 10 images in the document, but found a different number.");
+        }
 
         [Test]
         public void MarkdownWithPlaceholderReplacement()

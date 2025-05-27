@@ -9,6 +9,7 @@ using DocxTemplater.Formatter;
 using System.Collections.Generic;
 using System.Linq;
 using DocxTemplater.Extensions;
+using DocxTemplater.ImageBase;
 
 namespace DocxTemplater
 {
@@ -272,6 +273,11 @@ namespace DocxTemplater
 
         public void RegisterFormatter(IFormatter formatter)
         {
+            if (formatter is IImageServiceProvider imageService)
+            {
+                Context.SetImageService(imageService.CreateImageService());
+            }
+
             Context.VariableReplacer.RegisterFormatter(formatter);
         }
 
