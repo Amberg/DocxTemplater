@@ -29,7 +29,17 @@ namespace DocxTemplater.Markdown.Renderer.Inlines
             }
 
             var root = m_mainDocumentPart.RootElement;
-            var imageBytes = Convert.FromBase64String(obj.Url.Split(',')[1]);
+            byte[] imageBytes;
+
+            try
+            {
+                imageBytes = Convert.FromBase64String(obj.Url.Split(',')[1]);
+            }
+            catch (Exception ex)
+            {
+                throw new OpenXmlTemplateException($"Invalid image data in Markdown link. {obj.Url}", ex);
+            }
+
             var maxPropertyId = m_imageService.GetImage(root, imageBytes, out ImageInformation imageInfo);
             var drawing = CreateDrawing(imageInfo, maxPropertyId, m_imageService);
             var existingText = renderer.CurrentParagraph.Descendants<Text>().LastOrDefault();
