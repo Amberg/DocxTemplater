@@ -134,7 +134,64 @@ namespace DocxTemplater.Blocks
         public void RemoveAnchor(OpenXmlElement parentNode)
         {
             var element = m_insertionPoint.GetElement(parentNode) ?? throw new OpenXmlTemplateException($"Insertion point {m_insertionPoint.Id} not found");
-            element.Remove();
+
+            if (m_context?.ProcessSettings.RemoveParagraphsContainingOnlyBlocks == true)
+            {
+                RemoveParagraphIfEmpty(element);
+            }
+            else
+            {
+                element.Remove();
+            }
+        }
+
+        protected static void RemoveParagraphIfEmpty(OpenXmlElement element)
+        {
+            var paragraph = element.GetFirstAncestor<Paragraph>();
+            if (paragraph != null)
+            {
+                // First, remove the insertion point element
+                element.Remove();
+
+                // Check if the paragraph is now empty (contains only properties or no content)
+                bool isEmpty = true;
+                
+                // Skip checking paragraph properties
+                foreach (var child in paragraph.ChildElements)
+                {
+                    if (child is ParagraphProperties)
+                        continue;
+                        
+                    // If it has any content elements that are not properties
+                    if (child is Run run)
+                    {
+                        // Check if run has any non-empty text
+                        if (run.ChildElements.Any(c => 
+                            (c is Text text && !string.IsNullOrWhiteSpace(text.Text))))
+                        {
+                            isEmpty = false;
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        // Any other non-property element
+                        isEmpty = false;
+                        break;
+                    }
+                }
+                
+                if (isEmpty)
+                {
+                    // Remove the entire paragraph
+                    paragraph.Remove();
+                }
+            }
+            else
+            {
+                // If not in a paragraph, just remove the element
+                element.Remove();
+            }
         }
 
         public override string ToString()
