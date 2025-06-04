@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO;
+using System.Text;
+using System.Text.RegularExpressions;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocxTemplater.ImageBase;
@@ -25,32 +27,65 @@ namespace DocxTemplater.Images
 
                 if (!TryGetImageIdFromCache(imageBytes, openXmlPartRootElement, out imageInfoInformation))
                 {
-                    using var image = Image.Load(imageBytes);
-                    ImageRotation exifRotation = ImageRotation.CreateFromUnits(0);
-                    if (image.Metadata?.ExifProfile?.TryGetValue(ExifTag.Orientation, out var orientationValue) == true)
+                    if (IsSvgImage(imageBytes))
                     {
-                        exifRotation = ImageRotation.CreateFromExifRotation((ExifRotation)orientationValue.Value);
+                        // Handle SVG specifically
+                        string imagePartRelId = null;
+
+                        if (openXmlPartRootElement.OpenXmlPart is HeaderPart headerPart)
+                        {
+                            imagePartRelId = CreateSvgPart(headerPart, imageBytes);
+                        }
+                        else if (openXmlPartRootElement.OpenXmlPart is FooterPart footerPart)
+                        {
+                            imagePartRelId = CreateSvgPart(footerPart, imageBytes);
+                        }
+                        else if (openXmlPartRootElement.OpenXmlPart is MainDocumentPart mainDocumentPart)
+                        {
+                            imagePartRelId = CreateSvgPart(mainDocumentPart, imageBytes);
+                        }
+
+                        if (imagePartRelId == null)
+                        {
+                            throw new OpenXmlTemplateException("Could not create SVG part");
+                        }
+
+                        // Parse size arguments from SVG if possible or use defaults
+                        int defaultWidth = ExtractSvgWidth(imageBytes) ?? 300;
+                        int defaultHeight = ExtractSvgHeight(imageBytes) ?? 300;
+
+                        imageInfoInformation = new ImageInformation(defaultWidth, defaultHeight, imagePartRelId, ImageRotation.CreateFromUnits(0), true);
+                        m_imagePartRelIdCache[imageBytes] = imageInfoInformation;
                     }
-                    string imagePartRelId = null;
-                    var imagePartType = DetectPartTypeInfo(image.Metadata);
-                    if (openXmlPartRootElement.OpenXmlPart is HeaderPart headerPart)
+                    else
                     {
-                        imagePartRelId = CreateImagePart(headerPart, imageBytes, imagePartType);
+                        using var image = Image.Load(imageBytes);
+                        ImageRotation exifRotation = ImageRotation.CreateFromUnits(0);
+                        if (image.Metadata?.ExifProfile?.TryGetValue(ExifTag.Orientation, out var orientationValue) == true)
+                        {
+                            exifRotation = ImageRotation.CreateFromExifRotation((ExifRotation)orientationValue.Value);
+                        }
+                        string imagePartRelId = null;
+                        var imagePartType = DetectPartTypeInfo(image.Metadata);
+                        if (openXmlPartRootElement.OpenXmlPart is HeaderPart headerPart)
+                        {
+                            imagePartRelId = CreateImagePart(headerPart, imageBytes, imagePartType);
+                        }
+                        else if (openXmlPartRootElement.OpenXmlPart is FooterPart footerPart)
+                        {
+                            imagePartRelId = CreateImagePart(footerPart, imageBytes, imagePartType);
+                        }
+                        else if (openXmlPartRootElement.OpenXmlPart is MainDocumentPart mainDocumentPart)
+                        {
+                            imagePartRelId = CreateImagePart(mainDocumentPart, imageBytes, imagePartType);
+                        }
+                        if (imagePartRelId == null)
+                        {
+                            throw new OpenXmlTemplateException("Could not find a valid image part");
+                        }
+                        imageInfoInformation = new ImageInformation(image.Width, image.Height, imagePartRelId, exifRotation);
+                        m_imagePartRelIdCache[imageBytes] = imageInfoInformation;
                     }
-                    else if (openXmlPartRootElement.OpenXmlPart is FooterPart footerPart)
-                    {
-                        imagePartRelId = CreateImagePart(footerPart, imageBytes, imagePartType);
-                    }
-                    else if (openXmlPartRootElement.OpenXmlPart is MainDocumentPart mainDocumentPart)
-                    {
-                        imagePartRelId = CreateImagePart(mainDocumentPart, imageBytes, imagePartType);
-                    }
-                    if (imagePartRelId == null)
-                    {
-                        throw new OpenXmlTemplateException("Could not find a valid image part");
-                    }
-                    imageInfoInformation = new ImageInformation(image.Width, image.Height, imagePartRelId, exifRotation);
-                    m_imagePartRelIdCache[imageBytes] = imageInfoInformation;
                 }
                 return maxPropertyId;
             }
@@ -134,6 +169,84 @@ namespace DocxTemplater.Images
             var memStream = new MemoryStream(imageBytes);
             imagePart.FeedData(memStream);
             return relationshipId;
+        }
+
+        private static string CreateSvgPart<T>(T parent, byte[] svgBytes)
+            where T : OpenXmlPartContainer, ISupportedRelationship<ImagePart>
+        {
+            var imagePart = parent.AddImagePart(ImagePartType.Svg);
+            var relationshipId = parent.GetIdOfPart(imagePart);
+            var memStream = new MemoryStream(svgBytes);
+            imagePart.FeedData(memStream);
+            return relationshipId;
+        }
+
+        private static bool IsSvgImage(byte[] imageBytes)
+        {
+            // Check for SVG XML signature at the beginning of the file
+            try
+            {
+                // Check the first portion of the file for SVG signature
+                string content = Encoding.UTF8.GetString(imageBytes, 0, System.Math.Min(imageBytes.Length, 1000)).Trim();
+                return (content.StartsWith("<?xml", System.StringComparison.OrdinalIgnoreCase) ||
+                        content.StartsWith("<svg", System.StringComparison.OrdinalIgnoreCase)) &&
+                       content.Contains("<svg", System.StringComparison.OrdinalIgnoreCase) &&
+                       content.Contains("xmlns", System.StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static int? ExtractSvgWidth(byte[] svgBytes)
+        {
+            try
+            {
+                string svgContent = Encoding.UTF8.GetString(svgBytes);
+                var widthMatch = Regex.Match(svgContent, @"<svg[^>]*\s+width\s*=\s*[""']?(\d+)(?:px)?[""']?");
+                if (widthMatch.Success && int.TryParse(widthMatch.Groups[1].Value, out int width))
+                {
+                    return width;
+                }
+
+                // Check for viewBox as fallback
+                var viewBoxMatch = Regex.Match(svgContent, @"<svg[^>]*\s+viewBox\s*=\s*[""']?(\d+)\s+(\d+)\s+(\d+)\s+(\d+)[""']?");
+                if (viewBoxMatch.Success && int.TryParse(viewBoxMatch.Groups[3].Value, out int viewBoxWidth))
+                {
+                    return viewBoxWidth;
+                }
+            }
+            catch
+            {
+                // Ignore parsing errors and use default
+            }
+            return null;
+        }
+
+        private static int? ExtractSvgHeight(byte[] svgBytes)
+        {
+            try
+            {
+                string svgContent = Encoding.UTF8.GetString(svgBytes);
+                var heightMatch = Regex.Match(svgContent, @"<svg[^>]*\s+height\s*=\s*[""']?(\d+)(?:px)?[""']?");
+                if (heightMatch.Success && int.TryParse(heightMatch.Groups[1].Value, out int height))
+                {
+                    return height;
+                }
+
+                // Check for viewBox as fallback
+                var viewBoxMatch = Regex.Match(svgContent, @"<svg[^>]*\s+viewBox\s*=\s*[""']?(\d+)\s+(\d+)\s+(\d+)\s+(\d+)[""']?");
+                if (viewBoxMatch.Success && int.TryParse(viewBoxMatch.Groups[4].Value, out int viewBoxHeight))
+                {
+                    return viewBoxHeight;
+                }
+            }
+            catch
+            {
+                // Ignore parsing errors and use default
+            }
+            return null;
         }
     }
 }
