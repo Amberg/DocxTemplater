@@ -2,7 +2,7 @@
 
 namespace DocxTemplater.ImageBase
 {
-    public sealed record ImageInformation(int PixelWidth, int PixelHeight, string ImagePartRelationId, ImageRotation ExifRotation);
+    public sealed record ImageInformation(int PixelWidth, int PixelHeight, string ImagePartRelationId, ImageRotation ExifRotation, bool IsSvg = false);
     public interface IImageService
     {
         uint GetImage(OpenXmlElement root, byte[] imageBytes, out ImageInformation imageInfoInformation);

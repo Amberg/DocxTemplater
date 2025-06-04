@@ -25,32 +25,60 @@ namespace DocxTemplater.Images
 
                 if (!TryGetImageIdFromCache(imageBytes, openXmlPartRootElement, out imageInfoInformation))
                 {
-                    using var image = Image.Load(imageBytes);
-                    ImageRotation exifRotation = ImageRotation.CreateFromUnits(0);
-                    if (image.Metadata?.ExifProfile?.TryGetValue(ExifTag.Orientation, out var orientationValue) == true)
+                    if (SvgHelper.TryReadAsSvg(imageBytes, out int width, out int height))
                     {
-                        exifRotation = ImageRotation.CreateFromExifRotation((ExifRotation)orientationValue.Value);
+                        // Handle SVG specifically
+                        string imagePartRelId = null;
+                        if (openXmlPartRootElement.OpenXmlPart is HeaderPart headerPart)
+                        {
+                            imagePartRelId = SvgHelper.CreateSvgPart(headerPart, imageBytes);
+                        }
+                        else if (openXmlPartRootElement.OpenXmlPart is FooterPart footerPart)
+                        {
+                            imagePartRelId = SvgHelper.CreateSvgPart(footerPart, imageBytes);
+                        }
+                        else if (openXmlPartRootElement.OpenXmlPart is MainDocumentPart mainDocumentPart)
+                        {
+                            imagePartRelId = SvgHelper.CreateSvgPart(mainDocumentPart, imageBytes);
+                        }
+
+                        if (imagePartRelId == null)
+                        {
+                            throw new OpenXmlTemplateException("Could not create SVG part");
+                        }
+
+                        imageInfoInformation = new ImageInformation(width, height, imagePartRelId, ImageRotation.CreateFromUnits(0), true);
+                        m_imagePartRelIdCache[imageBytes] = imageInfoInformation;
                     }
-                    string imagePartRelId = null;
-                    var imagePartType = DetectPartTypeInfo(image.Metadata);
-                    if (openXmlPartRootElement.OpenXmlPart is HeaderPart headerPart)
+                    else
                     {
-                        imagePartRelId = CreateImagePart(headerPart, imageBytes, imagePartType);
+                        using var image = Image.Load(imageBytes);
+                        ImageRotation exifRotation = ImageRotation.CreateFromUnits(0);
+                        if (image.Metadata?.ExifProfile?.TryGetValue(ExifTag.Orientation, out var orientationValue) == true)
+                        {
+                            exifRotation = ImageRotation.CreateFromExifRotation((ExifRotation)orientationValue.Value);
+                        }
+                        string imagePartRelId = null;
+                        var imagePartType = DetectPartTypeInfo(image.Metadata);
+                        if (openXmlPartRootElement.OpenXmlPart is HeaderPart headerPart)
+                        {
+                            imagePartRelId = CreateImagePart(headerPart, imageBytes, imagePartType);
+                        }
+                        else if (openXmlPartRootElement.OpenXmlPart is FooterPart footerPart)
+                        {
+                            imagePartRelId = CreateImagePart(footerPart, imageBytes, imagePartType);
+                        }
+                        else if (openXmlPartRootElement.OpenXmlPart is MainDocumentPart mainDocumentPart)
+                        {
+                            imagePartRelId = CreateImagePart(mainDocumentPart, imageBytes, imagePartType);
+                        }
+                        if (imagePartRelId == null)
+                        {
+                            throw new OpenXmlTemplateException("Could not find a valid image part");
+                        }
+                        imageInfoInformation = new ImageInformation(image.Width, image.Height, imagePartRelId, exifRotation);
+                        m_imagePartRelIdCache[imageBytes] = imageInfoInformation;
                     }
-                    else if (openXmlPartRootElement.OpenXmlPart is FooterPart footerPart)
-                    {
-                        imagePartRelId = CreateImagePart(footerPart, imageBytes, imagePartType);
-                    }
-                    else if (openXmlPartRootElement.OpenXmlPart is MainDocumentPart mainDocumentPart)
-                    {
-                        imagePartRelId = CreateImagePart(mainDocumentPart, imageBytes, imagePartType);
-                    }
-                    if (imagePartRelId == null)
-                    {
-                        throw new OpenXmlTemplateException("Could not find a valid image part");
-                    }
-                    imageInfoInformation = new ImageInformation(image.Width, image.Height, imagePartRelId, exifRotation);
-                    m_imagePartRelIdCache[imageBytes] = imageInfoInformation;
                 }
                 return maxPropertyId;
             }
