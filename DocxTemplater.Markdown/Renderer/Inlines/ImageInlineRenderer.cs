@@ -1,5 +1,4 @@
-﻿using DocumentFormat.OpenXml.Packaging;
-using Markdig.Syntax.Inlines;
+﻿using Markdig.Syntax.Inlines;
 using System;
 using System.Linq;
 using DocumentFormat.OpenXml;
@@ -12,12 +11,10 @@ namespace DocxTemplater.Markdown.Renderer.Inlines
 {
     internal sealed class ImageInlineRenderer : OpenXmlObjectRenderer<LinkInline>
     {
-        private readonly MainDocumentPart m_mainDocumentPart;
         private readonly IImageService m_imageService;
 
-        public ImageInlineRenderer(MainDocumentPart mainDocumentPart, IImageService imageService)
+        public ImageInlineRenderer(IImageService imageService)
         {
-            m_mainDocumentPart = mainDocumentPart;
             m_imageService = imageService;
         }
 
@@ -28,7 +25,7 @@ namespace DocxTemplater.Markdown.Renderer.Inlines
                 return;
             }
 
-            var root = m_mainDocumentPart.RootElement;
+            var root = renderer.TargetText.GetRoot();
             byte[] imageBytes;
 
             try
