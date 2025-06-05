@@ -1,5 +1,4 @@
-﻿
-using DocumentFormat.OpenXml;
+﻿using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using DocxTemplater.Markdown.Renderer;
@@ -33,7 +32,8 @@ namespace DocxTemplater.Markdown
             IImageService imageService)
         {
             // extract style from target run element
-            m_targetRunProperties = ((Run)target.Parent).RunProperties;
+            TargetText = target;
+            m_targetRunProperties = ((Run)TargetText?.Parent)?.RunProperties;
             m_formatStack.Push(new Format(false, false, null, false));
             m_containingParagraphFromTemplate = parentElement;
             CurrentParagraph = parentElement;
@@ -48,7 +48,7 @@ namespace DocxTemplater.Markdown
             ObjectRenderers.Add(new HtmlBlockRenderer());
             if (imageService != null)
             {
-                ObjectRenderers.Add(new ImageInlineRenderer(mainDocumentPart, imageService));
+                ObjectRenderers.Add(new ImageInlineRenderer(imageService));
             }
 
 
@@ -59,6 +59,8 @@ namespace DocxTemplater.Markdown
         }
 
         public Paragraph CurrentParagraph { get; private set; }
+
+        public Text TargetText { get; }
 
         public bool CurrentParagraphWasCreatedByMarkdown => CurrentParagraph != m_containingParagraphFromTemplate;
 

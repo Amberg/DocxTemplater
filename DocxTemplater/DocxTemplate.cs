@@ -99,12 +99,12 @@ namespace DocxTemplater
                 return m_stream;
             }
             Processed = true;
-            foreach (var header in m_wpDocument.MainDocumentPart.HeaderParts)
+            foreach (var header in m_wpDocument.MainDocumentPart.HeaderParts.ToList())
             {
                 ProcessNode(header.Header);
             }
             ProcessNode(m_wpDocument.MainDocumentPart.RootElement);
-            foreach (var footer in m_wpDocument.MainDocumentPart.FooterParts)
+            foreach (var footer in m_wpDocument.MainDocumentPart.FooterParts.ToList())
             {
                 ProcessNode(footer.Footer);
             }

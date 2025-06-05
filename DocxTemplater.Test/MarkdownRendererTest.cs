@@ -275,7 +275,9 @@ namespace DocxTemplater.Test
             {
                 { "MyMarkdown", new ValueWithMetadata(markdownTextAndPic, new ValueMetadata("md")) },
                 { "MyOtherMarkdown", new ValueWithMetadata(markdownTextAndPic, new ValueMetadata("md")) },
-                { "MyNextMarkdown", new ValueWithMetadata(markdownTextAndPic, new ValueMetadata("md")) }
+                { "MyNextMarkdown", new ValueWithMetadata(markdownTextAndPic, new ValueMetadata("md")) },
+                { "Header", new ValueWithMetadata(markdownTextAndPic, new ValueMetadata("md")) },
+                { "Footer", new ValueWithMetadata(markdownTextAndPic, new ValueMetadata("md")) }
             });
 
             var result = docTemplate.Process();
@@ -284,7 +286,7 @@ namespace DocxTemplater.Test
             result.SaveAsFileAndOpenInWord();
             result.Position = 0;
             var document = WordprocessingDocument.Open(result, false);
-            Assert.That(TestHelper.ComputeSha256Hash(document.MainDocumentPart.Document.Body.InnerXml), Is.EqualTo("80cefc6cbda5140f0196de9df6812c9db046bf7a59cee756e34348f4fba1b8d4"));
+            Assert.That(TestHelper.ComputeSha256Hash(document.MainDocumentPart.Document.Body.InnerXml), Is.EqualTo("f53a467b63e86c7f766b1697a44e9a2965351d52dfb1c02bdc0b1b3118b20658"));
         }
 
         [Test]
@@ -316,7 +318,9 @@ namespace DocxTemplater.Test
             {
                 { "MyMarkdown", new ValueWithMetadata(markdownTextAndPic, new ValueMetadata("md")) },
                 { "MyOtherMarkdown", new ValueWithMetadata(markdownPicOnly, new ValueMetadata("md")) },
-                { "MyNextMarkdown", new ValueWithMetadata(markdownTableAndPic, new ValueMetadata("md")) }
+                { "MyNextMarkdown", new ValueWithMetadata(markdownTableAndPic, new ValueMetadata("md")) },
+                { "Header", new ValueWithMetadata(markdownTextAndPic, new ValueMetadata("md")) },
+                { "Footer", new ValueWithMetadata(markdownTextAndPic, new ValueMetadata("md")) }
             });
 
             var result = docTemplate.Process();
@@ -325,12 +329,24 @@ namespace DocxTemplater.Test
             result.SaveAsFileAndOpenInWord();
             result.Position = 0;
             var document = WordprocessingDocument.Open(result, false);
-            var drawings = document.MainDocumentPart.Document.Body.Descendants<Drawing>();
-            int imageCount = drawings
+            var mainDrawings = document.MainDocumentPart.Document.Body.Descendants<Drawing>();
+            int mainImageCount = mainDrawings
                 .Select(d => d.Descendants<GraphicData>()
                     .Any(gd => gd.Uri == "http://schemas.openxmlformats.org/drawingml/2006/picture"))
                 .Count(b => b);
-            Assert.That(imageCount, Is.EqualTo(10), "Expected 10 images in the document, but found a different number.");
+            var headerDrawings = document.MainDocumentPart.HeaderParts.Single().Header.Descendants<Drawing>();
+            int headerImageCount = headerDrawings
+                .Select(d => d.Descendants<GraphicData>()
+                    .Any(gd => gd.Uri == "http://schemas.openxmlformats.org/drawingml/2006/picture"))
+                .Count(b => b);
+            var footerDrawings = document.MainDocumentPart.FooterParts.Single().Footer.Descendants<Drawing>();
+            int footerImageCount = footerDrawings
+                .Select(d => d.Descendants<GraphicData>()
+                    .Any(gd => gd.Uri == "http://schemas.openxmlformats.org/drawingml/2006/picture"))
+                .Count(b => b);
+            Assert.That(mainImageCount, Is.EqualTo(10), "Expected 10 images in the document, but found a different number.");
+            Assert.That(headerImageCount, Is.EqualTo(1), "Expected 10 images in the document, but found a different number.");
+            Assert.That(footerImageCount, Is.EqualTo(1), "Expected 10 images in the document, but found a different number.");
         }
 
         [Test]
