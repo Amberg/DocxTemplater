@@ -1335,11 +1335,12 @@ namespace DocxTemplater.Test
 
             MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
             mainPart.Document = new Document(new Body(new Paragraph(
-                new Run(new Text("{{ds.MyString}} + {{ds.SomeNumber}}"))
+                new Run(new Text("{{ds.Vorname}} {{ds.LastName}} aus {{ds.Anschrift}}"))
             )));
             wpDocument.Save();
             memStream.Position = 0;
             var docTemplate = new DocxTemplate(memStream);
+            docTemplate.RegisterFormatter(new Markdown.MarkdownFormatter());
             docTemplate.BindModel("ds", new DummyModelWithDisplayNames());
             var result = docTemplate.Process();
             docTemplate.Validate();
@@ -1348,7 +1349,7 @@ namespace DocxTemplater.Test
 
             var document = WordprocessingDocument.Open(result, false);
             var body = document.MainDocumentPart.Document.Body;
-            Assert.That(body.InnerText, Is.EqualTo("Hello World! + 42"));
+            Assert.That(body.InnerText, Is.EqualTo("John Doe aus Musterstraße 42, A-4242 Musterhausen"));
         }
 
         private static DriveStudentOverviewReportingModel CrateBillTemplate2Model()
@@ -1520,10 +1521,14 @@ namespace DocxTemplater.Test
 
         private class DummyModelWithDisplayNames : TemplateModelWithDisplayNames
         {
-            [DisplayName("MyString")]
-            public string SomeString { get; set; } = "Hello World!";
+            [DisplayName("Vorname")]
+            public string FirstName { get; set; } = "John";
 
-            public int SomeNumber { get; set; } = 42;
+            public string LastName { get; set; } = "Doe";
+
+            [DisplayName("Anschrift")]
+            [ModelProperty(DefaultFormatter = "md")]
+            public string Address { get; set; } = "Musterstraße 42, **A-4242 Musterhausen**";
         }
     }
 }
