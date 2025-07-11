@@ -1,11 +1,12 @@
-﻿using DocumentFormat.OpenXml;
+﻿using System.Collections;
+using System.ComponentModel;
+using System.Dynamic;
+using System.Globalization;
+using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using DocxTemplater.Images;
 using DocxTemplater.Model;
-using System.Collections;
-using System.Dynamic;
-using System.Globalization;
 using Bold = DocumentFormat.OpenXml.Wordprocessing.Bold;
 using Break = DocumentFormat.OpenXml.Drawing.Break;
 using Paragraph = DocumentFormat.OpenXml.Wordprocessing.Paragraph;
@@ -1326,6 +1327,30 @@ namespace DocxTemplater.Test
                                                   "</w:r></w:p>"));
         }
 
+        [Test]
+        public void TestWithBaseTemplateModelWithDisplayNames()
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(new Paragraph(
+                new Run(new Text("{{ds.MyString}} + {{ds.SomeNumber}}"))
+            )));
+            wpDocument.Save();
+            memStream.Position = 0;
+            var docTemplate = new DocxTemplate(memStream);
+            docTemplate.BindModel("ds", new DummyModelWithDisplayNames());
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.That(result, Is.Not.Null);
+            result.Position = 0;
+
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            Assert.That(body.InnerText, Is.EqualTo("Hello World! + 42"));
+        }
+
         private static DriveStudentOverviewReportingModel CrateBillTemplate2Model()
         {
             DriveStudentOverviewReportingModel model = new()
@@ -1491,6 +1516,14 @@ namespace DocxTemplater.Test
                 value = new ValueWithMetadata();
                 return false;
             }
+        }
+
+        private class DummyModelWithDisplayNames : TemplateModelWithDisplayNames
+        {
+            [DisplayName("MyString")]
+            public string SomeString { get; set; } = "Hello World!";
+
+            public int SomeNumber { get; set; } = 42;
         }
     }
 }

@@ -327,6 +327,44 @@ var docTemplate = new DocxTemplate(memStream, new ProcessSettings()
 var result = docTemplate.Process();
 ```
 
+## Advanced Model Binding: `ITemplateModel` and `TemplateModelWithDisplayNames`
+
+### `ITemplateModel` Interface
+
+For advanced scenarios where a standard object or dictionary is not suitable for your data model, you can implement the `ITemplateModel` interface.
+This allows you to control how properties are resolved for template binding.
+
+```csharp
+public interface ITemplateModel
+{
+    bool TryGetPropertyValue(string propertyName, out ValueWithMetadata value);
+}
+```
+
+Implement this interface to provide custom property lookup logic.
+This is useful for dynamic models, computed properties, or when you want to support custom property resolution strategies.
+
+### `TemplateModelWithDisplayNames` Base Class
+
+`TemplateModelWithDisplayNames` is an abstract base class that extends `ITemplateModel` and allows you to bind template placeholders to properties using either their property name or a `[DisplayName]` attribute.
+This is especially useful when you want to use user-friendly or localized names in your templates.
+
+```csharp
+using DocxTemplater.Model;
+using System.ComponentModel;
+
+public class PersonModel : TemplateModelWithDisplayNames
+{
+    [DisplayName("Vorname")]
+    public string FirstName { get; set; }
+
+    [DisplayName("Nachname")]
+    public string LastName { get; set; }
+}
+```
+
+In your template, you can then use either `{{person.Vorname}}` or `{{person.FirstName}}` to access the property.
+
 ## Support This Project
 
 If you find DocxTemplater useful, please consider supporting its development:
