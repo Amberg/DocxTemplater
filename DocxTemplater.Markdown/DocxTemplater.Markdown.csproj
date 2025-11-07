@@ -3,7 +3,7 @@
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 	</PropertyGroup>
 	<ItemGroup>
-		<PackageReference Include="Markdig" Version="[0.41.1,1.0.0)" />
+		<PackageReference Include="Markdig" Version="[0.43.0,1.0.0)" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\DocxTemplater\DocxTemplater.csproj" />
