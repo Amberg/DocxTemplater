@@ -117,8 +117,9 @@ namespace DocxTemplater
 
         public void Dispose()
         {
-            m_stream?.Dispose();
             m_wpDocument?.Dispose();
+            m_stream?.Dispose();
         }
     }
 }
+
