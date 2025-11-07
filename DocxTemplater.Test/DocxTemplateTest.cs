@@ -22,7 +22,7 @@ namespace DocxTemplater.Test
         public void DynamicTable()
         {
             using var fileStream = File.OpenRead("Resources/DynamicTable.docx");
-            var docTemplate = new DocxTemplate(fileStream);
+            using var docTemplate = new DocxTemplate(fileStream);
             var tableModel = new DynamicTable();
             tableModel.AddRow(new Dictionary<object, object>() { { "Header1", "Value1" }, { "Header2", "Value2" }, { "Header3", "Value3" } });
             tableModel.AddRow(new Dictionary<object, object>() { { "Header1", "Value4" }, { "Header2", "Value5" }, { "Header3", "Value6" } });

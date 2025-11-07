@@ -49,7 +49,7 @@ namespace DocxTemplater.Test
 
 
         [Test]
-        public void SplitAfterElemntSameRunAtRunLevel()
+        public void SplitAfterElementSameRunAtRunLevel()
         {
             var run = new Run(new Text("Leading"), new Text("StartSplit"), new Text("SplitContent"),
                 new Text("FirstAfterSplit"), new Text("Trail"));
