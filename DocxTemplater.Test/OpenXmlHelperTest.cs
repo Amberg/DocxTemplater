@@ -165,7 +165,7 @@ namespace DocxTemplater.Test
             var paragraph = new Paragraph(xml);
             var parts = paragraph.ChildElements.First<Run>().SplitAfterElement(paragraph.Descendants<Text>().First());
             Assert.That(parts.Count, Is.EqualTo(2));
-            Assert.That(parts.Select(x => x.InnerText), Is.EqualTo(new[] { "Text1", "Text2" }));
+            Assert.That(parts.Select(x => x.InnerText), Is.EqualTo(["Text1", "Text2"]));
 
             var runs = paragraph.Descendants<Run>().ToList();
             Assert.That(runs.Count, Is.EqualTo(2));
@@ -186,7 +186,7 @@ namespace DocxTemplater.Test
             var paragraph = new Paragraph(xml);
             var parts = paragraph.ChildElements.First<Run>().SplitAfterElement(paragraph.Descendants<Text>().First());
             Assert.That(parts.Count, Is.EqualTo(1));
-            Assert.That(parts.Select(x => x.InnerText), Is.EqualTo(new[] { "Text1" }));
+            Assert.That(parts.Select(x => x.InnerText), Is.EqualTo(["Text1"]));
 
             var runs = paragraph.Descendants<Run>().ToList();
             Assert.That(runs.Count, Is.EqualTo(1));
