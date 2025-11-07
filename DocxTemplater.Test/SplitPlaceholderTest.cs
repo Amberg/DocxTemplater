@@ -22,8 +22,8 @@ namespace DocxTemplater.Test
             var runTexts = document.MainDocumentPart.Document.Body.Descendants<Run>()
                 .SelectMany(x => x.Descendants<Text>().Select(x => x.Text));
             Assert.That(runTexts,
-                Is.EqualTo(new[]
-                    {"AAAAA", " !!!!!!!! ", "BB", "BBB", " !!!!!!!! ", "CC", "CCC", " !!!!!!!! ", "LAST", "DDDD"}));
+                Is.EqualTo(["AAAAA", " !!!!!!!! ", "BB", "BBB", " !!!!!!!! ", "CC", "CCC", " !!!!!!!! ", "LAST", "DDDD"
+                ]));
         }
 
         [Test]

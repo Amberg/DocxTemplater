@@ -34,6 +34,25 @@ namespace DocxTemplater.Test
             result.SaveAsFileAndOpenInWord();
         }
 
+        [Test]
+        public void InsertSVGAndScaleAndRotate()
+        {
+            var imageBytes = File.ReadAllBytes("Resources/testImage.svg");
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(new Paragraph(new Run(new Text("{{ds}:img(h:1cm, r:90)}")))));
+            wpDocument.Save();
+            memStream.Position = 0;
+
+            var docTemplate = new DocxTemplate(memStream);
+            docTemplate.RegisterFormatter(new ImageFormatter());
+            docTemplate.BindModel("ds", imageBytes);
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            result.SaveAsFileAndOpenInWord();
+        }
+
 
         [TestCase("w:14cm,h:3cm")]
         [TestCase("w:14cm")]
