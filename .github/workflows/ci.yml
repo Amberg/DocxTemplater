@@ -27,10 +27,9 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: |
+          10.x.x
           9.x.x
           8.x.x
-          7.x.x
-          6.x.x
 
     - name: Restore
       run: dotnet restore $SOLUTION
