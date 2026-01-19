@@ -16,9 +16,15 @@ namespace DocxTemplater
     {
         public static bool IsChildOf(this OpenXmlElement element, OpenXmlElement parent)
         {
-            ArgumentNullException.ThrowIfNull(element, nameof(element));
-            ArgumentNullException.ThrowIfNull(element);
-            ArgumentNullException.ThrowIfNull(parent);
+            if (element is null)
+            {
+                throw new ArgumentNullException(nameof(element));
+            }
+
+            if (parent is null)
+            {
+                throw new ArgumentNullException(nameof(parent));
+            }
             var current = element.Parent;
             while (current != null)
             {
@@ -148,8 +154,15 @@ namespace DocxTemplater
 
         public static OpenXmlElement FindCommonParent(this OpenXmlElement element, OpenXmlElement otherElement)
         {
-            ArgumentNullException.ThrowIfNull(element);
-            ArgumentNullException.ThrowIfNull(otherElement);
+            if (element is null)
+            {
+                throw new ArgumentNullException(nameof(element));
+            }
+
+            if (otherElement is null)
+            {
+                throw new ArgumentNullException(nameof(otherElement));
+            }
             var current = element.Parent;
             while (current != null)
             {
@@ -293,8 +306,8 @@ namespace DocxTemplater
             {
                 throw new ArgumentOutOfRangeException(nameof(startIndexSecondPart));
             }
-            var firstPart = element.Text[..startIndexSecondPart];
-            var secondPart = element.Text[startIndexSecondPart..];
+            var firstPart = element.Text.Substring(0, startIndexSecondPart);
+            var secondPart = element.Text.Substring(startIndexSecondPart);
             element.Text = firstPart;
             var newElement = element.InsertAfterSelf(new Text(secondPart));
             element.Space = SpaceProcessingModeValues.Preserve;

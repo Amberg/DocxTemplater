@@ -31,7 +31,7 @@ namespace DocxTemplater
         public static PatternType GetMarker(this OpenXmlElement element)
         {
             var attribute = element.ExtendedAttributes.FirstOrDefault(a => a.LocalName == MarkerAttribute);
-            return (PatternType)System.Enum.Parse<PatternType>(attribute.Value);
+            return (PatternType)System.Enum.Parse(typeof(PatternType), attribute.Value);
         }
 
         public static IEnumerable<OpenXmlElement> GetElementsWithMarker(this OpenXmlElement root, PatternType marker)

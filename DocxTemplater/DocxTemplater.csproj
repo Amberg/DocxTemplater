@@ -3,13 +3,32 @@
     <LangVersion>12.0</LangVersion>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
   </PropertyGroup>
+  <!-- Override Directory.Build.props target frameworks to include netstandard2.0 for this project -->
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;netstandard2.1;net48;net8.0;net9.0;net10.0</TargetFrameworks>
+  </PropertyGroup>
+  <!-- Disable treating warnings as errors for this project to allow incremental backports -->
+  <PropertyGroup>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <!-- Analyzer warnings will be addressed in code; do not suppress globally -->
+  <!-- Note: We only override TargetFrameworks here. Additional compatibility shims may be required for netstandard2.0. -->
   <ItemGroup>
     <PackageReference Include="DocumentFormat.OpenXml" Version="[3.4.1,4.0.0)" />
     <PackageReference Include="DynamicExpresso.Core" Version="[2.19.3,3.0.0)" />
   </ItemGroup>
   <ItemGroup>
+    <!-- Explicitly include compatibility shims only for older targets -->
+    <Compile Update="Compatibility\**\*.cs" Condition="'$(TargetFramework)' == 'netstandard2.0' Or '$(TargetFramework)' == 'net48'">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
       <_Parameter1>DocxTemplater.Test</_Parameter1>
     </AssemblyAttribute>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="NetStandard\" />
   </ItemGroup>
 </Project>

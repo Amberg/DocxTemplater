@@ -5,16 +5,31 @@ using System.Text.RegularExpressions;
 
 namespace DocxTemplater
 {
-    internal record PatternMatch(
-        Match Match,
-        PatternType Type,
-        string Condition,
-        string Prefix,
-        string Variable,
-        string Formatter,
-        string[] Arguments,
-        int Index,
-        int Length);
+    internal class PatternMatch
+    {
+        public PatternMatch(Match match, PatternType type, string condition, string prefix, string variable, string formatter, string[] arguments, int index, int length)
+        {
+            Match = match;
+            Type = type;
+            Condition = condition;
+            Prefix = prefix;
+            Variable = variable;
+            Formatter = formatter;
+            Arguments = arguments;
+            Index = index;
+            Length = length;
+        }
+
+        public Match Match { get; }
+        public PatternType Type { get; }
+        public string Condition { get; }
+        public string Prefix { get; }
+        public string Variable { get; }
+        public string Formatter { get; }
+        public string[] Arguments { get; }
+        public int Index { get; }
+        public int Length { get; }
+    }
 
     internal static class PatternMatcher
     {
@@ -141,7 +156,7 @@ namespace DocxTemplater
                     {
                         var argGroup = match.Groups["arg"];
                         var arguments = argGroup.Success
-                            ? argGroup.Captures.Select(x => x.Value?.Replace("\\'", "'")).ToArray()
+                            ? argGroup.Captures.Cast<System.Text.RegularExpressions.Capture>().Select(x => x.Value?.Replace("\\'", "'")).ToArray()
                             : Array.Empty<string>();
                         result.Add(new PatternMatch(match, PatternType.Variable, null, null,
                             match.Groups["varname"].Value,

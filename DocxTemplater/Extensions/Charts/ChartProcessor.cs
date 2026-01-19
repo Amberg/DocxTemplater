@@ -35,7 +35,11 @@ namespace DocxTemplater.Extensions.Charts
                 var charts = newContent.SelectMany(x => x.Descendants<ChartReference>());
                 foreach (var chartReference in charts)
                 {
-                    if (!m_insertedChartReferences.TryAdd(chartReference.Id, chartReference))
+                    if (!m_insertedChartReferences.ContainsKey(chartReference.Id))
+                    {
+                        m_insertedChartReferences.Add(chartReference.Id, chartReference);
+                    }
+                    else
                     {
                         // if this chart already used - clone it
                         CloneChart(chartReference, mainDocumentPart);

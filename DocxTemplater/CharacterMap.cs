@@ -8,7 +8,19 @@ using System.Text;
 
 namespace DocxTemplater
 {
-    internal record struct CharacterPointer(Text Element, int CharIndexInText, int Index);
+    internal struct CharacterPointer
+    {
+        public CharacterPointer(Text element, int charIndexInText, int index)
+        {
+            Element = element;
+            CharIndexInText = charIndexInText;
+            Index = index;
+        }
+
+        public Text Element { get; }
+        public int CharIndexInText { get; }
+        public int Index { get; }
+    }
 
     internal class CharacterMap
     {
@@ -81,11 +93,12 @@ namespace DocxTemplater
                     continue;
                 }
 
-                // trailing text is not part of the match int the last element
+                // trailing text is not part of the match in the last element
                 if (first.Element.Text.Length + current.Text.Length > matchLength)
                 {
-                    var firstPart = current.Text[..(matchLength - first.Element.Text.Length)];
-                    var secondPart = current.Text[(matchLength - first.Element.Text.Length)..];
+                    var splitIndex = (matchLength - first.Element.Text.Length);
+                    var firstPart = current.Text.Substring(0, splitIndex);
+                    var secondPart = current.Text.Substring(splitIndex);
                     AddTextToCharacterPointer(first, firstPart);
                     current.Text = secondPart;
                     FixMapAtIndex(first.Index + first.Element.Text.Length);
