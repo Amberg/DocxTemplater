@@ -136,7 +136,10 @@ namespace DocxTemplater.Markdown
                             {
                                 if (lastInsertedElement is Paragraph lastInsertedParagraph) // merge runs into first paragraph
                                 {
-                                    var children = paragraphAfterMd.ChildElements.Where(x => x is Table or Run).ToList();
+                                    var children = paragraphAfterMd.ChildElements.Where(x => x is Table or Run
+                                        || InsertionPoint.HasAlreadyInsertionPointMarker(x)
+                                        || x.IsMarked()
+                                        ).ToList();
                                     paragraphAfterMd.RemoveAllChildren();
                                     paragraphAfterMd.Remove();
                                     foreach (var c in children)
