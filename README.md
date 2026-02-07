@@ -292,7 +292,7 @@ template.Save("generated.docx");
 In your template, you would have a placeholder like this:
 
 ```
-{{ds.MarkdownContent:MD}}
+{{ds.MarkdownContent}:MD}
 ```
 ---
 ### Whitespace Trimming Around Directives
