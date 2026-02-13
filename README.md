@@ -218,7 +218,7 @@ Examples:
 {{SomeDouble}:format(f2)}  ----> "1234.42"  (en-US)
 ```
 ---
-### Image Formatter
+## Image Formatter
 
 **_NOTE:_** For the Image formatter, the NuGet package `DocxTemplater.Images` is required.
 
@@ -256,7 +256,7 @@ If the image is not placed in a container, scaling can be applied using the `w` 
 | `w,h`    | `{{imgData}:img(w:50px,h:20px)}`   | Stretches the image to 50 x 20 pixels without preserving the aspect ratio             |
 
 ---
-### Markdown Formatter
+## Markdown Formatter
 
 The Markdown Formatter in DocxTemplater allows you to convert Markdown text into OpenXML elements, which can be included in your Word documents. This feature supports placeholder replacement within Markdown text and can handle various Markdown elements including tables, lists, and more.
 
@@ -295,7 +295,7 @@ In your template, you would have a placeholder like this:
 {{ds.MarkdownContent}:MD}
 ```
 ---
-### Whitespace Trimming Around Directives
+## Whitespace Trimming Around Directives
 
 To improve template readability without affecting the final output, line breaks before and after template directives (e.g., `{{#...}}, {{/}}, {{:}}`) can be automatically removed.
 This behavior can be enabled via the ProcessSettings:
@@ -307,7 +307,7 @@ var docTemplate = new DocxTemplate(memStream, new ProcessSettings()
 var result = docTemplate.Process();
 ```
 ---
-### Error Handling
+## Error Handling
 
 If a placeholder is not found in the model, an exception is thrown. This can be configured with the `ProcessSettings`:
 ```csharp
@@ -316,7 +316,7 @@ docTemplate.Settings.BindingErrorHandling = BindingErrorHandling.SkipBindingAndR
 var result = docTemplate.Process();
 ```
 ---
-### Culture
+## Culture
 
 The culture used to format the model values can be configured with the `ProcessSettings`:
 ```csharp
