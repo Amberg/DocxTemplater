@@ -91,14 +91,14 @@ namespace DocxTemplater.Test
             using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
             MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
             mainPart.Document = new Document(new Body(
-                new Paragraph(new Run(new Text("{{#switch: ds.Val}}"))),
-                new Paragraph(new Run(new Text("{{#case: 1}}"))),
+                new Paragraph(new Run(new Text("{{#s: ds.Val}}"))),
+                new Paragraph(new Run(new Text("{{#c: 1}}"))),
                 new Paragraph(new Run(new Text("Match 1"))),
-                new Paragraph(new Run(new Text("{{#case: 2}}"))),
+                new Paragraph(new Run(new Text("{{#c: 2}}"))),
                 new Paragraph(new Run(new Text("Match 2"))),
-                new Paragraph(new Run(new Text("{{#default}}"))),
+                new Paragraph(new Run(new Text("{{#d}}"))),
                 new Paragraph(new Run(new Text("Match Default"))),
-                new Paragraph(new Run(new Text("{{/switch}}")))
+                new Paragraph(new Run(new Text("{{/s}}")))
             ));
             wpDocument.Save();
             memStream.Position = 0;

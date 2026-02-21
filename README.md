@@ -208,13 +208,14 @@ Show or hide a given section depending on a switch variable:
 
 | Long Syntax                                                | Short Syntax                                         |
 | :--------------------------------------------------------- | :--------------------------------------------------- |
-| `{{#switch: Item.Value}}`<br>&nbsp;&nbsp;`{{#case: 1}}Value is 1{{/case}}`<br>&nbsp;&nbsp;`{{#case: 'A'}}Value is A{{/case}}`<br>&nbsp;&nbsp;`{{#default}}Value is unknown{{/default}}`<br>`{{/switch}}` | `{{#s: Item.Value}}`<br>&nbsp;&nbsp;`{{#c: 1}}Value is 1{{/c}}`<br>&nbsp;&nbsp;`{{#c: 'A'}}Value is A{{/c}}`<br>&nbsp;&nbsp;`{{#d}}Value is unknown{{/d}}`<br>`{{/s}}` |
+| `{{#switch: Item.Value}}`<br>&nbsp;&nbsp;`{{#case: 1}}Value is 1{{/case}}`<br>&nbsp;&nbsp;`{{#case: 'A'}}Value is A{{/case}}`<br>&nbsp;&nbsp;`{{#default}}Value is unknown{{/default}}`<br>`{{/switch}}` | `{{#s: Item.Value}}`<br>&nbsp;&nbsp;`{{#c: 1}}Value is 1`<br>&nbsp;&nbsp;`{{#c: 'A'}}Value is A`<br>&nbsp;&nbsp;`{{#d}}Value is unknown`<br>`{{/s}}` |
+| **Optional Closing Tags:** | A new Case, Default or SwitchEnd tag automatically closes any preceding open block. |
 
 > [!TIP]
 > **Enums:**
 > You can also use `.ToString()` to match `enum` properties against strings.
 > For example, if `Item.Day` is `DayOfWeek.Monday`:
-> `{{#switch: Item.Day.ToString()}} ... {{#case: 'Monday'}} Match {{/case}} ... {{/switch}}`
+> `{{#s: Item.Day.ToString()}} ... {{#c: 'Monday'}} Match ... {{/s}}`
 ---
 ## Formatters
 
