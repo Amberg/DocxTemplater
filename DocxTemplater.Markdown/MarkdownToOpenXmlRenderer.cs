@@ -16,7 +16,7 @@ namespace DocxTemplater.Markdown
 {
     internal sealed class MarkdownToOpenXmlRenderer : RendererBase
     {
-        private sealed record Format(bool Bold, bool Italic, string Style, bool Strike);
+        private sealed record Format(bool Bold, bool Italic, string Style, bool Strike, bool Subscript, bool Superscript);
 
         private readonly Stack<Format> m_formatStack = new();
         private readonly RunProperties m_targetRunProperties;
@@ -34,7 +34,7 @@ namespace DocxTemplater.Markdown
             // extract style from target run element
             TargetText = target;
             m_targetRunProperties = ((Run)TargetText?.Parent)?.RunProperties;
-            m_formatStack.Push(new Format(false, false, null, false));
+            m_formatStack.Push(new Format(false, false, null, false, false, false));
             m_containingParagraphFromTemplate = parentElement;
             CurrentParagraph = parentElement;
             ObjectRenderers.Add(new LiteralInlineRenderer());
@@ -92,7 +92,7 @@ namespace DocxTemplater.Markdown
                 }
 
                 var format = m_formatStack.Peek();
-                if (format.Bold || format.Italic || format.Strike || format.Style != null)
+                if (format.Bold || format.Italic || format.Strike || format.Style != null || format.Subscript || format.Superscript)
                 {
                     newRun.RunProperties ??= new RunProperties();
 
@@ -109,6 +109,16 @@ namespace DocxTemplater.Markdown
                     if (format.Strike && newRun.RunProperties.Strike == null)
                     {
                         newRun.RunProperties.AddChild(new Strike());
+                    }
+
+                    if (format.Subscript && newRun.RunProperties.VerticalTextAlignment == null)
+                    {
+                        newRun.RunProperties.AddChild(new VerticalTextAlignment { Val = VerticalPositionValues.Subscript });
+                    }
+
+                    if (format.Superscript && newRun.RunProperties.VerticalTextAlignment == null)
+                    {
+                        newRun.RunProperties.AddChild(new VerticalTextAlignment { Val = VerticalPositionValues.Superscript });
                     }
 
                     //add style
@@ -139,13 +149,15 @@ namespace DocxTemplater.Markdown
             }
         }
 
-        public IDisposable PushFormat(bool? bold, bool? italic, bool? strike)
+        public IDisposable PushFormat(bool? bold, bool? italic, bool? strike, bool? subscript = null, bool? superscript = null)
         {
             var currentStyle = m_formatStack.Peek();
             bold ??= currentStyle.Bold;
             italic ??= currentStyle.Italic;
             strike ??= currentStyle.Strike;
-            return new FormatScope(m_formatStack, bold.Value, italic.Value, strike.Value, currentStyle.Style);
+            subscript ??= currentStyle.Subscript;
+            superscript ??= currentStyle.Superscript;
+            return new FormatScope(m_formatStack, bold.Value, italic.Value, strike.Value, currentStyle.Style, subscript.Value, superscript.Value);
         }
 
         public void NewLine()
@@ -204,10 +216,10 @@ namespace DocxTemplater.Markdown
         {
             private readonly Stack<Format> m_formatStack;
 
-            public FormatScope(Stack<Format> formatStack, bool bold, bool italic, bool strike, string style)
+            public FormatScope(Stack<Format> formatStack, bool bold, bool italic, bool strike, string style, bool subscript, bool superscript)
             {
                 m_formatStack = formatStack;
-                m_formatStack.Push(new Format(bold, italic, style, strike));
+                m_formatStack.Push(new Format(bold, italic, style, strike, subscript, superscript));
             }
 
             public void Dispose()
