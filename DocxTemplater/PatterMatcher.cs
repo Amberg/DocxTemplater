@@ -36,7 +36,24 @@ namespace DocxTemplater
                 (?<condition>[^}]+) # allow any character except }
                 |
                 (?:
-                    (?<prefix>[\/\#:]{1,2})?(?<varname>[\p{L}\p{N}\._]+)? # \p{L}\p{N} - any letter or number (unicode) same as [a-zA-Z0-9] for ascii
+                    (?<prefix>[\/\#:@]{1,2})?
+                    (?:
+                        (?<varname>  # Constrain Switch/Case capturing to strictly known prefix variables
+                            (?i:switch|s|case|c)
+                            (?:
+                                \s*:\s* # match colon for switch/case
+                                (?:
+                                    (?:'[^']*') | # match single quotes
+                                    (?:""[^""]*"") | # match double quotes
+                                    [\p{L}\p{N}\._()]+ # match unquoted values
+                                )
+                            )?
+                        )
+                        |
+                        (?<varname> # the default variable matcher
+                            [\p{L}\p{N}\._]+ # match variable name
+                        )
+                    )?
                 ) 
             )
         )
@@ -119,7 +136,25 @@ namespace DocxTemplater
                         }
                         else if (prefix == "#")
                         {
-                            result.Add(new PatternMatch(match, PatternType.CollectionStart, null,
+                            var patternType = PatternType.CollectionStart;
+                            if (varname != null)
+                            {
+                                var trimmedVarname = varname.Trim();
+                                if (trimmedVarname.StartsWith("switch:", StringComparison.OrdinalIgnoreCase) || trimmedVarname.StartsWith("s:", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    patternType = PatternType.Switch;
+                                }
+                                else if (trimmedVarname.StartsWith("case:", StringComparison.OrdinalIgnoreCase) || trimmedVarname.StartsWith("c:", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    patternType = PatternType.Case;
+                                }
+                                else if (trimmedVarname.Equals("default", StringComparison.OrdinalIgnoreCase) || trimmedVarname.Equals("d", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    patternType = PatternType.Default;
+                                }
+                            }
+
+                            result.Add(new PatternMatch(match, patternType, null,
                                 match.Groups["prefix"].Value, match.Groups["varname"].Value,
                                 match.Groups["formatter"].Value, match.Groups["arg"].Value.Split(','), match.Index,
                                 match.Length));
@@ -131,7 +166,22 @@ namespace DocxTemplater
                         }
                         else
                         {
-                            result.Add(new PatternMatch(match, PatternType.CollectionEnd, null,
+                            var patternType = PatternType.CollectionEnd;
+                            var trimmedVarname = varname.Trim();
+                            if (trimmedVarname.Equals("switch", StringComparison.OrdinalIgnoreCase) || trimmedVarname.Equals("s", StringComparison.OrdinalIgnoreCase))
+                            {
+                                patternType = PatternType.SwitchEnd;
+                            }
+                            else if (trimmedVarname.Equals("case", StringComparison.OrdinalIgnoreCase) || trimmedVarname.Equals("c", StringComparison.OrdinalIgnoreCase))
+                            {
+                                patternType = PatternType.CaseEnd;
+                            }
+                            else if (trimmedVarname.Equals("default", StringComparison.OrdinalIgnoreCase) || trimmedVarname.Equals("d", StringComparison.OrdinalIgnoreCase))
+                            {
+                                patternType = PatternType.DefaultEnd;
+                            }
+
+                            result.Add(new PatternMatch(match, patternType, null,
                                 match.Groups["prefix"].Value, match.Groups["varname"].Value,
                                 match.Groups["formatter"].Value, match.Groups["arg"].Value.Split(','), match.Index,
                                 match.Length));

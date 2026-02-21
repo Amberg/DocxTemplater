@@ -79,6 +79,14 @@ namespace DocxTemplater.Test
                     PatternType.CollectionEnd
                 })
                 .SetName("Complex Match 1");
+            yield return new TestCaseData("{{#switch: SomeVar}}").Returns(new[] { PatternType.Switch });
+            yield return new TestCaseData("{{#s: SomeVar}}").Returns(new[] { PatternType.Switch });
+            yield return new TestCaseData("{{#case: 'A'}}").Returns(new[] { PatternType.Case });
+            yield return new TestCaseData("{{#c: 'A'}}").Returns(new[] { PatternType.Case });
+            yield return new TestCaseData("{{#case: 3}}").Returns(new[] { PatternType.Case });
+            yield return new TestCaseData("{{#default}}").Returns(new[] { PatternType.Default });
+            yield return new TestCaseData("{{#d}}").Returns(new[] { PatternType.Default });
+            yield return new TestCaseData("{{/switch}}").Returns(new[] { PatternType.SwitchEnd });
         }
 
         [Test, TestCaseSource(nameof(PatternMatcherArgumentParsingTest_Cases))]
@@ -137,6 +145,32 @@ namespace DocxTemplater.Test
             var match = PatternMatcher.FindSyntaxPatterns(syntax).First();
             Assert.That(match.Type, Is.EqualTo(PatternType.Condition));
             return match.Condition;
+        }
+
+        [Test]
+        public void ColonValueSuffix_OnlyAllowedForSwitchCase()
+        {
+            // The :<value> suffix must NOT be parsed for regular collection variables.
+            // {{#Items:foo}} should NOT match because the colon suffix is restricted to switch/case keywords.
+            var matches = PatternMatcher.FindSyntaxPatterns("{{#Items:foo}}").ToList();
+            Assert.That(matches, Has.Count.EqualTo(0));
+
+            // Dot-separated variable names must still work as normal collection starts.
+            var dotMatches = PatternMatcher.FindSyntaxPatterns("{{#Items.foo}}").ToList();
+            Assert.That(dotMatches, Has.Count.EqualTo(1));
+            Assert.That(dotMatches[0].Type, Is.EqualTo(PatternType.CollectionStart));
+            Assert.That(dotMatches[0].Variable, Is.EqualTo("Items.foo"));
+
+            // But switch/case keywords SHOULD capture the :<value> suffix.
+            var switchMatches = PatternMatcher.FindSyntaxPatterns("{{#switch: MyVar}}").ToList();
+            Assert.That(switchMatches, Has.Count.EqualTo(1));
+            Assert.That(switchMatches[0].Type, Is.EqualTo(PatternType.Switch));
+            Assert.That(switchMatches[0].Variable, Does.Contain("MyVar"));
+
+            var caseMatches = PatternMatcher.FindSyntaxPatterns("{{#case: 'A'}}").ToList();
+            Assert.That(caseMatches, Has.Count.EqualTo(1));
+            Assert.That(caseMatches[0].Type, Is.EqualTo(PatternType.Case));
+            Assert.That(caseMatches[0].Variable, Does.Contain("'A'"));
         }
     }
 }

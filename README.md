@@ -82,6 +82,7 @@ The syntax is case insensitive.
 | `{{SomeBytes}:img()}`                                    | Image Formatter for image data.                                                                 |
 | `{{SomeHtmlString}:html()}`                              | Inserts HTML string into the word document.                                                     |
 | `{{#Items}}{?{Items._Idx % 2 == 0}}{{.}}{{/}}{{/Items}}` | Renders every second item in a list.                                                            |
+| `{{#switch: SomeVar}}{{#case: 'A'}}...{{/case}}{{#default}}...{{/default}}{{/switch}}`    | Evaluates switch cases and renders the matching block.                                          |
 | `{{:ignore}} ... {{/:ignore}}`                           | Ignore DocxTemplater syntax, which is helpful around a Table of Contents.                       |
 | `{{:break}}`                                             | Insert a line break after this keyword block.                                                   |
 | `{{:PageBreak}}`                                         | Start a new page after this keyword block.                                                      |
@@ -190,6 +191,21 @@ All document content between the start and end tag is rendered only if the condi
 {?{Item.Value >= 0}}Only visible if value is >= 0
 {{:}}Otherwise this text is shown{{/}}
 ```
+
+---
+### Switch / Case Blocks
+
+Show or hide a given section depending on a switch variable:
+
+| Long Syntax                                                | Short Syntax                                         |
+| :--------------------------------------------------------- | :--------------------------------------------------- |
+| `{{#switch: Item.Value}}`<br>&nbsp;&nbsp;`{{#case: 1}}Value is 1{{/case}}`<br>&nbsp;&nbsp;`{{#case: 'A'}}Value is A{{/case}}`<br>&nbsp;&nbsp;`{{#default}}Value is unknown{{/default}}`<br>`{{/switch}}` | `{{#s: Item.Value}}`<br>&nbsp;&nbsp;`{{#c: 1}}Value is 1{{/c}}`<br>&nbsp;&nbsp;`{{#c: 'A'}}Value is A{{/c}}`<br>&nbsp;&nbsp;`{{#d}}Value is unknown{{/d}}`<br>`{{/s}}` |
+
+> [!TIP]
+> **Enums:**
+> You can also use `.ToString()` to match `enum` properties against strings.
+> For example, if `Item.Day` is `DayOfWeek.Monday`:
+> `{{#switch: Item.Day.ToString()}} ... {{#case: 'Monday'}} Match {{/case}} ... {{/switch}}`
 ---
 ## Formatters
 

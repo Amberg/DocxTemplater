@@ -41,6 +41,9 @@ namespace DocxTemplater.Blocks
         {
             return patternType switch
             {
+                PatternType.Switch => new SwitchBlock(context, patternType, startTextNode, matchedStartNode),
+                PatternType.Case => new CaseBlock(context, patternType, startTextNode, matchedStartNode),
+                PatternType.Default => new CaseBlock(context, patternType, startTextNode, matchedStartNode),
                 PatternType.CollectionStart when matchedStartNode.Formatter.Equals("dyntable", StringComparison.InvariantCultureIgnoreCase) => new DynamicTableBlock(context, patternType, startTextNode, matchedStartNode),
                 PatternType.CollectionStart => new LoopBlock(context, patternType, startTextNode, matchedStartNode),
                 PatternType.CollectionSeparator => new CollectionSeparatorBlock(context, patternType, startTextNode, matchedStartNode),

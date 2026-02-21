@@ -200,7 +200,7 @@ namespace DocxTemplater
                     CloseBlock(blockStack, match, text);
                 }
 
-                if (patternType is PatternType.Condition or PatternType.CollectionStart or PatternType.IgnoreBlock)
+                if (patternType is PatternType.Condition or PatternType.CollectionStart or PatternType.IgnoreBlock or PatternType.Switch or PatternType.Case or PatternType.Default)
                 {
                     StartBlock(blockStack, match, patternType, text);
                     StartBlock(blockStack, match, PatternType.None, text); // open the child content block of the loop or condition
@@ -210,7 +210,7 @@ namespace DocxTemplater
                     CloseBlock(blockStack, match, text);
                     StartBlock(blockStack, match, patternType, text);
                 }
-                if (patternType is PatternType.ConditionEnd or PatternType.CollectionEnd or PatternType.IgnoreEnd)
+                if (patternType is PatternType.ConditionEnd or PatternType.CollectionEnd or PatternType.IgnoreEnd or PatternType.SwitchEnd or PatternType.CaseEnd or PatternType.DefaultEnd)
                 {
                     CloseBlock(blockStack, match, text);
                     CloseBlock(blockStack, match, text);
