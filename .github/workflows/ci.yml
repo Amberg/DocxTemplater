@@ -56,7 +56,7 @@ jobs:
     - name: Generate Coverage Report
       if: always()
       run: |
-        reportgenerator -reports:./TestResults/**/coverage.cobertura.xml -targetdir:./CoverageReport -reporttypes:Html;MarkdownSummary
+        reportgenerator -reports:./TestResults/**/coverage.cobertura.xml -targetdir:./CoverageReport -reporttypes:"Html;MarkdownSummary"
 
     - name: Upload Test Results
       if: always()
