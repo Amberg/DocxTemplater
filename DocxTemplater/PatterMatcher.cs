@@ -50,6 +50,12 @@ namespace DocxTemplater
                             )?
                         )
                         |
+                        (?<varname> # Range loop pattern: identifier:count
+                            [\p{L}\p{N}\._]+
+                            :
+                            [\p{L}\p{N}\._]+
+                        )
+                        |
                         (?<varname> # the default variable matcher
                             [\p{L}\p{N}\._]+ # match variable name
                         )
@@ -152,9 +158,21 @@ namespace DocxTemplater
                                 {
                                     patternType = PatternType.Default;
                                 }
+                                else if (trimmedVarname.Contains(':'))
+                                {
+                                    // Colon syntax is only valid for switch/case keywords, not for regular collections
+                                    continue;
+                                }
                             }
 
                             result.Add(new PatternMatch(match, patternType, null,
+                                match.Groups["prefix"].Value, match.Groups["varname"].Value,
+                                match.Groups["formatter"].Value, match.Groups["arg"].Value.Split(','), match.Index,
+                                match.Length));
+                        }
+                        else if (prefix == "@")
+                        {
+                            result.Add(new PatternMatch(match, PatternType.RangeStart, null,
                                 match.Groups["prefix"].Value, match.Groups["varname"].Value,
                                 match.Groups["formatter"].Value, match.Groups["arg"].Value.Split(','), match.Index,
                                 match.Length));

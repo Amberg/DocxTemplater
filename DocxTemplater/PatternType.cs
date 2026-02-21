@@ -18,6 +18,7 @@
         Case,
         CaseEnd,
         Default,
-        DefaultEnd
+        DefaultEnd,
+        RangeStart
     }
 }

@@ -81,8 +81,9 @@ The syntax is case insensitive.
 | `{{SomeDate}:F('MM/dd/yyyy')}`                           | Date variable with formatting - short syntax.                                                   |
 | `{{SomeBytes}:img()}`                                    | Image Formatter for image data.                                                                 |
 | `{{SomeHtmlString}:html()}`                              | Inserts HTML string into the word document.                                                     |
+| `{{@i:ItemCount}}...{{i}}...{{/}}`                       | Range loop that repeats its content `ItemCount` times.                                          |
 | `{{#Items}}{?{Items._Idx % 2 == 0}}{{.}}{{/}}{{/Items}}` | Renders every second item in a list.                                                            |
-| `{{#switch: SomeVar}}{{#case: 'A'}}...{{/case}}{{#default}}...{{/default}}{{/switch}}`    | Evaluates switch cases and renders the matching block.                                          |
+| `{{#switch: SomeVar}}...{{#case: 'A'}}...{{/switch}}`    | Evaluates switch cases and renders the matching block.                                          |
 | `{{:ignore}} ... {{/:ignore}}`                           | Ignore DocxTemplater syntax, which is helpful around a Table of Contents.                       |
 | `{{:break}}`                                             | Insert a line break after this keyword block.                                                   |
 | `{{:PageBreak}}`                                         | Start a new page after this keyword block.                                                      |
@@ -139,6 +140,14 @@ To access the outer item in a nested collection, use the dot notation `{{..}}` T
 #### Accessing the Index of the Current Item
 
 To access the index of the current item, use the special variable `Items._Idx` In this example, the collection is called "Items".
+
+---
+### Range Loops
+
+To repeat document content a specific number of times based on an integer count or the length of a collection without directly iterating over it, use the range loop syntax:
+**{{@i:count}}** ... content ... **{{/}}**
+
+Here, `count` can be an integer, a string parseable to an integer, or an `IEnumerable` (in which case its count is used). The variable `i` is the index of the current iteration (starting from 0). If you omit the index variable name (e.g. `{{@count}}`), it defaults to `Index`.
 
 ---
 ### Separator
