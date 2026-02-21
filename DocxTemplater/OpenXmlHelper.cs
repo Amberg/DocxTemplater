@@ -418,7 +418,10 @@ namespace DocxTemplater
                 if (removeParent)
                 {
                     parent.RemoveChild(element);
-                    RemoveWithEmptyParent(parent);
+                    if (parent is not Body and not Document)
+                    {
+                        RemoveWithEmptyParent(parent);
+                    }
                 }
             }
         }

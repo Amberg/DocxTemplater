@@ -42,7 +42,7 @@ namespace DocxTemplater
 
         public static bool HasAlreadyInsertionPointMarker(OpenXmlElement element)
         {
-            return element.ExtendedAttributes.Any(a => a.LocalName == InsertionPointAttributeName);
+            return element != null && element.ExtendedAttributes.Any(a => a.LocalName == InsertionPointAttributeName);
         }
 
         public bool IsForElement(OpenXmlElement element)
