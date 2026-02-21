@@ -8,7 +8,10 @@ namespace DocxTemplater.Markdown.Renderer.Inlines
         {
             bool? italic = null;
             bool? bold = null;
+            bool? subscript = null;
+            bool? superscript = null;
             bool? strikethrough = null;
+
             if (obj.DelimiterChar is '_' or '*')
             {
                 if (obj.DelimiterCount == 1)
@@ -23,12 +26,25 @@ namespace DocxTemplater.Markdown.Renderer.Inlines
 
             if (obj.DelimiterChar is '~')
             {
-                if (obj.DelimiterCount == 2)
+                if (obj.DelimiterCount == 1)
+                {
+                    subscript = true;
+                }
+                else if (obj.DelimiterCount == 2)
                 {
                     strikethrough = true;
                 }
             }
-            using var format = renderer.PushFormat(bold, italic, strikethrough);
+
+            if (obj.DelimiterChar is '^')
+            {
+                if (obj.DelimiterCount == 1)
+                {
+                    superscript = true;
+                }
+            }
+
+            using var format = renderer.PushFormat(bold, italic, strikethrough, subscript, superscript);
             renderer.WriteChildren(obj);
         }
     }

@@ -27,7 +27,7 @@ namespace DocxTemplater.Markdown
             var builder = new MarkdownPipelineBuilder();
             builder.UseGridTables()
                 .UsePipeTables(new PipeTableOptions { InferColumnWidthsFromSeparator = true })
-                .UseEmphasisExtras(EmphasisExtraOptions.Strikethrough)
+                .UseEmphasisExtras(EmphasisExtraOptions.Strikethrough | EmphasisExtraOptions.Subscript | EmphasisExtraOptions.Superscript)
                 .UseFigures();
             MarkdownPipeline = builder.Build();
         }

@@ -416,6 +416,57 @@ namespace DocxTemplater.Test
         }
 
         [Test]
+        public void SubscriptText()
+        {
+            var body = CreateTemplateWithMarkdownAndReturnBody("~Hello~");
+            var runWithHello = (Run)body.Descendants<Text>().Single(x => x.Text == "Hello").Parent;
+            Assert.That(runWithHello.RunProperties?.VerticalTextAlignment, Is.Not.Null);
+            Assert.That(runWithHello.RunProperties.VerticalTextAlignment.Val.Value, Is.EqualTo(VerticalPositionValues.Subscript));
+            Assert.That(body.InnerXml, Is.EqualTo("<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:r><w:rPr><w:vertAlign w:val=\"subscript\" /></w:rPr><w:t>Hello</w:t></w:r></w:p>"));
+        }
+
+        [Test]
+        public void SuperscriptText()
+        {
+            var body = CreateTemplateWithMarkdownAndReturnBody("^Hello^");
+            var runWithHello = (Run)body.Descendants<Text>().Single(x => x.Text == "Hello").Parent;
+            Assert.That(runWithHello.RunProperties?.VerticalTextAlignment, Is.Not.Null);
+            Assert.That(runWithHello.RunProperties.VerticalTextAlignment.Val.Value, Is.EqualTo(VerticalPositionValues.Superscript));
+            Assert.That(body.InnerXml, Is.EqualTo("<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:r><w:rPr><w:vertAlign w:val=\"superscript\" /></w:rPr><w:t>Hello</w:t></w:r></w:p>"));
+        }
+
+        [Test]
+        public void SubscriptWithBoldText()
+        {
+            var body = CreateTemplateWithMarkdownAndReturnBody("**~Hello~**");
+            var runWithHello = (Run)body.Descendants<Text>().Single(x => x.Text == "Hello").Parent;
+            Assert.That(runWithHello.RunProperties?.Bold, Is.Not.Null);
+            Assert.That(runWithHello.RunProperties?.Italic, Is.Null);
+            Assert.That(runWithHello.RunProperties?.VerticalTextAlignment, Is.Not.Null);
+            Assert.That(runWithHello.RunProperties.VerticalTextAlignment.Val.Value, Is.EqualTo(VerticalPositionValues.Subscript));
+        }
+
+        [Test]
+        public void SuperscriptWithItalicText()
+        {
+            var body = CreateTemplateWithMarkdownAndReturnBody("_^Hello^_");
+            var runWithHello = (Run)body.Descendants<Text>().Single(x => x.Text == "Hello").Parent;
+            Assert.That(runWithHello.RunProperties?.Italic, Is.Not.Null);
+            Assert.That(runWithHello.RunProperties?.Bold, Is.Null);
+            Assert.That(runWithHello.RunProperties?.VerticalTextAlignment, Is.Not.Null);
+            Assert.That(runWithHello.RunProperties.VerticalTextAlignment.Val.Value, Is.EqualTo(VerticalPositionValues.Superscript));
+        }
+
+        [Test]
+        public void StrikethroughStillWorksWithTildeSyntax()
+        {
+            var body = CreateTemplateWithMarkdownAndReturnBody("~~Hello~~");
+            var runWithHello = (Run)body.Descendants<Text>().Single(x => x.Text == "Hello").Parent;
+            Assert.That(runWithHello.RunProperties?.Strike, Is.Not.Null);
+            Assert.That(runWithHello.RunProperties?.VerticalTextAlignment, Is.Null);
+        }
+
+        [Test]
         public void MixedText()
         {
             var body = CreateTemplateWithMarkdownAndReturnBody("_Hello_ **There**");
