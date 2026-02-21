@@ -12,6 +12,12 @@
         ConditionElse,
         InlineKeyWord,
         IgnoreBlock,
-        IgnoreEnd
+        IgnoreEnd,
+        Switch,
+        SwitchEnd,
+        Case,
+        CaseEnd,
+        Default,
+        DefaultEnd
     }
 }

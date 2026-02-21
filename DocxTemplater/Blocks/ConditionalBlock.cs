@@ -22,7 +22,7 @@ namespace DocxTemplater.Blocks
             {
                 conditionResult = m_context.ScriptCompiler.CompileScript(m_condition)();
             }
-            catch (OpenXmlTemplateException e) when (m_context.ScriptCompiler.ProcessSettings.BindingErrorHandling != BindingErrorHandling.ThrowException)
+            catch (OpenXmlTemplateException e) when (m_context.ProcessSettings.BindingErrorHandling != BindingErrorHandling.ThrowException)
             {
                 m_context.VariableReplacer.AddError($"{e.Message} in condition '{m_condition}'");
             }
