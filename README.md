@@ -83,7 +83,7 @@ The syntax is case insensitive.
 | `{{SomeHtmlString}:html()}`                              | Inserts HTML string into the word document.                                                     |
 | `{{@i:ItemCount}}...{{i}}...{{/}}`                       | Range loop that repeats its content `ItemCount` times.                                          |
 | `{{#Items}}{?{Items._Idx % 2 == 0}}{{.}}{{/}}{{/Items}}` | Renders every second item in a list.                                                            |
-| `{{#switch: SomeVar}}{{#case: 'A'}}...{{/case}}{{#default}}...{{/default}}{{/switch}}` | Evaluates switch cases and renders the matching block.                                          |
+| `{{#switch: SomeVar}}{{#case: 'A'}}...{{/case}}{{#default}}...{{/default}}{{/switch}}` | Evaluates switch cases and renders the matching block. there is a short syntax too                                          |
 | `{{:ignore}} ... {{/:ignore}}`                           | Ignore DocxTemplater syntax, which is helpful around a Table of Contents.                       |
 | `{{:break}}`                                             | Insert a line break after this keyword block.                                                   |
 | `{{:PageBreak}}`                                         | Start a new page after this keyword block.                                                      |
@@ -397,3 +397,4 @@ If you find DocxTemplater useful, please consider supporting its development:
 
 [![Sponsor](https://img.shields.io/github/sponsors/Amberg?logo=GitHub&color=ff69b4)](https://github.com/sponsors/Amberg)
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support-%23FFDD00?style=flat&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/amstutz)
+
