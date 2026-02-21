@@ -200,8 +200,12 @@ namespace DocxTemplater
                     CloseBlock(blockStack, match, text);
                 }
 
-                if (patternType is PatternType.Condition or PatternType.CollectionStart or PatternType.IgnoreBlock or PatternType.Switch or PatternType.Case or PatternType.Default)
+                if (patternType is PatternType.Condition or PatternType.CollectionStart or PatternType.IgnoreBlock or PatternType.Switch or PatternType.Case or PatternType.Default or PatternType.RangeStart)
                 {
+                    if (patternType is PatternType.Case or PatternType.Default)
+                    {
+                        AutoCloseCaseOrDefaultIfNeeded(blockStack, match, text);
+                    }
                     StartBlock(blockStack, match, patternType, text);
                     StartBlock(blockStack, match, PatternType.None, text); // open the child content block of the loop or condition
                 }
@@ -212,6 +216,10 @@ namespace DocxTemplater
                 }
                 if (patternType is PatternType.ConditionEnd or PatternType.CollectionEnd or PatternType.IgnoreEnd or PatternType.SwitchEnd or PatternType.CaseEnd or PatternType.DefaultEnd)
                 {
+                    if (patternType is PatternType.SwitchEnd)
+                    {
+                        AutoCloseCaseOrDefaultIfNeeded(blockStack, match, text);
+                    }
                     CloseBlock(blockStack, match, text);
                     CloseBlock(blockStack, match, text);
                 }
@@ -254,6 +262,17 @@ namespace DocxTemplater
             var newBlock = ContentBlock.Crate(Context, value, text, match);
             blockStack.Peek().AddChildBlock(newBlock);
             blockStack.Push(newBlock);
+        }
+
+        private static void AutoCloseCaseOrDefaultIfNeeded(Stack<ContentBlock> blockStack, PatternMatch match, Text text)
+        {
+            var current = blockStack.Peek();
+            if (current.PatternType == PatternType.None && current.ParentBlock != null &&
+                (current.ParentBlock.PatternType == PatternType.Case || current.ParentBlock.PatternType == PatternType.Default))
+            {
+                CloseBlock(blockStack, match, text); // Close None
+                CloseBlock(blockStack, match, text); // Close Case/Default
+            }
         }
 
         private static void CloseBlock(Stack<ContentBlock> blockStack, PatternMatch match, Text text)

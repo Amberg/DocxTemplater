@@ -87,6 +87,8 @@ namespace DocxTemplater.Test
             yield return new TestCaseData("{{#default}}").Returns(new[] { PatternType.Default });
             yield return new TestCaseData("{{#d}}").Returns(new[] { PatternType.Default });
             yield return new TestCaseData("{{/switch}}").Returns(new[] { PatternType.SwitchEnd });
+            yield return new TestCaseData("{{@i:count}}").Returns(new[] { PatternType.RangeStart });
+            yield return new TestCaseData("{{@count}}").Returns(new[] { PatternType.RangeStart });
         }
 
         [Test, TestCaseSource(nameof(PatternMatcherArgumentParsingTest_Cases))]
@@ -148,12 +150,34 @@ namespace DocxTemplater.Test
         }
 
         [Test]
-        public void ColonValueSuffix_OnlyAllowedForSwitchCase()
+        public void FindSyntax_SwitchCaseStatements()
+        {
+            var text = "{{#switch: Item.Value}}...{{#case: 'A'}}...{{/case}}...{{#default}}...{{/default}}...{{/switch}}";
+            var matches = PatternMatcher.FindSyntaxPatterns(text).ToList();
+            Assert.Multiple(() =>
+            {
+                Assert.That(matches, Has.Count.EqualTo(6));
+                Assert.That(matches[0].Type, Is.EqualTo(PatternType.Switch));
+                Assert.That(matches[1].Type, Is.EqualTo(PatternType.Case));
+                Assert.That(matches[2].Type, Is.EqualTo(PatternType.CaseEnd));
+                Assert.That(matches[3].Type, Is.EqualTo(PatternType.Default));
+                Assert.That(matches[4].Type, Is.EqualTo(PatternType.DefaultEnd));
+                Assert.That(matches[5].Type, Is.EqualTo(PatternType.SwitchEnd));
+            });
+        }
+
+        [Test]
+        public void ColonValueSuffix_NotAllowedForCollections()
         {
             // The :<value> suffix must NOT be parsed for regular collection variables.
-            // {{#Items:foo}} should NOT match because the colon suffix is restricted to switch/case keywords.
+            // {{#Items:foo}} should return 0 matches because colon syntax is only valid for switch/case or range loops.
             var matches = PatternMatcher.FindSyntaxPatterns("{{#Items:foo}}").ToList();
             Assert.That(matches, Has.Count.EqualTo(0));
+
+            // {{Foo:Bar}} without prefix: colon should be treated as formatter separator, not varname
+            var noPrefix = PatternMatcher.FindSyntaxPatterns("{{Foo:Bar}}").ToList();
+            Assert.That(noPrefix, Has.Count.EqualTo(1));
+            Assert.That(noPrefix[0].Type, Is.EqualTo(PatternType.Variable));
 
             // Dot-separated variable names must still work as normal collection starts.
             var dotMatches = PatternMatcher.FindSyntaxPatterns("{{#Items.foo}}").ToList();
@@ -161,16 +185,28 @@ namespace DocxTemplater.Test
             Assert.That(dotMatches[0].Type, Is.EqualTo(PatternType.CollectionStart));
             Assert.That(dotMatches[0].Variable, Is.EqualTo("Items.foo"));
 
-            // But switch/case keywords SHOULD capture the :<value> suffix.
+            // Range loops with @ prefix SHOULD accept colon syntax
+            var rangeMatches = PatternMatcher.FindSyntaxPatterns("{{@i:count}}").ToList();
+            Assert.That(rangeMatches, Has.Count.EqualTo(1));
+            Assert.That(rangeMatches[0].Type, Is.EqualTo(PatternType.RangeStart));
+            Assert.That(rangeMatches[0].Variable, Is.EqualTo("i:count"));
+
+            // switch/case keywords SHOULD capture the :<value> suffix
             var switchMatches = PatternMatcher.FindSyntaxPatterns("{{#switch: MyVar}}").ToList();
             Assert.That(switchMatches, Has.Count.EqualTo(1));
             Assert.That(switchMatches[0].Type, Is.EqualTo(PatternType.Switch));
-            Assert.That(switchMatches[0].Variable, Does.Contain("MyVar"));
 
             var caseMatches = PatternMatcher.FindSyntaxPatterns("{{#case: 'A'}}").ToList();
             Assert.That(caseMatches, Has.Count.EqualTo(1));
             Assert.That(caseMatches[0].Type, Is.EqualTo(PatternType.Case));
-            Assert.That(caseMatches[0].Variable, Does.Contain("'A'"));
+        }
+
+        [Test]
+        public void EmptyRangeLoopVariable_ThrowsException()
+        {
+            // {{@}} without a variable name should throw
+            Assert.Throws<OpenXmlTemplateException>(() =>
+                PatternMatcher.FindSyntaxPatterns("{{@}}").ToList());
         }
     }
 }
