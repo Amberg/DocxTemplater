@@ -232,10 +232,11 @@ namespace DocxTemplater.Blocks
                     var nextElement = split.First().NextSibling();
 
                     // if two blocks opens there is already an anchor of the parent element
-                    while (InsertionPoint.HasAlreadyInsertionPointMarker(nextElement))
+                    while (nextElement != null && InsertionPoint.HasAlreadyInsertionPointMarker(nextElement))
                     {
                         nextElement = nextElement.NextSibling();
                     }
+                    nextElement ??= endChildOfCommonParent;
                     anchorElement = nextElement.InsertBeforeSelf(new Paragraph());
                 }
                 else
