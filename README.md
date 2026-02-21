@@ -83,7 +83,7 @@ The syntax is case insensitive.
 | `{{SomeHtmlString}:html()}`                              | Inserts HTML string into the word document.                                                     |
 | `{{@i:ItemCount}}...{{i}}...{{/}}`                       | Range loop that repeats its content `ItemCount` times.                                          |
 | `{{#Items}}{?{Items._Idx % 2 == 0}}{{.}}{{/}}{{/Items}}` | Renders every second item in a list.                                                            |
-| `{{#switch: SomeVar}}...{{#case: 'A'}}...{{/switch}}`    | Evaluates switch cases and renders the matching block.                                          |
+| `{{#switch: SomeVar}}{{#case: 'A'}}...{{/case}}{{#default}}...{{/default}}{{/switch}}` | Evaluates switch cases and renders the matching block.                                          |
 | `{{:ignore}} ... {{/:ignore}}`                           | Ignore DocxTemplater syntax, which is helpful around a Table of Contents.                       |
 | `{{:break}}`                                             | Insert a line break after this keyword block.                                                   |
 | `{{:PageBreak}}`                                         | Start a new page after this keyword block.                                                      |

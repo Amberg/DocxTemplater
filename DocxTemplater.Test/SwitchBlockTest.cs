@@ -83,5 +83,34 @@ namespace DocxTemplater.Test
             var body = document.MainDocumentPart.Document.Body;
             Assert.That(body.InnerText.Trim(), Is.EqualTo("Is Monday"));
         }
+
+        [Test]
+        public void SwitchWithOptionalClosingTags()
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(
+                new Paragraph(new Run(new Text("{{#switch: ds.Val}}"))),
+                new Paragraph(new Run(new Text("{{#case: 1}}"))),
+                new Paragraph(new Run(new Text("Match 1"))),
+                new Paragraph(new Run(new Text("{{#case: 2}}"))),
+                new Paragraph(new Run(new Text("Match 2"))),
+                new Paragraph(new Run(new Text("{{#default}}"))),
+                new Paragraph(new Run(new Text("Match Default"))),
+                new Paragraph(new Run(new Text("{{/switch}}")))
+            ));
+            wpDocument.Save();
+            memStream.Position = 0;
+
+            var docTemplate = new DocxTemplate(memStream);
+            docTemplate.BindModel("ds", new { Val = 2 });
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+
+            using var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            Assert.That(body.InnerText.Trim(), Is.EqualTo("Match 2"));
+        }
     }
 }

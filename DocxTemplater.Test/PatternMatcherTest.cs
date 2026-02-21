@@ -173,6 +173,40 @@ namespace DocxTemplater.Test
             // {{#Items:foo}} should return 0 matches because colon syntax is only valid for switch/case or range loops.
             var matches = PatternMatcher.FindSyntaxPatterns("{{#Items:foo}}").ToList();
             Assert.That(matches, Has.Count.EqualTo(0));
+
+            // {{Foo:Bar}} without prefix: colon should be treated as formatter separator, not varname
+            var noPrefix = PatternMatcher.FindSyntaxPatterns("{{Foo:Bar}}").ToList();
+            Assert.That(noPrefix, Has.Count.EqualTo(1));
+            Assert.That(noPrefix[0].Type, Is.EqualTo(PatternType.Variable));
+
+            // Dot-separated variable names must still work as normal collection starts.
+            var dotMatches = PatternMatcher.FindSyntaxPatterns("{{#Items.foo}}").ToList();
+            Assert.That(dotMatches, Has.Count.EqualTo(1));
+            Assert.That(dotMatches[0].Type, Is.EqualTo(PatternType.CollectionStart));
+            Assert.That(dotMatches[0].Variable, Is.EqualTo("Items.foo"));
+
+            // Range loops with @ prefix SHOULD accept colon syntax
+            var rangeMatches = PatternMatcher.FindSyntaxPatterns("{{@i:count}}").ToList();
+            Assert.That(rangeMatches, Has.Count.EqualTo(1));
+            Assert.That(rangeMatches[0].Type, Is.EqualTo(PatternType.RangeStart));
+            Assert.That(rangeMatches[0].Variable, Is.EqualTo("i:count"));
+
+            // switch/case keywords SHOULD capture the :<value> suffix
+            var switchMatches = PatternMatcher.FindSyntaxPatterns("{{#switch: MyVar}}").ToList();
+            Assert.That(switchMatches, Has.Count.EqualTo(1));
+            Assert.That(switchMatches[0].Type, Is.EqualTo(PatternType.Switch));
+
+            var caseMatches = PatternMatcher.FindSyntaxPatterns("{{#case: 'A'}}").ToList();
+            Assert.That(caseMatches, Has.Count.EqualTo(1));
+            Assert.That(caseMatches[0].Type, Is.EqualTo(PatternType.Case));
+        }
+
+        [Test]
+        public void EmptyRangeLoopVariable_ThrowsException()
+        {
+            // {{@}} without a variable name should throw
+            Assert.Throws<OpenXmlTemplateException>(() =>
+                PatternMatcher.FindSyntaxPatterns("{{@}}").ToList());
         }
     }
 }

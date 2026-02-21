@@ -48,30 +48,58 @@ namespace DocxTemplater.Blocks
             int count = 0;
             if (model != null)
             {
-                try
+                if (model is string stringValue)
                 {
-                    count = Convert.ToInt32(model);
-                }
-                catch (Exception)
-                {
-                    if (model is IEnumerable enumerable)
-                    {
-                        count = enumerable.Cast<object>().Count();
-                    }
-                    else
+                    if (!int.TryParse(stringValue, out count))
                     {
                         if (m_context.ProcessSettings.BindingErrorHandling == BindingErrorHandling.ThrowException)
                         {
                             throw new OpenXmlTemplateException(
-                                $"'{m_countVariable}' is not an integer or enumerable - it is of type {model.GetType().FullName}");
+                                $"'{m_countVariable}' is not an integer - its value '{stringValue}' cannot be parsed to an integer");
                         }
                         else
                         {
                             m_context.VariableReplacer.AddError(
-                                $"'{m_countVariable}' is not an integer or enumerable - it is of type {model.GetType().FullName}");
+                                $"'{m_countVariable}' is not an integer - its value '{stringValue}' cannot be parsed to an integer");
                         }
                     }
                 }
+                else
+                {
+                    try
+                    {
+                        count = Convert.ToInt32(model);
+                    }
+                    catch (Exception)
+                    {
+                        if (model is IEnumerable enumerable)
+                        {
+                            var enumerableObjects = enumerable.Cast<object>();
+                            if (!Enumerable.TryGetNonEnumeratedCount(enumerableObjects, out count))
+                            {
+                                count = enumerableObjects.Count();
+                            }
+                        }
+                        else
+                        {
+                            if (m_context.ProcessSettings.BindingErrorHandling == BindingErrorHandling.ThrowException)
+                            {
+                                throw new OpenXmlTemplateException(
+                                    $"'{m_countVariable}' is not an integer or enumerable - it is of type {model.GetType().FullName}");
+                            }
+                            else
+                            {
+                                m_context.VariableReplacer.AddError(
+                                    $"'{m_countVariable}' is not an integer or enumerable - it is of type {model.GetType().FullName}");
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (count < 0)
+            {
+                count = 0;
             }
 
             // Iterate backwards because InsertAfterSelf inserts elements immediately after the insertion point,

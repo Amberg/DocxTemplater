@@ -172,6 +172,11 @@ namespace DocxTemplater
                         }
                         else if (prefix == "@")
                         {
+                            if (string.IsNullOrWhiteSpace(varname))
+                            {
+                                throw new OpenXmlTemplateException($"Invalid range loop syntax '{match.Value}' - variable name is required");
+                            }
+
                             result.Add(new PatternMatch(match, PatternType.RangeStart, null,
                                 match.Groups["prefix"].Value, match.Groups["varname"].Value,
                                 match.Groups["formatter"].Value, match.Groups["arg"].Value.Split(','), match.Index,
