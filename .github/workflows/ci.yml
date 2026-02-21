@@ -56,7 +56,14 @@ jobs:
     - name: Generate Coverage Report
       if: always()
       run: |
-        reportgenerator -reports:./TestResults/**/coverage.cobertura.xml -targetdir:./CoverageReport -reporttypes:"Html;MarkdownSummary"
+        reportgenerator -reports:./TestResults/**/coverage.cobertura.xml -targetdir:./CoverageReport -reporttypes:"Html;MarkdownSummaryGithub"
+
+    - name: Write Coverage Summary
+      if: always()
+      run: |
+        if [ -f ./CoverageReport/SummaryGithub.md ]; then
+          cat ./CoverageReport/SummaryGithub.md >> $GITHUB_STEP_SUMMARY
+        fi
 
     - name: Upload Test Results
       if: always()
@@ -86,4 +93,4 @@ jobs:
         file-name: coverage.svg
         badge-branch: badges
         github-token: '${{ secrets.GITHUB_TOKEN }}'
-        coverage-file-name: ./TestResults/**/coverage.cobertura.xml
+        coverage-file-name: TestResults/*/coverage.cobertura.xml
