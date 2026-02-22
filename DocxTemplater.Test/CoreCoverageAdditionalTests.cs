@@ -114,7 +114,7 @@ namespace DocxTemplater.Test
             {
                 MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
                 mainPart.Document = new Document(new Body(
-                    new Paragraph(new Run(new Text("{{#switch: ds.Val}}{{/switch}}")))
+                    new Paragraph(new Run(new Text("{{#switch: ds.Val}}{{/}}")))
                 ));
                 wpDocument.Save();
             }
@@ -137,7 +137,8 @@ namespace DocxTemplater.Test
                     new Paragraph(new Run(new Text("{{#s: ds.Val}}"))),
                     new Paragraph(new Run(new Text("{{#c: ds.NonExistentProp}}"))),
                     new Paragraph(new Run(new Text("Match"))),
-                    new Paragraph(new Run(new Text("{{/s}}")))
+                    new Paragraph(new Run(new Text("{{/}}"))),
+                    new Paragraph(new Run(new Text("{{/}}")))
                 ));
                 wpDocument.Save();
             }
@@ -161,8 +162,8 @@ namespace DocxTemplater.Test
                 MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
                 mainPart.Document = new Document(new Body(
                     new Paragraph(new Run(new Text("{{#s: ds.Val}}"))),
-                    new Paragraph(new Run(new Text("{{#c: 2}} Match 2 {{/c}}"))),
-                    new Paragraph(new Run(new Text("{{/s}}")))
+                    new Paragraph(new Run(new Text("{{#c: 2}} Match 2 {{/}}"))),
+                    new Paragraph(new Run(new Text("{{/}}")))
                 ));
                 wpDocument.Save();
             }
