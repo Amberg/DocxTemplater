@@ -27,7 +27,7 @@ namespace DocxTemplater
         }
 
         private DocxTemplate(Stream docXStream, ProcessSettings settings, ModelLookup modelLookup)
-        : base(new TemplateProcessingContext(settings, modelLookup, new VariableReplacer(modelLookup, settings), new ScriptCompiler(modelLookup, settings)))
+        : base(CreateContext(settings, modelLookup))
         {
             ArgumentNullException.ThrowIfNull(docXStream);
             m_stream = new MemoryStream();
@@ -47,6 +47,11 @@ namespace DocxTemplater
 
             RegisterFormatter(new SubTemplateFormatter());
             RegisterExtension(new ChartProcessor());
+        }
+
+        private static TemplateProcessingContext CreateContext(ProcessSettings settings, ModelLookup modelLookup)
+        {
+            return new TemplateProcessingContext(settings, modelLookup, new VariableReplacer(modelLookup, settings), new ScriptCompiler(modelLookup, settings));
         }
 
         public static DocxTemplate Open(string pathToTemplate, ProcessSettings settings = null)

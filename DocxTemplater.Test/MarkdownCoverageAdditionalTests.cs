@@ -55,8 +55,8 @@ namespace DocxTemplater.Test
         public void MarkdownFormatter_RenderTableWithStyleArgument()
         {
             var markdown = "| Col 1 |\n| --- |\n| Val 1 |";
-            // Syntax: {{ds}:md(ts=MyStyle)}
-            var body = CreateTemplateWithMarkdownAndReturnBody(markdown, ":md(ts=MyStyle)");
+            // Syntax: {{ds}:md(ts:MyStyle)}
+            var body = CreateTemplateWithMarkdownAndReturnBody(markdown, ":md(ts:MyStyle)");
             Assert.That(body, Is.Not.Null);
         }
 
