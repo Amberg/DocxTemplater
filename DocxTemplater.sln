@@ -35,6 +35,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "V26", "V26", "{997CB94D-9B8
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DocxTemplater.Benchmarks.V26", "DocxTemplater.Benchmarks\V26\DocxTemplater.Benchmarks.V26.csproj", "{B616C1CF-3068-42E9-85B8-E8693B4EB679}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DocxTemplater.Benchmarks.Runner", "DocxTemplater.Benchmarks.Runner\DocxTemplater.Benchmarks.Runner.csproj", "{86CDD530-506A-4DD0-8FEA-7EB8B01B2E4E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -129,6 +131,18 @@ Global
 		{B616C1CF-3068-42E9-85B8-E8693B4EB679}.Release|x64.Build.0 = Release|Any CPU
 		{B616C1CF-3068-42E9-85B8-E8693B4EB679}.Release|x86.ActiveCfg = Release|Any CPU
 		{B616C1CF-3068-42E9-85B8-E8693B4EB679}.Release|x86.Build.0 = Release|Any CPU
+		{86CDD530-506A-4DD0-8FEA-7EB8B01B2E4E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{86CDD530-506A-4DD0-8FEA-7EB8B01B2E4E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{86CDD530-506A-4DD0-8FEA-7EB8B01B2E4E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{86CDD530-506A-4DD0-8FEA-7EB8B01B2E4E}.Debug|x64.Build.0 = Debug|Any CPU
+		{86CDD530-506A-4DD0-8FEA-7EB8B01B2E4E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{86CDD530-506A-4DD0-8FEA-7EB8B01B2E4E}.Debug|x86.Build.0 = Debug|Any CPU
+		{86CDD530-506A-4DD0-8FEA-7EB8B01B2E4E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{86CDD530-506A-4DD0-8FEA-7EB8B01B2E4E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{86CDD530-506A-4DD0-8FEA-7EB8B01B2E4E}.Release|x64.ActiveCfg = Release|Any CPU
+		{86CDD530-506A-4DD0-8FEA-7EB8B01B2E4E}.Release|x64.Build.0 = Release|Any CPU
+		{86CDD530-506A-4DD0-8FEA-7EB8B01B2E4E}.Release|x86.ActiveCfg = Release|Any CPU
+		{86CDD530-506A-4DD0-8FEA-7EB8B01B2E4E}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

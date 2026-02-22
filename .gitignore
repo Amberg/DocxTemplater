@@ -3,5 +3,8 @@
 **/bin
 *.user
 /BenchmarkDotNet.Artifacts
+/artifacts
+/DocxTemplater.Benchmarks.Runner/artifacts
+/BENCHMARK_REPORT.md
 /.gemini/agents
 /.gemini

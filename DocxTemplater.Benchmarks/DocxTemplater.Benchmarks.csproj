@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <NoWarn>$(NoWarn);CA1822;IDE0160;CS0436;IDE0055</NoWarn>
+    <BenchmarkVersion Condition="'$(BenchmarkVersion)' == ''">Current</BenchmarkVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(BenchmarkVersion)' == 'Current'">
+    <DefineConstants>$(DefineConstants);BENCHMARK_CURRENT</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" Version="0.14.0" />
+    <ProjectReference Include="../DocxTemplater.Images/DocxTemplater.Images.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(BenchmarkVersion)' == 'Current'">
+    <ProjectReference Include="../DocxTemplater/DocxTemplater.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(BenchmarkVersion)' != 'Current'">
+    <PackageReference Include="DocxTemplater" Version="$(BenchmarkVersion)" />
+  </ItemGroup>
+
+</Project>
