@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <NoWarn>$(NoWarn);CA1822;IDE0160;CS0436</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" Version="0.14.0" />
+    <PackageReference Include="DocxTemplater" Version="2.6.1" />
+    <ProjectReference Include="../../DocxTemplater.Images/DocxTemplater.Images.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="../Common/BenchmarkBase.cs" Link="BenchmarkBase.cs" />
+    <None Include="../../DocxTemplater.Test/Resources/**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+</Project>
