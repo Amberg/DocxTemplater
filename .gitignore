@@ -2,3 +2,6 @@
 **/obj
 **/bin
 *.user
+/BenchmarkDotNet.Artifacts
+/.gemini/agents
+/.gemini
