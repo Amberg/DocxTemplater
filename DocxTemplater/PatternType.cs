@@ -1,4 +1,4 @@
-﻿namespace DocxTemplater
+namespace DocxTemplater
 {
     internal enum PatternType
     {
@@ -14,11 +14,8 @@
         IgnoreBlock,
         IgnoreEnd,
         Switch,
-        SwitchEnd,
         Case,
-        CaseEnd,
         Default,
-        DefaultEnd,
         RangeStart
     }
 }

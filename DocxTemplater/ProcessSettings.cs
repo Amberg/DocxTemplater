@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 
 namespace DocxTemplater
 {
@@ -19,6 +19,6 @@ namespace DocxTemplater
         /// </summary>
         public bool IgnoreLineBreaksAroundTags { get; set; }
 
-        public static ProcessSettings Default { get; } = new();
+        public static ProcessSettings Default => new();
     }
 }

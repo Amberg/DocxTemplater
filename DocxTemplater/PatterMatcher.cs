@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -189,21 +189,17 @@ namespace DocxTemplater
                         }
                         else
                         {
-                            var patternType = PatternType.CollectionEnd;
                             var trimmedVarname = varname.Trim();
-                            if (trimmedVarname.Equals("switch", StringComparison.OrdinalIgnoreCase) || trimmedVarname.Equals("s", StringComparison.OrdinalIgnoreCase))
+                            if (trimmedVarname.Equals("switch", StringComparison.OrdinalIgnoreCase) ||
+                                trimmedVarname.Equals("s", StringComparison.OrdinalIgnoreCase) ||
+                                trimmedVarname.Equals("case", StringComparison.OrdinalIgnoreCase) ||
+                                trimmedVarname.Equals("c", StringComparison.OrdinalIgnoreCase) ||
+                                trimmedVarname.Equals("default", StringComparison.OrdinalIgnoreCase) ||
+                                trimmedVarname.Equals("d", StringComparison.OrdinalIgnoreCase))
                             {
-                                patternType = PatternType.SwitchEnd;
+                                throw new OpenXmlTemplateException($"Invalid syntax '{match.Value}'. Use '{{{{/}}}}' instead.");
                             }
-                            else if (trimmedVarname.Equals("case", StringComparison.OrdinalIgnoreCase) || trimmedVarname.Equals("c", StringComparison.OrdinalIgnoreCase))
-                            {
-                                patternType = PatternType.CaseEnd;
-                            }
-                            else if (trimmedVarname.Equals("default", StringComparison.OrdinalIgnoreCase) || trimmedVarname.Equals("d", StringComparison.OrdinalIgnoreCase))
-                            {
-                                patternType = PatternType.DefaultEnd;
-                            }
-
+                            var patternType = PatternType.CollectionEnd;
                             result.Add(new PatternMatch(match, patternType, null,
                                 match.Groups["prefix"].Value, match.Groups["varname"].Value,
                                 match.Groups["formatter"].Value, match.Groups["arg"].Value.Split(','), match.Index,

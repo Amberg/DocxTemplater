@@ -1,4 +1,4 @@
-﻿#if DEBUG
+#if DEBUG
 using System;
 #endif
 using DocumentFormat.OpenXml;
@@ -214,12 +214,8 @@ namespace DocxTemplater
                     CloseBlock(blockStack, match, text);
                     StartBlock(blockStack, match, patternType, text);
                 }
-                if (patternType is PatternType.ConditionEnd or PatternType.CollectionEnd or PatternType.IgnoreEnd or PatternType.SwitchEnd or PatternType.CaseEnd or PatternType.DefaultEnd)
+                if (patternType is PatternType.ConditionEnd or PatternType.CollectionEnd or PatternType.IgnoreEnd)
                 {
-                    if (patternType is PatternType.SwitchEnd)
-                    {
-                        AutoCloseCaseOrDefaultIfNeeded(blockStack, match, text);
-                    }
                     CloseBlock(blockStack, match, text);
                     CloseBlock(blockStack, match, text);
                 }

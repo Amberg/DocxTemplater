@@ -41,6 +41,11 @@ namespace DocxTemplater.Formatter
                 rootElement = document.Body;
             }
 
+            if (rootElement == null)
+            {
+                return;
+            }
+
             if (m_errors.Count > 0)
             {
                 var firstParagraph = rootElement.GetFirstChild<Paragraph>();

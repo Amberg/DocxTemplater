@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 
 
 namespace DocxTemplater.Test
@@ -86,7 +86,6 @@ namespace DocxTemplater.Test
             yield return new TestCaseData("{{#case: 3}}").Returns(new[] { PatternType.Case });
             yield return new TestCaseData("{{#default}}").Returns(new[] { PatternType.Default });
             yield return new TestCaseData("{{#d}}").Returns(new[] { PatternType.Default });
-            yield return new TestCaseData("{{/switch}}").Returns(new[] { PatternType.SwitchEnd });
             yield return new TestCaseData("{{@i:count}}").Returns(new[] { PatternType.RangeStart });
             yield return new TestCaseData("{{@count}}").Returns(new[] { PatternType.RangeStart });
         }
@@ -152,17 +151,17 @@ namespace DocxTemplater.Test
         [Test]
         public void FindSyntax_SwitchCaseStatements()
         {
-            var text = "{{#switch: Item.Value}}...{{#case: 'A'}}...{{/case}}...{{#default}}...{{/default}}...{{/switch}}";
+            var text = "{{#switch: Item.Value}}...{{#case: 'A'}}...{{/}}...{{#default}}...{{/}}...{{/}}";
             var matches = PatternMatcher.FindSyntaxPatterns(text).ToList();
             Assert.Multiple(() =>
             {
                 Assert.That(matches, Has.Count.EqualTo(6));
                 Assert.That(matches[0].Type, Is.EqualTo(PatternType.Switch));
                 Assert.That(matches[1].Type, Is.EqualTo(PatternType.Case));
-                Assert.That(matches[2].Type, Is.EqualTo(PatternType.CaseEnd));
+                Assert.That(matches[2].Type, Is.EqualTo(PatternType.ConditionEnd));
                 Assert.That(matches[3].Type, Is.EqualTo(PatternType.Default));
-                Assert.That(matches[4].Type, Is.EqualTo(PatternType.DefaultEnd));
-                Assert.That(matches[5].Type, Is.EqualTo(PatternType.SwitchEnd));
+                Assert.That(matches[4].Type, Is.EqualTo(PatternType.ConditionEnd));
+                Assert.That(matches[5].Type, Is.EqualTo(PatternType.ConditionEnd));
             });
         }
 

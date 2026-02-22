@@ -83,7 +83,7 @@ The syntax is case insensitive.
 | `{{SomeHtmlString}:html()}`                              | Inserts HTML string into the word document.                                                     |
 | `{{@i:ItemCount}}...{{i}}...{{/}}`                       | Range loop that repeats its content `ItemCount` times.                                          |
 | `{{#Items}}{?{Items._Idx % 2 == 0}}{{.}}{{/}}{{/Items}}` | Renders every second item in a list.                                                            |
-| `{{#switch: SomeVar}}{{#case: 'A'}}...{{/case}}{{#default}}...{{/default}}{{/switch}}` | Evaluates switch cases and renders the matching block. there is a short syntax too                                          |
+| `{{#switch: SomeVar}}{{#case: 'A'}}...{{/}}{{#default}}...{{/}}{{/}}` | Evaluates switch cases and renders the matching block. there is a short syntax too                                          |
 | `{{:ignore}} ... {{/:ignore}}`                           | Ignore DocxTemplater syntax, which is helpful around a Table of Contents.                       |
 | `{{:break}}`                                             | Insert a line break after this keyword block.                                                   |
 | `{{:PageBreak}}`                                         | Start a new page after this keyword block.                                                      |
@@ -208,8 +208,8 @@ Show or hide a given section depending on a switch variable:
 
 | Long Syntax                                                | Short Syntax                                         |
 | :--------------------------------------------------------- | :--------------------------------------------------- |
-| `{{#switch: Item.Value}}`<br>&nbsp;&nbsp;`{{#case: 1}}Value is 1{{/case}}`<br>&nbsp;&nbsp;`{{#case: 'A'}}Value is A{{/case}}`<br>&nbsp;&nbsp;`{{#default}}Value is unknown{{/default}}`<br>`{{/switch}}` | `{{#s: Item.Value}}`<br>&nbsp;&nbsp;`{{#c: 1}}Value is 1`<br>&nbsp;&nbsp;`{{#c: 'A'}}Value is A`<br>&nbsp;&nbsp;`{{#d}}Value is unknown`<br>`{{/s}}` |
-| **Optional Closing Tags:** | A new Case, Default or SwitchEnd tag automatically closes any preceding open block. |
+| `{{#switch: Item.Value}}`<br>&nbsp;&nbsp;`{{#case: 1}}Value is 1{{/}}`<br>&nbsp;&nbsp;`{{#case: 'A'}}Value is A{{/}}`<br>&nbsp;&nbsp;`{{#default}}Value is unknown{{/}}`<br>`{{/}}` | `{{#s: Item.Value}}`<br>&nbsp;&nbsp;`{{#c: 1}}Value is 1{{/}}`<br>&nbsp;&nbsp;`{{#c: 'A'}}Value is A{{/}}`<br>&nbsp;&nbsp;`{{#d}}Value is unknown{{/}}`<br>`{{/}}` |
+| **Optional Closing Tags:** | A new Case or Default tag automatically closes any preceding open block. However, the switch itself must always be closed with `{{/}}`. |
 
 > [!TIP]
 > **Enums:**
