@@ -17,8 +17,8 @@ namespace DocxTemplater.Benchmarks
         [GlobalSetup]
         public void Setup()
         {
-            _templateBytes = CreateLargeTemplate(5000);
-            _model = CreateLargeModel(5000);
+            _templateBytes = CreateLargeTemplate(10); // Reduced for debugging report
+            _model = CreateLargeModel(10);
         }
 
         private static byte[] CreateLargeTemplate(int count)
@@ -93,9 +93,9 @@ namespace DocxTemplater.Benchmarks
         [GlobalSetup]
         public void Setup()
         {
-            _nestedTemplate = CreateTemplate(1000, "{{ds.L1.L2.L3.L4.L5.Val}}");
+            _nestedTemplate = CreateTemplate(10, "{{ds.L1.L2.L3.L4.L5.Val}}");
             _nestedModel = new { L1 = new { L2 = new { L3 = new { L4 = new { L5 = new { Val = "Deep" } } } } } };
-            _formatterTemplate = CreateTemplate(1000, "{{ds.Val}:toUpper()}");
+            _formatterTemplate = CreateTemplate(10, "{{ds.Val}:toUpper()}");
             _simpleModel = new { Val = "text", BoolVal = true };
         }
 

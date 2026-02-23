@@ -8,3 +8,6 @@
 /BENCHMARK_REPORT.md
 /.gemini/agents
 /.gemini
+
+.gemini/
+gha-creds-*.json
