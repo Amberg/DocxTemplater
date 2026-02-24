@@ -215,7 +215,7 @@ Show or hide a given section depending on a switch variable:
 > **Enums:**
 > You can also use `.ToString()` to match `enum` properties against strings.
 > For example, if `Item.Day` is `DayOfWeek.Monday`:
-> `{{#s: Item.Day.ToString()}} ... {{#c: 'Monday'}} Match ... {{/s}}`
+> `{{#s: Item.Day.ToString()}} ... {{#c: 'Monday'}} Match ... {{/}}`
 ---
 ## Formatters
 
