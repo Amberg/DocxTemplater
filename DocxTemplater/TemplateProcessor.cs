@@ -144,7 +144,7 @@ namespace DocxTemplater
             foreach (var markedText in element.Descendants<Text>().Where(x => x.IsMarked()).ToList())
             {
                 var value = markedText.GetMarker();
-                if (removeEmptyElements && value is not PatternType.Variable)
+                if (removeEmptyElements && value is not PatternType.Variable && value is not PatternType.Expression)
                 {
                     var parent = markedText.Parent;
                     markedText.RemoveWithEmptyParent();

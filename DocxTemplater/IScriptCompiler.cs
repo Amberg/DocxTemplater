@@ -6,5 +6,6 @@ namespace DocxTemplater
     {
         ProcessSettings ProcessSettings { get; }
         Func<bool> CompileScript(string scriptAsString);
+        Func<object> CompileExpression(string scriptAsString);
     }
 }

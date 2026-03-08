@@ -90,14 +90,30 @@ namespace DocxTemplater.Formatter
                 return;
             }
 
-            var formatterText = GetFormatterText(patternMatch, valueWithMetadata, out string[] formaterArguments);
+            var formatterText = GetFormatterText(patternMatch, valueWithMetadata, out string[] formatterArguments);
+            ApplyFormatterInternal(templateContext, patternMatch, value, target, formatterText, formatterArguments);
+        }
+
+        internal void ApplyFormatter(PatternMatch patternMatch, object value, Text target, ITemplateProcessingContext templateContext)
+        {
+            if (value == null)
+            {
+                target.Text = string.Empty;
+                return;
+            }
+            var formatterText = GetFormatterText(patternMatch, new ValueWithMetadata(value, new ValueMetadata()), out string[] formatterArguments);
+            ApplyFormatterInternal(templateContext, patternMatch, value, target, formatterText, formatterArguments);
+        }
+
+        private void ApplyFormatterInternal(ITemplateProcessingContext templateContext, PatternMatch patternMatch, object value, Text target, string formatterText, string[] formatterArguments)
+        {
             if (!string.IsNullOrWhiteSpace(formatterText))
             {
                 foreach (var formatter in m_formatters)
                 {
                     if (formatter.CanHandle(value.GetType(), formatterText))
                     {
-                        var context = new FormatterContext(patternMatch.Variable, formatterText, formaterArguments,
+                        var context = new FormatterContext(patternMatch.Variable, formatterText, formatterArguments,
                             value, ProcessSettings.Culture);
                         formatter.ApplyFormat(templateContext, context, target);
                         return;
@@ -126,15 +142,25 @@ namespace DocxTemplater.Formatter
 
         public void ReplaceVariables(OpenXmlElement cloned, ITemplateProcessingContext templateContext)
         {
-            var variables = cloned.GetElementsWithMarker(PatternType.Variable).OfType<Text>().ToList();
+            var variables = cloned.GetElementsWithMarker(PatternType.Variable)
+                .Concat(cloned.GetElementsWithMarker(PatternType.Expression))
+                .OfType<Text>().ToList();
             foreach (var text in variables)
             {
                 var variableMatch = PatternMatcher.FindSyntaxPatterns(text.Text).FirstOrDefault() ??
                                     throw new OpenXmlTemplateException($"Invalid variable syntax '{text.Text}'");
                 try
                 {
-                    var valueWithMetadata = m_models.GetValueWithMetadata(variableMatch.Variable);
-                    ApplyFormatter(templateContext, variableMatch, valueWithMetadata, text);
+                    if (variableMatch.Type == PatternType.Expression)
+                    {
+                        var expressionResult = templateContext.ScriptCompiler.CompileExpression(variableMatch.Variable)();
+                        ApplyFormatter(variableMatch, expressionResult, text, templateContext);
+                    }
+                    else
+                    {
+                        var valueWithMetadata = m_models.GetValueWithMetadata(variableMatch.Variable);
+                        ApplyFormatter(templateContext, variableMatch, valueWithMetadata, text);
+                    }
                     VariableReplacer.SplitNewLinesInText(text);
                 }
                 catch (Exception e) when (e is OpenXmlTemplateException or FormatException)
@@ -187,7 +213,7 @@ namespace DocxTemplater.Formatter
         /// <summary>
         /// Insert Breaks for line breaks in the text
         /// </summary>
-        private static void SplitNewLinesInText(Text text)
+        internal static void SplitNewLinesInText(Text text)
         {
             if (text.Parent == null)
             {

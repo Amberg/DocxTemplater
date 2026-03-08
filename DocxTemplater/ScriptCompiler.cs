@@ -17,8 +17,8 @@ namespace DocxTemplater
                                                                         |                        
                                                                         (?<unary>[+\-!])         # Capture unary operators (+, -, !) in 'unary' group
                                                                         |                       
-                                                                        (?<=[^.\p{L}\p{N}_])     # Position after any char that's not a dot, letter, number, or underscore
-                                                                                                 # (lookbehind - ensures we don't break existing identifiers)
+                                                                        (?<=[^.\p{L}\p{N}_?])    # Position after any char that's not a dot, letter, number, underscore, or question mark (for null-conditional)
+                                                                                                 # (lookbehind - ensures we don't break existing identifiers or ?.)
 
                                                                         (?<!\(.*\))              # Also try to start after any function call with zero to many arguments.
                                                                                                  # NOTE: While this isn't industrial grade combinatorial parsing, the results seem fine.
@@ -44,9 +44,37 @@ namespace DocxTemplater
 
         public Func<bool> CompileScript(string scriptAsString)
         {
+            var interpreter = CreateInterpreter(ref scriptAsString);
+
+            try
+            {
+                return interpreter.ParseAsDelegate<Func<bool>>(scriptAsString);
+            }
+            catch (DynamicExpresso.Exceptions.ParseException e)
+            {
+                throw new OpenXmlTemplateException($"Error parsing script {scriptAsString}", e);
+            }
+        }
+
+        public Func<object> CompileExpression(string scriptAsString)
+        {
+            var interpreter = CreateInterpreter(ref scriptAsString);
+
+            try
+            {
+                return interpreter.ParseAsDelegate<Func<object>>(scriptAsString);
+            }
+            catch (DynamicExpresso.Exceptions.ParseException e)
+            {
+                throw new OpenXmlTemplateException($"Error parsing expression {scriptAsString}", e);
+            }
+        }
+
+        private Interpreter CreateInterpreter(ref string scriptAsString)
+        {
             scriptAsString = HelperFunctions.SanitizeQuotes(scriptAsString);
             // replace leading dots (implicit scope) with variables
-            var interpreter = new Interpreter();
+            var interpreter = new Interpreter().EnableAssignment(AssignmentOperators.None);
             try
             {
                 // replace ..foo / .foo etc
@@ -74,14 +102,7 @@ namespace DocxTemplater
                 }
             }
 
-            try
-            {
-                return interpreter.ParseAsDelegate<Func<bool>>(scriptAsString);
-            }
-            catch (DynamicExpresso.Exceptions.ParseException e)
-            {
-                throw new OpenXmlTemplateException($"Error parsing script {scriptAsString}", e);
-            }
+            return interpreter;
         }
 
         private string OnVariableReplace(Match match, Interpreter interpreter)

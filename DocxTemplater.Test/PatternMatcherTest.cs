@@ -88,6 +88,11 @@ namespace DocxTemplater.Test
             yield return new TestCaseData("{{#d}}").Returns(new[] { PatternType.Default });
             yield return new TestCaseData("{{@i:count}}").Returns(new[] { PatternType.RangeStart });
             yield return new TestCaseData("{{@count}}").Returns(new[] { PatternType.RangeStart });
+            yield return new TestCaseData("{{(a == b ? 'yes' : 'no')}}").Returns(new[] { PatternType.Expression });
+            yield return new TestCaseData("{{(a.ToString(\"#,0\"))}}").Returns(new[] { PatternType.Expression });
+            yield return new TestCaseData("{{  (ds.QrBills._Idx % 2 == 0) }}").Returns(new[] { PatternType.Expression });
+            yield return new TestCaseData("{{(.Number?.ToString(\"$#,0.00\") ?? \"N/A\")}}").Returns(new[] { PatternType.Expression });
+            yield return new TestCaseData("{{(.Number?.ToString(\"$#,0.00\") ?? \"N/A\")}:toupper}").Returns(new[] { PatternType.Expression });
         }
 
         [Test, TestCaseSource(nameof(PatternMatcherArgumentParsingTest_Cases))]

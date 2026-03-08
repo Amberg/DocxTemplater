@@ -59,6 +59,13 @@ namespace DocxTemplater
                         (?<varname> # the default variable matcher
                             [\p{L}\p{N}\._]+ # match variable name
                         )
+                        |
+                        (?<expression> # the expression matcher
+                            \(
+                            (?>[^()]+|(?<o>\()|(?<-o>\)))*
+                            \)
+                            (?(o)(?!))
+                        )
                     )?
                 ) 
             )
@@ -205,6 +212,20 @@ namespace DocxTemplater
                                 match.Groups["formatter"].Value, match.Groups["arg"].Value.Split(','), match.Index,
                                 match.Length));
                         }
+                    }
+                    else if (match.Groups["expression"].Success)
+                    {
+                        var argGroup = match.Groups["arg"];
+                        var arguments = argGroup.Success
+                            ? argGroup.Captures.Select(x => x.Value?.Replace("\\'", "'")).ToArray()
+                            : Array.Empty<string>();
+
+                        // we want to extract the expression string but keep the original match structure similar to Variable
+                        // the expression group includes the outer parenthesis `(a > 5)`
+                        // let's pass the whole captured expression as the variable name for now, the block can trim if needed.
+                        result.Add(new PatternMatch(match, PatternType.Expression, null, null,
+                            match.Groups["expression"].Value,
+                            match.Groups["formatter"].Value, arguments, match.Index, match.Length));
                     }
                     else if (match.Groups["varname"].Success)
                     {

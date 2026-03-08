@@ -79,6 +79,10 @@ The syntax is case insensitive.
 | `{{SomeDate}:Format('MM/dd/yyyy')}`                      | Date variable with formatting.                                                                  |
 | `{?{!.IsHw && .Name.Contains('Item')}}...{{}}`           | Logical Expression with string operation. Careful; Word Replaces `'` with `‘` and `"` with `”`. |
 | `{{SomeDate}:F('MM/dd/yyyy')}`                           | Date variable with formatting - short syntax.                                                   |
+| `{{(1 + 2)}}`                                            | Evaluate simple math expressions.                                                               |
+| `{{(ds.Name.ToUpper() + "!")}}`                          | Expressions with variables and string operations.                                               |
+| `{{(ds.Val?.ToString() ?? "N/A")}}`                      | Expressions with null-conditional and coalescing operators.                                     |
+| `{{(ds.Price * 1.19)}:f(c)}`                             | Expressions with calculations and formatters.                                                   |
 | `{{SomeBytes}:img()}`                                    | Image Formatter for image data.                                                                 |
 | `{{SomeHtmlString}:html()}`                              | Inserts HTML string into the word document.                                                     |
 | `{{@i:ItemCount}}...{{i}}...{{/}}`                       | Range loop that repeats its content `ItemCount` times.                                          |
@@ -216,6 +220,30 @@ Show or hide a given section depending on a switch variable:
 > You can also use `.ToString()` to match `enum` properties against strings.
 > For example, if `Item.Day` is `DayOfWeek.Monday`:
 > `{{#s: Item.Day.ToString()}} ... {{#c: 'Monday'}} Match ... {{/}}`
+---
+### C# Expressions
+
+You can evaluate C# expressions directly inside placeholders. This is useful for simple calculations, string manipulations, or handling null values. Expressions must be enclosed in parentheses: **{{(\<expression\>)}}**.
+
+Expressions are evaluated using [DynamicExpresso](https://github.com/davideicardi/DynamicExpresso) and have access to all bound models.
+
+#### Examples
+
+- **Simple Math:** `{{(1 + 2)}}` -> `3`
+- **String Concatenation:** `{{(ds.Name.ToUpper() + "!")}}` -> `WORLD!` (if Name is "world")
+- **Null Handling:** `{{(ds.Val?.ToString() ?? "N/A")}}` -> `N/A` (if Val is null)
+- **Complex Logic:** `{{(ds.Items.Count > 0 ? "Items available" : "Empty")}}`
+
+#### Using Formatters with Expressions
+
+Expressions also support the standard formatter syntax: **{{(\<expression\>)}:\<formatter\>(\<args\>)}**. This is especially useful when you calculate values that require specific formatting.
+
+Example: `{{(ds.Price * 1.19)}:f(c)}` -> formats the calculated gross price as currency.
+
+> [!IMPORTANT]
+> **Security Note:**
+> Expressions are evaluated in a restricted environment. Only bound models and basic .NET types are accessible. **Assignment operators are disabled** to ensure models cannot be modified from within the template. System namespaces, file system access, or other sensitive operations are not permitted. This prevents malicious code injection through templates.
+
 ---
 ## Formatters
 
