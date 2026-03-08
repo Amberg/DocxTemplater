@@ -56,6 +56,8 @@ jobs:
         name: .NET Tests
         path: "TestResults/*.trx"
         reporter: dotnet-trx
+        list-suites: all
+        list-tests: failed
 
     - name: Install ReportGenerator
       run: dotnet tool install -g dotnet-reportgenerator-globaltool || true
