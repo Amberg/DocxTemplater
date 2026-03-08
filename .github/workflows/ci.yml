@@ -49,12 +49,25 @@ jobs:
         --results-directory ./TestResults \
         -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
 
+    - name: Test Report
+      uses: dorny/test-reporter@v1
+      if: always()
+      with:
+        name: .NET Tests
+        path: "TestResults/*.trx"
+        reporter: dotnet-trx
+
     - name: Install ReportGenerator
-      run: dotnet tool install -g dotnet-reportgenerator-globaltool
+      run: dotnet tool install -g dotnet-reportgenerator-globaltool || true
 
     - name: Generate Coverage Report
       run: |
-        reportgenerator -reports:./TestResults/**/coverage.cobertura.xml -targetdir:./CoverageReport -reporttypes:Html
+        reportgenerator -reports:./TestResults/**/coverage.cobertura.xml -targetdir:./CoverageReport -reporttypes:"Html;MarkdownSummary"
+
+    - name: Add coverage to GitHub summary
+      run: |
+        echo "## Code Coverage" >> $GITHUB_STEP_SUMMARY
+        cat CoverageReport/Summary.md >> $GITHUB_STEP_SUMMARY
 
     - name: Upload Test Results
       uses: actions/upload-artifact@v4
