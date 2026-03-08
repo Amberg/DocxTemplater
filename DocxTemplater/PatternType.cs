@@ -16,6 +16,7 @@ namespace DocxTemplater
         Switch,
         Case,
         Default,
-        RangeStart
+        RangeStart,
+        Expression
     }
 }

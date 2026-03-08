@@ -155,5 +155,22 @@
             Assert.That(m_scriptCompiler.CompileScript(".Substring(2).EndsWith('there')")(), Is.True);
             Assert.That(m_scriptCompiler.CompileScript("!.Substring(0, 2).EndsWith('hello')")(), Is.True);
         }
+        [Test]
+        public void TestCompileExpression()
+        {
+            // Simple arithmetic
+            Assert.That(m_scriptCompiler.CompileExpression("10 / 2")(), Is.EqualTo(5));
+
+            // Null coalescing
+            m_modelDictionary.Add("obj", new { Number = (int?)null, Text = "Hello" });
+            Assert.That(m_scriptCompiler.CompileExpression("obj.Number ?? 5")(), Is.EqualTo(5));
+            Assert.That(m_scriptCompiler.CompileExpression("obj.Number?.ToString() ?? \"N/A\"")(), Is.EqualTo("N/A"));
+            Assert.That(m_scriptCompiler.CompileExpression("obj.Text ?? \"N/A\"")(), Is.EqualTo("Hello"));
+
+            // Scope and dot notation
+            m_modelDictionary.OpenScope().AddVariable("obj", new { Number = 15 });
+            Assert.That(m_scriptCompiler.CompileExpression(".Number ?? 5")(), Is.EqualTo(15));
+            Assert.That(m_scriptCompiler.CompileExpression(".Number?.ToString() ?? \"N/A\"")(), Is.EqualTo("15"));
+        }
     }
 }
