@@ -102,6 +102,29 @@ namespace DocxTemplater
                         lastValueMetadata = valWithMetadata.Metadata;
                     }
                 }
+                else if (model is IDictionary dictionary)
+                {
+                    bool found = false;
+                    foreach (var key in dictionary.Keys)
+                    {
+                        if (string.Equals(key?.ToString(), propertyName, System.StringComparison.OrdinalIgnoreCase))
+                        {
+                            model = dictionary[key];
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if (!found)
+                    {
+                        throw new OpenXmlTemplateException($"Property {propertyName} not found in {modelRootPath}");
+                    }
+                    if (model is ValueWithMetadata valWithMetadata)
+                    {
+                        model = valWithMetadata.Value;
+                        lastValueMetadata = valWithMetadata.Metadata;
+                    }
+                }
                 else
                 {
                     var property = model.GetType().GetProperty(propertyName, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.GetProperty | BindingFlags.Instance);

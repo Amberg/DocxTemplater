@@ -1,6 +1,5 @@
 ﻿using DynamicExpresso;
 using System;
-using System.Dynamic;
 using System.Text.RegularExpressions;
 using DocxTemplater.Blocks;
 
@@ -48,7 +47,8 @@ namespace DocxTemplater
 
             try
             {
-                return interpreter.ParseAsDelegate<Func<bool>>(scriptAsString);
+                var func = interpreter.ParseAsDelegate<Func<bool>>(scriptAsString);
+                return WrapExecution(func);
             }
             catch (DynamicExpresso.Exceptions.ParseException e)
             {
@@ -62,12 +62,29 @@ namespace DocxTemplater
 
             try
             {
-                return interpreter.ParseAsDelegate<Func<object>>(scriptAsString);
+                var func = interpreter.ParseAsDelegate<Func<object>>(scriptAsString);
+                return WrapExecution(func);
             }
             catch (DynamicExpresso.Exceptions.ParseException e)
             {
                 throw new OpenXmlTemplateException($"Error parsing expression {scriptAsString}", e);
             }
+        }
+
+        private static Func<T> WrapExecution<T>(Func<T> func)
+        {
+            return () =>
+            {
+                try
+                {
+                    return func();
+                }
+                catch (Exception e) when (e is NullReferenceException or Microsoft.CSharp.RuntimeBinder.RuntimeBinderException or System.Reflection.TargetInvocationException)
+                {
+                    var message = e is System.Reflection.TargetInvocationException tie ? tie.InnerException?.Message ?? e.Message : e.Message;
+                    throw new OpenXmlTemplateException(message, e);
+                }
+            };
         }
 
         private Interpreter CreateInterpreter(ref string scriptAsString)
@@ -91,14 +108,22 @@ namespace DocxTemplater
             var identifiers = interpreter.DetectIdentifiers(scriptAsString);
             foreach (var identifier in identifiers.UnknownIdentifiers)
             {
-                var val = m_modelDictionary.GetValue(identifier);
+                object val;
+                try
+                {
+                    val = m_modelDictionary.GetValue(identifier);
+                }
+                catch (OpenXmlTemplateException) when (ProcessSettings?.BindingErrorHandling is BindingErrorHandling.SkipBindingAndRemoveContent)
+                {
+                    val = null;
+                }
                 if (val == null || IsSimpleType(val.GetType()))
                 {
-                    interpreter.SetVariable(identifier, val);
+                    interpreter.SetVariable(identifier, val, val?.GetType() ?? typeof(string));
                 }
                 else
                 {
-                    interpreter.SetVariable(identifier, new ModelVariable(m_modelDictionary, identifier));
+                    interpreter.SetVariable(identifier, new ScriptCompilerModelVariable(m_modelDictionary, identifier, ProcessSettings));
                 }
             }
 
@@ -125,7 +150,7 @@ namespace DocxTemplater
                 var scope = m_modelDictionary.GetScopeParentLevel(dotCount - 1);
                 if (scope != null && !IsSimpleType(scope.GetType()))
                 {
-                    scope = new ModelVariable(m_modelDictionary, new string('.', dotCount - 1));
+                    scope = new ScriptCompilerModelVariable(m_modelDictionary, new string('.', dotCount - 1), ProcessSettings);
                 }
 
                 var varName = $"__s{dotCount}_"; // choose a variable name that is unlikely to be used by the user
@@ -157,36 +182,6 @@ namespace DocxTemplater
         {
             var typeCode = Type.GetTypeCode(type);
             return typeCode != TypeCode.Object || type == typeof(Guid);
-        }
-
-
-        private class ModelVariable : DynamicObject
-        {
-            private readonly IModelLookup m_modelDictionary;
-            private readonly string m_rootName;
-
-            public ModelVariable(IModelLookup modelDictionary, string rootName)
-            {
-                m_modelDictionary = modelDictionary;
-                m_rootName = rootName;
-            }
-
-            public override bool TryGetMember(GetMemberBinder binder, out object result)
-            {
-                var name = m_rootName + "." + binder.Name;
-                result = m_modelDictionary.GetValue(name);
-                if (result != null && !IsSimpleType(result.GetType()))
-                {
-                    result = new ModelVariable(m_modelDictionary, name);
-                }
-
-                return true;
-            }
-
-            public override bool TrySetMember(SetMemberBinder binder, object value)
-            {
-                return false;
-            }
         }
     }
 }

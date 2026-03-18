@@ -176,5 +176,29 @@ namespace DocxTemplater.Test
             using var resultDoc = WordprocessingDocument.Open(result, false);
             Assert.That(resultDoc.MainDocumentPart.Document.Body.InnerText.Trim(), Is.Empty);
         }
+
+        [Test]
+        public void ProductionStructure_NonGenericDictionary_ResolvesCorrectly()
+        {
+            using var memStream = new MemoryStream();
+            using (var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document))
+            {
+                MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+                mainPart.Document = new Document(new Body(
+                    new Paragraph(new Run(new Text("Value: {{ds.Nested.Key}}")))
+                ));
+                wpDocument.Save();
+            }
+            memStream.Position = 0;
+
+            var docTemplate = new DocxTemplate(memStream);
+            var nested = new System.Collections.Hashtable { { "Key", "Success" } };
+            var ds = new System.Collections.Hashtable { { "Nested", nested } };
+            docTemplate.BindModel("ds", ds);
+            var result = docTemplate.Process();
+
+            using var resultDoc = WordprocessingDocument.Open(result, false);
+            Assert.That(resultDoc.MainDocumentPart.Document.Body.InnerText.Trim(), Is.EqualTo("Value: Success"));
+        }
     }
 }
