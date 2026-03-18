@@ -1,6 +1,7 @@
 ﻿using DynamicExpresso;
 using System;
 using System.Dynamic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using DocxTemplater.Blocks;
 
@@ -181,6 +182,14 @@ namespace DocxTemplater
                 }
 
                 return true;
+            }
+
+            public override bool TryInvokeMember(InvokeMemberBinder binder, object[] args, out object result)
+            {
+                var actualObject = m_modelDictionary.GetValue(m_rootName);
+                var method = actualObject?.GetType().GetMethod(binder.Name, args.Select(a => a?.GetType() ?? typeof(object)).ToArray());
+                result = method?.Invoke(actualObject, args);
+                return method != null;
             }
 
             public override bool TrySetMember(SetMemberBinder binder, object value)

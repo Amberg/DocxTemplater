@@ -156,6 +156,16 @@
             Assert.That(m_scriptCompiler.CompileScript("!.Substring(0, 2).EndsWith('hello')")(), Is.True);
         }
         [Test]
+        public void CollectionMethodCall()
+        {
+            m_modelDictionary.Add("x", new { a = new { items = new List<string> { "hi", "there", "world" } } });
+
+            Assert.That(m_scriptCompiler.CompileScript("x.a.items.Contains('hi')")());
+            Assert.That(m_scriptCompiler.CompileScript("x.a.items.Contains('there')")());
+            Assert.That(m_scriptCompiler.CompileScript("x.a.items.Contains('missing')")(), Is.False);
+        }
+
+        [Test]
         public void TestCompileExpression()
         {
             // Simple arithmetic
