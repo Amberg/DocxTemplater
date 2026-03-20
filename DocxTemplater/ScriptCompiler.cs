@@ -175,7 +175,15 @@ namespace DocxTemplater
             public override bool TryGetMember(GetMemberBinder binder, out object result)
             {
                 var name = m_rootName + "." + binder.Name;
-                result = m_modelDictionary.GetValue(name);
+                try
+                {
+                    result = m_modelDictionary.GetValue(name);
+                }
+                catch (OpenXmlTemplateException)
+                {
+                    result = null;
+                    return true;
+                }
                 if (result != null && !IsSimpleType(result.GetType()))
                 {
                     result = new ModelVariable(m_modelDictionary, name);

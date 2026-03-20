@@ -182,5 +182,44 @@
             Assert.That(m_scriptCompiler.CompileExpression(".Number ?? 5")(), Is.EqualTo(15));
             Assert.That(m_scriptCompiler.CompileExpression(".Number?.ToString() ?? \"N/A\"")(), Is.EqualTo("15"));
         }
+
+        [Test]
+        public void ConditionWithMissingProperty_ReturnsNull()
+        {
+            m_modelDictionary.Add("ds", new { Name = "test" });
+
+            // missing property in null check should resolve to null, not throw
+            Assert.That(m_scriptCompiler.CompileScript("ds.MissingProp == null")());
+        }
+
+        [Test]
+        public void ConditionWithStringIsNullOrWhiteSpace_OnMissingProperty()
+        {
+            m_modelDictionary.Add("ds", new { Name = "test" });
+
+            // string.IsNullOrWhiteSpace on a missing property should return true
+            Assert.That(m_scriptCompiler.CompileScript("string.IsNullOrWhiteSpace(ds.MissingProp)")());
+            Assert.That(m_scriptCompiler.CompileScript("!string.IsNullOrWhiteSpace(ds.MissingProp)")(), Is.False);
+        }
+
+        [Test]
+        public void ExpressionWithNullCoalescing_OnMissingProperty()
+        {
+            m_modelDictionary.Add("ds", new { Name = "test" });
+
+            // null coalescing on a missing property should return the fallback
+            Assert.That(m_scriptCompiler.CompileExpression("ds.MissingProp ?? \"fallback\"")(), Is.EqualTo("fallback"));
+        }
+
+        [Test]
+        public void ExistingProperty_StillResolvesCorrectly()
+        {
+            m_modelDictionary.Add("ds", new { Name = "hello" });
+
+            // existing properties must still work as before
+            Assert.That(m_scriptCompiler.CompileScript("ds.Name == \"hello\"")());
+            Assert.That(m_scriptCompiler.CompileScript("!string.IsNullOrWhiteSpace(ds.Name)")());
+            Assert.That(m_scriptCompiler.CompileExpression("ds.Name ?? \"fallback\"")(), Is.EqualTo("hello"));
+        }
     }
 }

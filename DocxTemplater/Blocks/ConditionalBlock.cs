@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Wordprocessing;
@@ -22,7 +23,8 @@ namespace DocxTemplater.Blocks
             {
                 conditionResult = m_context.ScriptCompiler.CompileScript(m_condition)();
             }
-            catch (OpenXmlTemplateException e) when (m_context.ProcessSettings.BindingErrorHandling != BindingErrorHandling.ThrowException)
+            catch (Exception e) when (e is OpenXmlTemplateException or NullReferenceException or Microsoft.CSharp.RuntimeBinder.RuntimeBinderException
+                && m_context.ProcessSettings.BindingErrorHandling != BindingErrorHandling.ThrowException)
             {
                 m_context.VariableReplacer.AddError($"{e.Message} in condition '{m_condition}'");
             }

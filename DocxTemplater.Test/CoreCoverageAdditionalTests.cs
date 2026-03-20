@@ -150,7 +150,8 @@ namespace DocxTemplater.Test
             var result = docTemplate.Process();
 
             using var resultDoc = WordprocessingDocument.Open(result, false);
-            Assert.That(resultDoc.MainDocumentPart.Document.Body.InnerText, Does.Contain("NonExistentProp"));
+            // Missing property resolves to null in expressions, so no case matches and no error is shown
+            Assert.That(resultDoc.MainDocumentPart.Document.Body.InnerText, Does.Not.Contain("Match"));
         }
 
         [Test]
