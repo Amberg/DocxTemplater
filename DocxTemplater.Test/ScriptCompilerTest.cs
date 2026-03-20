@@ -221,5 +221,16 @@
             Assert.That(m_scriptCompiler.CompileScript("!string.IsNullOrWhiteSpace(ds.Name)")());
             Assert.That(m_scriptCompiler.CompileExpression("ds.Name ?? \"fallback\"")(), Is.EqualTo("hello"));
         }
+
+        [Test]
+        public void ConditionWithUnknownTopLevelIdentifier_ResolvesToNull()
+        {
+            m_modelDictionary.Add("ds", new { Name = "test" });
+
+            // top-level identifier not in model (no ds. prefix) should resolve to null
+            Assert.That(m_scriptCompiler.CompileScript("string.IsNullOrWhiteSpace(ClientBusinessType)")());
+            Assert.That(m_scriptCompiler.CompileScript("!string.IsNullOrWhiteSpace(ClientBusinessType)")(), Is.False);
+            Assert.That(m_scriptCompiler.CompileExpression("ClientBusinessType ?? \"fallback\"")(), Is.EqualTo("fallback"));
+        }
     }
 }

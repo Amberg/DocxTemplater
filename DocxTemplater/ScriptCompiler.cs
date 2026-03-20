@@ -92,7 +92,16 @@ namespace DocxTemplater
             var identifiers = interpreter.DetectIdentifiers(scriptAsString);
             foreach (var identifier in identifiers.UnknownIdentifiers)
             {
-                var val = m_modelDictionary.GetValue(identifier);
+                object val;
+                try
+                {
+                    val = m_modelDictionary.GetValue(identifier);
+                }
+                catch (OpenXmlTemplateException)
+                {
+                    interpreter.SetVariable(identifier, null, typeof(string));
+                    continue;
+                }
                 if (val == null || IsSimpleType(val.GetType()))
                 {
                     interpreter.SetVariable(identifier, val);
