@@ -32,7 +32,7 @@
 
 
 	<PropertyGroup>
-		<Version>2.7.0-fork2</Version>
+		<Version>2.7.0-fork4</Version>
 		<PackageId>$(MSBuildProjectName)</PackageId>
 		<RepositoryType>git</RepositoryType>
 		<Authors>Orphis AG</Authors>
