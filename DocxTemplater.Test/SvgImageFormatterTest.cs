@@ -72,7 +72,7 @@ namespace DocxTemplater.Test
             // Check if there's a blip with an embed relationship
             var blip = drawing.Descendants<DocumentFormat.OpenXml.Drawing.Blip>().FirstOrDefault();
             Assert.That(blip, Is.Not.Null, "Blip element should be present");
-            Assert.That(blip.Embed, Is.Not.Null.Or.Empty, "Embed attribute should be present");
+            Assert.That(blip.Embed?.Value, Is.Not.Null.And.Not.Empty, "Embed attribute should be present");
 
             // Verify the image part exists and is SVG
             var imagePart = processedDoc.MainDocumentPart.GetPartById(blip.Embed) as ImagePart;
@@ -130,7 +130,7 @@ namespace DocxTemplater.Test
             // Check if there's a blip with an embed relationship
             var blip = drawing.Descendants<DocumentFormat.OpenXml.Drawing.Blip>().FirstOrDefault();
             Assert.That(blip, Is.Not.Null, "Blip element should be present");
-            Assert.That(blip.Embed, Is.Not.Null.Or.Empty, "Embed attribute should be present");
+            Assert.That(blip.Embed?.Value, Is.Not.Null.And.Not.Empty, "Embed attribute should be present");
 
             // Verify the image part exists and is SVG
             var imagePart = processedDoc.MainDocumentPart.GetPartById(blip.Embed) as ImagePart;
