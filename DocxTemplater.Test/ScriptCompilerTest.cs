@@ -9,7 +9,7 @@
         public void Setup()
         {
             m_modelDictionary = new ModelLookup();
-            m_scriptCompiler = new ScriptCompiler(m_modelDictionary, null);
+            m_scriptCompiler = new ScriptCompiler(m_modelDictionary, new ProcessSettings { BindingErrorHandling = BindingErrorHandling.SkipBindingAndRemoveContent });
         }
 
         [Test]
@@ -156,6 +156,16 @@
             Assert.That(m_scriptCompiler.CompileScript("!.Substring(0, 2).EndsWith('hello')")(), Is.True);
         }
         [Test]
+        public void CollectionMethodCall()
+        {
+            m_modelDictionary.Add("x", new { a = new { items = new List<string> { "hi", "there", "world" } } });
+
+            Assert.That(m_scriptCompiler.CompileScript("x.a.items.Contains('hi')")());
+            Assert.That(m_scriptCompiler.CompileScript("x.a.items.Contains('there')")());
+            Assert.That(m_scriptCompiler.CompileScript("x.a.items.Contains('missing')")(), Is.False);
+        }
+
+        [Test]
         public void TestCompileExpression()
         {
             // Simple arithmetic
@@ -171,6 +181,140 @@
             m_modelDictionary.OpenScope().AddVariable("obj", new { Number = 15 });
             Assert.That(m_scriptCompiler.CompileExpression(".Number ?? 5")(), Is.EqualTo(15));
             Assert.That(m_scriptCompiler.CompileExpression(".Number?.ToString() ?? \"N/A\"")(), Is.EqualTo("15"));
+        }
+
+        [Test]
+        public void ConditionWithMissingProperty_ReturnsNull()
+        {
+            m_modelDictionary.Add("ds", new { Name = "test" });
+
+            // missing property in null check should resolve to null, not throw
+            Assert.That(m_scriptCompiler.CompileScript("ds.MissingProp == null")());
+        }
+
+        [Test]
+        public void ConditionWithStringIsNullOrWhiteSpace_OnMissingProperty()
+        {
+            m_modelDictionary.Add("ds", new { Name = "test" });
+
+            // string.IsNullOrWhiteSpace on a missing property should return true
+            Assert.That(m_scriptCompiler.CompileScript("string.IsNullOrWhiteSpace(ds.MissingProp)")());
+            Assert.That(m_scriptCompiler.CompileScript("!string.IsNullOrWhiteSpace(ds.MissingProp)")(), Is.False);
+        }
+
+        [Test]
+        public void ExpressionWithNullCoalescing_OnMissingProperty()
+        {
+            m_modelDictionary.Add("ds", new { Name = "test" });
+
+            // null coalescing on a missing property should return the fallback
+            Assert.That(m_scriptCompiler.CompileExpression("ds.MissingProp ?? \"fallback\"")(), Is.EqualTo("fallback"));
+        }
+
+        [Test]
+        public void ExistingProperty_StillResolvesCorrectly()
+        {
+            m_modelDictionary.Add("ds", new { Name = "hello" });
+
+            // existing properties must still work as before
+            Assert.That(m_scriptCompiler.CompileScript("ds.Name == \"hello\"")());
+            Assert.That(m_scriptCompiler.CompileScript("!string.IsNullOrWhiteSpace(ds.Name)")());
+            Assert.That(m_scriptCompiler.CompileExpression("ds.Name ?? \"fallback\"")(), Is.EqualTo("hello"));
+        }
+
+        [Test]
+        public void ConditionWithUnknownTopLevelIdentifier_ResolvesToNull()
+        {
+            m_modelDictionary.Add("ds", new { Name = "test" });
+
+            // top-level identifier not in model (no ds. prefix) should resolve to null
+            Assert.That(m_scriptCompiler.CompileScript("string.IsNullOrWhiteSpace(ClientBusinessType)")());
+            Assert.That(m_scriptCompiler.CompileScript("!string.IsNullOrWhiteSpace(ClientBusinessType)")(), Is.False);
+            Assert.That(m_scriptCompiler.CompileExpression("ClientBusinessType ?? \"fallback\"")(), Is.EqualTo("fallback"));
+        }
+
+        [Test]
+        public void MethodInvocationOnDynamicObjects()
+        {
+            var model = new System.Collections.Hashtable
+            {
+                { "Nested", new { Name = "World" } },
+                { "Value", 42 }
+            };
+            m_modelDictionary.Add("ds", model);
+
+            // Method call on the dynamic object itself (Hashtable doesn't have much, but ToString works)
+            Assert.That(m_scriptCompiler.CompileExpression("ds.ToString()")(), Is.Not.Null);
+
+            // Method call on a property that is a "normal" object (resolved via DynamicObject/ModelVariable)
+            Assert.That(m_scriptCompiler.CompileExpression("ds.Nested.ToString()")(), Is.EqualTo("{ Name = World }"));
+            Assert.That(m_scriptCompiler.CompileExpression("ds.Nested.Name.ToUpper()")(), Is.EqualTo("WORLD"));
+
+            // Method call on a simple type property
+            Assert.That(m_scriptCompiler.CompileExpression("ds.Value.ToString()")(), Is.EqualTo("42"));
+        }
+
+        private class TestMethodModel
+        {
+            public string SayHello(string name)
+            {
+                return $"Hello {name}";
+            }
+
+            public string SayHello(string name, int count)
+            {
+                return $"Hello {name} {count}";
+            }
+
+            public string WithNull(string val)
+            {
+                return val ?? "was null";
+            }
+
+            public void Throw()
+            {
+                throw new InvalidOperationException("Test exception");
+            }
+        }
+
+        [Test]
+        public void MethodInvocation_WithComplexOverloadsAndNulls()
+        {
+            m_modelDictionary.Add("ds", new System.Collections.Hashtable { { "Model", new TestMethodModel() } });
+
+            Assert.That(m_scriptCompiler.CompileExpression("ds.Model.SayHello('World')")(), Is.EqualTo("Hello World"));
+            Assert.That(m_scriptCompiler.CompileExpression("ds.Model.SayHello('World', 42)")(), Is.EqualTo("Hello World 42"));
+            Assert.That(m_scriptCompiler.CompileExpression("ds.Model.WithNull(null)")(), Is.EqualTo("was null"));
+        }
+
+        [Test]
+        public void ToString_OnComplexProperty_ReturnsUnderlyingToString()
+        {
+            m_modelDictionary.Add("ds", new { Complex = new { Name = "RealObject" } });
+            var expr = m_scriptCompiler.CompileExpression("ds.Complex");
+            var result = expr();
+            // result is a ScriptCompilerModelVariable, calling ToString() should return the underlying object's ToString
+            Assert.That(result.ToString(), Is.EqualTo("{ Name = RealObject }"));
+        }
+
+        [Test]
+        public void MethodInvocation_ThrowsException_WrappedInOpenXmlTemplateException()
+        {
+            m_modelDictionary.Add("ds", new System.Collections.Hashtable { { "Model", new TestMethodModel() } });
+            var expr = m_scriptCompiler.CompileExpression("ds.Model.Throw()");
+            var ex = Assert.Throws<OpenXmlTemplateException>(() => expr());
+            Assert.That(ex.Message, Is.EqualTo("Test exception"));
+        }
+
+        [Test]
+        public void BindingErrorHandling_ThrowException_ShouldThrowOnMissingProperty()
+        {
+            var settings = new ProcessSettings { BindingErrorHandling = BindingErrorHandling.ThrowException };
+            var compiler = new ScriptCompiler(m_modelDictionary, settings);
+            m_modelDictionary.Add("ds", new { Name = "Test" });
+
+            var expr = compiler.CompileExpression("ds.MissingProp");
+            Assert.Throws<OpenXmlTemplateException>(() => expr());
         }
     }
 }
