@@ -3,9 +3,7 @@ using System.IO;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocxTemplater.ImageBase;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Metadata;
-using SixLabors.ImageSharp.Metadata.Profiles.Exif;
+using SkiaSharp;
 using A = DocumentFormat.OpenXml.Drawing;
 using PIC = DocumentFormat.OpenXml.Drawing.Pictures; // http://schemas.openxmlformats.org/drawingml/2006/picture"
 
@@ -52,14 +50,10 @@ namespace DocxTemplater.Images
                     }
                     else
                     {
-                        using var image = Image.Load(imageBytes);
-                        ImageRotation exifRotation = ImageRotation.CreateFromUnits(0);
-                        if (image.Metadata?.ExifProfile?.TryGetValue(ExifTag.Orientation, out var orientationValue) == true)
-                        {
-                            exifRotation = ImageRotation.CreateFromExifRotation((ExifRotation)orientationValue.Value);
-                        }
+                        using var codec = SKCodec.Create(new SKMemoryStream(imageBytes)) ?? throw new OpenXmlTemplateException("Could not detect image format");
+                        ImageRotation exifRotation = ImageRotation.CreateFromExifRotation((ExifRotation)(int)codec.EncodedOrigin);
                         string imagePartRelId = null;
-                        var imagePartType = DetectPartTypeInfo(image.Metadata);
+                        var imagePartType = DetectPartTypeInfo(codec.EncodedFormat);
                         if (openXmlPartRootElement.OpenXmlPart is HeaderPart headerPart)
                         {
                             imagePartRelId = CreateImagePart(headerPart, imageBytes, imagePartType);
@@ -76,7 +70,7 @@ namespace DocxTemplater.Images
                         {
                             throw new OpenXmlTemplateException("Could not find a valid image part");
                         }
-                        imageInfoInformation = new ImageInformation(image.Width, image.Height, imagePartRelId, exifRotation);
+                        imageInfoInformation = new ImageInformation(codec.Info.Width, codec.Info.Height, imagePartRelId, exifRotation);
                         m_imagePartRelIdCache[imageBytes] = imageInfoInformation;
                     }
                 }
@@ -141,16 +135,15 @@ namespace DocxTemplater.Images
         ///     the size of the text box is adjusted to the size of the image.
         /// </summary>
 
-        private static PartTypeInfo DetectPartTypeInfo(ImageMetadata imageMetadata)
+        private static PartTypeInfo DetectPartTypeInfo(SKEncodedImageFormat encodedFormat)
         {
-            return imageMetadata switch
+            return encodedFormat switch
             {
-                { DecodedImageFormat.Name: "TIFF" } => ImagePartType.Tiff,
-                { DecodedImageFormat.Name: "BMP" } => ImagePartType.Bmp,
-                { DecodedImageFormat.Name: "GIF" } => ImagePartType.Gif,
-                { DecodedImageFormat.Name: "JPEG" } => ImagePartType.Jpeg,
-                { DecodedImageFormat.Name: "PNG" } => ImagePartType.Png,
-                _ => throw new OpenXmlTemplateException($"Could not detect image format for image in {imageMetadata}")
+                SKEncodedImageFormat.Jpeg => ImagePartType.Jpeg,
+                SKEncodedImageFormat.Png => ImagePartType.Png,
+                SKEncodedImageFormat.Gif => ImagePartType.Gif,
+                SKEncodedImageFormat.Bmp => ImagePartType.Bmp,
+                _ => throw new OpenXmlTemplateException($"Could not detect image format for image format {encodedFormat}")
             };
         }
 

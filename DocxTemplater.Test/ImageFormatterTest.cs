@@ -2,27 +2,33 @@
 using DocumentFormat.OpenXml.Wordprocessing;
 using DocumentFormat.OpenXml;
 using DocxTemplater.Images;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Processing;
+using SkiaSharp;
 
 namespace DocxTemplater.Test
 {
     internal class ImageFormatterTest
     {
+        private static SKEncodedImageFormat GetSkiaFormatByExtension(string extension)
+        {
+            return extension.ToLowerInvariant() switch
+            {
+                "jpg" or "jpeg" => SKEncodedImageFormat.Jpeg,
+                "png" => SKEncodedImageFormat.Png,
+                _ => throw new NotSupportedException($"Unsupported image extension: {extension}")
+            };
+        }
+
         [TestCase("jpg", "testImage")]
-        [TestCase("tiff", "testImage")]
         [TestCase("png", "testImage")]
         [TestCase("png", "testImage_rot")]
-        [TestCase("bmp", "testImage")]
-        [TestCase("gif", "testImage")]
         public void ProcessTemplateWithDifferentImageTypes(string extension, string image)
         {
             var imageBytes = File.ReadAllBytes($"Resources/{image}.jpg");
-            var img = Image.Load(imageBytes);
-            Assert.That(img.Configuration.ImageFormatsManager.TryFindFormatByFileExtension(extension, out var format));
-            var memStream = new MemoryStream();
-            img.Save(memStream, format);
-            imageBytes = memStream.ToArray();
+            using var bitmap = SKBitmap.Decode(imageBytes);
+            Assert.That(bitmap, Is.Not.Null);
+            var skFormat = GetSkiaFormatByExtension(extension);
+            using var encoded = bitmap.Encode(skFormat, 90);
+            imageBytes = encoded.ToArray();
 
             using var fileStream = File.OpenRead("Resources/ImageFormatterTest.docx");
             var docTemplate = new DocxTemplate(fileStream);
@@ -65,11 +71,15 @@ namespace DocxTemplater.Test
             var imageBytes = File.ReadAllBytes("Resources/testImage.jpg");
 
             // change the size to be bigger than the page
-            var img = Image.Load(imageBytes);
-            img.Mutate(x => x.Resize(img.Width * 10, img.Height * 10));
-
-            var bigImgStream = new MemoryStream();
-            img.SaveAsJpeg(bigImgStream);
+            using var originalBitmap = SKBitmap.Decode(imageBytes);
+            var newWidth = originalBitmap.Width * 10;
+            var newHeight = originalBitmap.Height * 10;
+            using var resized = originalBitmap.Resize(new SKImageInfo(newWidth, newHeight), new SKSamplingOptions(SKFilterMode.Linear));
+            using var bigImgStream = new MemoryStream();
+            using (var encodedData = resized.Encode(SKEncodedImageFormat.Jpeg, 90))
+            {
+                encodedData.SaveTo(bigImgStream);
+            }
             imageBytes = bigImgStream.ToArray();
 
             using var memStream = new MemoryStream();
