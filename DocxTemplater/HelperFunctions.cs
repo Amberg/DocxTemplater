@@ -7,7 +7,14 @@ namespace DocxTemplater
 
         public static string SanitizeQuotes(string input)
         {
-            return input.Trim().Replace('\'', '"').Replace('“', '"');
+            return input.Trim()
+                .Replace('\'', '"')
+                .Replace('\u2018', '"') // Left Single
+                .Replace('\u2019', '"') // Right Single
+                .Replace('\u201C', '"') // Left Double
+                .Replace('\u201D', '"') // Right Double
+                .Replace('\u00AB', '"') // Left-Pointing
+                .Replace('\u00BB', '"');// Right-Pointing
         }
 
         /// <summary>
@@ -24,7 +31,8 @@ namespace DocxTemplater
                 {
                     throw new OpenXmlTemplateException("Arguments must be in the form foo:bar");
                 }
-                result[parts[0]] = SanitizeQuotes(parts[1]).Replace("\"", "").Trim();
+                var val = SanitizeQuotes(parts[1]).Replace("\"", "").Trim();
+                result[parts[0]] = val;
             }
             return result;
         }
