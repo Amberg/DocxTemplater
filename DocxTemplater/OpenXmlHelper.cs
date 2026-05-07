@@ -188,6 +188,11 @@ namespace DocxTemplater
             if (childs.Count > 0)
             {
                 var clonedParent = (OpenXmlElement)parent.CloneNode(false);
+                // Insertion point markers (IpId) identify a specific element instance and must not
+                // be duplicated across both halves of a split, otherwise lookups find multiple elements
+                // and the next-sibling skip logic in AddInsertionPoints incorrectly skips paragraphs
+                // that don't really hold a marker. Keep the IpId on the original parent only.
+                clonedParent.RemoveAttribute(InsertionPoint.InsertionPointAttributeName, null);
                 if (parent.Parent != null)
                 {
                     if (beforeElement)

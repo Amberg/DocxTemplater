@@ -5,7 +5,7 @@ namespace DocxTemplater
 {
     internal class InsertionPoint
     {
-        private const string InsertionPointAttributeName = "IpId";
+        public const string InsertionPointAttributeName = "IpId";
         public string Id { get; }
 
         private static int s_counter;
