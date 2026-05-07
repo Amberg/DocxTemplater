@@ -35,6 +35,58 @@ namespace DocxTemplater.Test
 
 
         [Test]
+        // Issue: https://github.com/Amberg/DocxTemplater/issues/114
+        public void InsertionPointConditionNotFound_Issue114()
+        {
+            using var fileStream = File.OpenRead("Resources/Issue114.docx");
+            var docTemplate = new DocxTemplate(fileStream);
+            var data = new Dictionary<string, object>
+            {
+                { "RESIDES", 0 },
+                { "CATEGORY", "cat_002" },
+                { "DEMAND_TYPE_CODE", "00017" }
+            };
+            docTemplate.BindModel("ds", data);
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.That(result, Is.Not.Null);
+            result.SaveAsFileAndOpenInWord();
+        }
+
+        // Regression for https://github.com/Amberg/DocxTemplater/issues/114
+        // Trigger pattern: nested condition (with else) spanning paragraphs whose start text
+        // sits in a paragraph carrying the inherited end-marker of the surrounding block,
+        // followed by an independent top-level condition. The old SplitAtElement cloned the
+        // IpId attribute, multiple paragraphs ended up sharing the same insertion-point id,
+        // and the next-sibling skip in AddInsertionPoints placed later anchors far past
+        // their intended location, corrupting the trailing top-level block.
+        [Test]
+        public void NestedConditionsAcrossParagraphsWithSiblingBlock_Issue114()
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(
+                new Paragraph(new Run(new Text("{?{ds.O1}}{?{ds.O2}}"))),
+                new Paragraph(new Run(new Text("A{{:}}{?{ds.I}}B{{:}}C"))),
+                new Paragraph(new Run(new Text("{{/}}{{/}}{{/}}"))),
+                new Paragraph(new Run(new Text("ok"))),
+                new Paragraph(new Run(new Text("{?{ds.X}}"))),
+                new Paragraph(new Run(new Text("Y"))),
+                new Paragraph(new Run(new Text("{{/}}")))
+            ));
+            wpDocument.Save();
+            memStream.Position = 0;
+            var docTemplate = new DocxTemplate(memStream);
+            docTemplate.BindModel("ds", new { O1 = true, O2 = false, I = true, X = true });
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            var document = WordprocessingDocument.Open(result, false);
+            var text = document.MainDocumentPart.Document.Body.InnerText;
+            Assert.That(text, Is.EqualTo("BokY"));
+        }
+
+        [Test]
         // Issue: https://github.com/Amberg/DocxTemplater/issues/89
         public void MarkdownCrash()
         {
