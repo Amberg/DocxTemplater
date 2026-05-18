@@ -34,18 +34,23 @@ namespace DocxTemplater.Markdown
             OrderedListLevelConfiguration.Add(new ListLevelConfiguration("%7.", null, NumberFormatValues.Decimal, 720));
             OrderedListLevelConfiguration.Add(new ListLevelConfiguration("%8.", null, NumberFormatValues.LowerLetter, 720));
             OrderedListLevelConfiguration.Add(new ListLevelConfiguration("%9.", null, NumberFormatValues.LowerRoman, 720));
+            // Level 1: Standard Bullet -> No explicit Windows font
+            UnorderedListLevelConfiguration.Add(new ListLevelConfiguration("•", null, NumberFormatValues.Bullet, 720));
 
-            UnorderedListLevelConfiguration.Add(new ListLevelConfiguration("\uf0b7", "Symbol", NumberFormatValues.Bullet, 720));
-            UnorderedListLevelConfiguration.Add(new ListLevelConfiguration("o", "Courier New", NumberFormatValues.Bullet, 720));
-            UnorderedListLevelConfiguration.Add(new ListLevelConfiguration("\uf0a7", "Wingdings", NumberFormatValues.Bullet, 720));
+            // Level 2: Hollow Circle -> "Courier New" is mostly safe, but null/Arial is safer
+            UnorderedListLevelConfiguration.Add(new ListLevelConfiguration("◦", null, NumberFormatValues.Bullet, 720));
 
-            UnorderedListLevelConfiguration.Add(new ListLevelConfiguration("\uf0b7", "Symbol", NumberFormatValues.Bullet, 720));
-            UnorderedListLevelConfiguration.Add(new ListLevelConfiguration("o", "Courier New", NumberFormatValues.Bullet, 720));
-            UnorderedListLevelConfiguration.Add(new ListLevelConfiguration("\uf0a7", "Wingdings", NumberFormatValues.Bullet, 720));
+            // Level 3: Square Bullet -> Removed "Wingdings"
+            UnorderedListLevelConfiguration.Add(new ListLevelConfiguration("▪", null, NumberFormatValues.Bullet, 720));
 
-            UnorderedListLevelConfiguration.Add(new ListLevelConfiguration("\uf0b7", "Symbol", NumberFormatValues.Bullet, 720));
-            UnorderedListLevelConfiguration.Add(new ListLevelConfiguration("o", "Courier New", NumberFormatValues.Bullet, 720));
-            UnorderedListLevelConfiguration.Add(new ListLevelConfiguration("\uf0a7", "Wingdings", NumberFormatValues.Bullet, 720));
+            // Repeat the platform-independent pattern for levels 4-9
+            UnorderedListLevelConfiguration.Add(new ListLevelConfiguration("•", null, NumberFormatValues.Bullet, 720));
+            UnorderedListLevelConfiguration.Add(new ListLevelConfiguration("◦", null, NumberFormatValues.Bullet, 720));
+            UnorderedListLevelConfiguration.Add(new ListLevelConfiguration("▪", null, NumberFormatValues.Bullet, 720));
+
+            UnorderedListLevelConfiguration.Add(new ListLevelConfiguration("•", null, NumberFormatValues.Bullet, 720));
+            UnorderedListLevelConfiguration.Add(new ListLevelConfiguration("◦", null, NumberFormatValues.Bullet, 720));
+            UnorderedListLevelConfiguration.Add(new ListLevelConfiguration("▪", null, NumberFormatValues.Bullet, 720));
         }
 
         public List<ListLevelConfiguration> OrderedListLevelConfiguration
