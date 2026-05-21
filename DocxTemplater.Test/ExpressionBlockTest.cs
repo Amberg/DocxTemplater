@@ -110,6 +110,86 @@ namespace DocxTemplater.Test
         }
 
         [Test]
+        public void ArrayIndexAccessInExpression()
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(new Paragraph(new Run(new Text("First: {{(ds.Items[0])}}")))));
+            wpDocument.Save();
+            memStream.Position = 0;
+
+            var docTemplate = new DocxTemplate(memStream);
+            docTemplate.BindModel("ds", new { Items = new[] { "a", "b", "c" } });
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            Assert.That(body.InnerText, Is.EqualTo("First: a"));
+        }
+
+        [Test]
+        public void ArrayIndexAccessOnComplexObject()
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(new Paragraph(new Run(new Text("Name: {{(ds.Items[1].Name)}}")))));
+            wpDocument.Save();
+            memStream.Position = 0;
+
+            var docTemplate = new DocxTemplate(memStream);
+            docTemplate.BindModel("ds", new { Items = new[] { new { Name = "first" }, new { Name = "second" } } });
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            Assert.That(body.InnerText, Is.EqualTo("Name: second"));
+        }
+
+        [Test]
+        public void IndexAccessOnListResultOfMethodCall()
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(new Paragraph(new Run(new Text(@"{{(ds.qa.Split('|')[0])}}")))));
+            wpDocument.Save();
+            memStream.Position = 0;
+
+            var docTemplate = new DocxTemplate(memStream);
+            docTemplate.BindModel("ds", new { qa = "question|answer" });
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            Assert.That(body.InnerText, Is.EqualTo("question"));
+        }
+
+        [Test]
+        public void DictionaryIndexAccessInExpression()
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(new Paragraph(new Run(new Text(@"{{(ds.Map[""key""])}}")))));
+            wpDocument.Save();
+            memStream.Position = 0;
+
+            var docTemplate = new DocxTemplate(memStream);
+            docTemplate.BindModel("ds", new { Map = new Dictionary<string, string> { ["key"] = "value" } });
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            Assert.That(body.InnerText, Is.EqualTo("value"));
+        }
+
+        [Test]
         public void AssignmentIsDisabled()
         {
             using var memStream = new MemoryStream();
