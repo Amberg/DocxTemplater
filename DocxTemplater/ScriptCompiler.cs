@@ -16,7 +16,8 @@ namespace DocxTemplater
                                                                         |                        
                                                                         (?<unary>[+\-!])         # Capture unary operators (+, -, !) in 'unary' group
                                                                         |                       
-                                                                        (?<=[^.\p{L}\p{N}_?])    # Position after any char that's not a dot, letter, number, underscore, or question mark (for null-conditional)
+                                                                        (?<=[^.\p{L}\p{N}_?\]])  # Position after any char that's not a dot, letter, number, underscore, question mark (for null-conditional)
+                                                                                                 # or closing bracket (a dot after ']' is member access on an index result, not an implicit scope)
                                                                                                  # (lookbehind - ensures we don't break existing identifiers or ?.)
 
                                                                         (?<!\(.*\))              # Also try to start after any function call with zero to many arguments.

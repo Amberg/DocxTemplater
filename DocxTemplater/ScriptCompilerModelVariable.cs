@@ -1,5 +1,8 @@
 using System;
+using System.Collections;
 using System.Dynamic;
+using System.Linq;
+using System.Reflection;
 
 namespace DocxTemplater
 {
@@ -85,6 +88,61 @@ namespace DocxTemplater
         public override bool TrySetMember(SetMemberBinder binder, object value)
         {
             return false;
+        }
+
+        /// <summary>
+        /// Supports bracket indexing on the wrapped model value, e.g. <c>{{(ds.Items[0])}}</c>.
+        /// The actual collection is resolved from the model lookup and the raw indexed value is returned.
+        /// Note: any further access on the result (e.g. <c>items[0].Name</c>) is handled by the C# runtime
+        /// binder directly, not by <see cref="IModelLookup"/> - so model-specific resolution and
+        /// <see cref="BindingErrorHandling"/> do not apply beyond the index operation.
+        /// </summary>
+        public override bool TryGetIndex(GetIndexBinder binder, object[] indexes, out object result)
+        {
+            object actualObject;
+            try
+            {
+                actualObject = m_modelDictionary.GetValue(m_rootName);
+            }
+            catch (OpenXmlTemplateException) when (ProcessSettings?.BindingErrorHandling is BindingErrorHandling.SkipBindingAndRemoveContent)
+            {
+                actualObject = null;
+            }
+
+            if (actualObject == null)
+            {
+                result = null;
+                return false;
+            }
+
+            result = GetIndexedValue(actualObject, indexes);
+            return true;
+        }
+
+        private static object GetIndexedValue(object target, object[] indexes)
+        {
+            switch (target)
+            {
+                case IDictionary dictionary when indexes.Length == 1:
+                    return dictionary[indexes[0]];
+                case IList list when indexes.Length == 1:
+                    return list[Convert.ToInt32(indexes[0])];
+            }
+
+            var indexer = target.GetType().GetDefaultMembers()
+                .OfType<PropertyInfo>()
+                .FirstOrDefault(p => p.GetIndexParameters().Length == indexes.Length);
+            if (indexer != null)
+            {
+                return indexer.GetValue(target, indexes);
+            }
+
+            if (indexes.Length == 1 && target is IEnumerable enumerable)
+            {
+                return enumerable.Cast<object>().ElementAt(Convert.ToInt32(indexes[0]));
+            }
+
+            throw new OpenXmlTemplateException($"Cannot apply indexing to an expression of type '{target.GetType()}'");
         }
 
         public override string ToString()

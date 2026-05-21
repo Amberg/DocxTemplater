@@ -83,6 +83,7 @@ The syntax is case insensitive.
 | `{{(ds.Name.ToUpper() + "!")}}`                          | Expressions with variables and string operations.                                               |
 | `{{(ds.Val?.ToString() ?? "N/A")}}`                      | Expressions with null-conditional and coalescing operators.                                     |
 | `{{(ds.Price * 1.19)}:f(c)}`                             | Expressions with calculations and formatters.                                                   |
+| `{{(ds.Items[0].Name)}}`                                 | Expressions with array / list / dictionary index access.                                        |
 | `{{SomeBytes}:img()}`                                    | Image Formatter for image data.                                                                 |
 | `{{SomeHtmlString}:html()}`                              | Inserts HTML string into the word document.                                                     |
 | `{{@i:ItemCount}}...{{i}}...{{/}}`                       | Range loop that repeats its content `ItemCount` times.                                          |
@@ -233,6 +234,19 @@ Expressions are evaluated using [DynamicExpresso](https://github.com/davideicard
 - **String Concatenation:** `{{(ds.Name.ToUpper() + "!")}}` -> `WORLD!` (if Name is "world")
 - **Null Handling:** `{{(ds.Val?.ToString() ?? "N/A")}}` -> `N/A` (if Val is null)
 - **Complex Logic:** `{{(ds.Items.Count > 0 ? "Items available" : "Empty")}}`
+- **Index Access:** `{{(ds.Items[0])}}` -> first element of a list, array or dictionary. Also works on method results, e.g. `{{(ds.Qa.Split('|')[0])}}`, and can be chained: `{{(ds.Items[1].Name)}}`.
+
+> [!TIP]
+> **Keep logic out of your templates.**
+> Expressions are handy for small calculations, but complex logic embedded in a document is hard to read, hard to test, and easy to break (Word also likes to rewrite quotes and operators).
+> For clean, maintainable templates prefer exposing a **property/getter with the logic on your model** and bind to that instead:
+> ```csharp
+> // Instead of {{(ds.Items[0].FirstName + " " + ds.Items[0].LastName)}}
+> public string PrimaryContactName => Items.Count > 0
+>     ? $"{Items[0].FirstName} {Items[0].LastName}"
+>     : "n/a";
+> ```
+> Then the template stays simple: `{{ds.PrimaryContactName}}`. The logic lives in C#, where it can be unit-tested and reused.
 
 #### Using Formatters with Expressions
 
