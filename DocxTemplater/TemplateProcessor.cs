@@ -147,7 +147,7 @@ namespace DocxTemplater
                 if (removeEmptyElements && value is not PatternType.Variable && value is not PatternType.Expression)
                 {
                     var parent = markedText.Parent;
-                    markedText.RemoveWithEmptyParent();
+                    markedText.RemoveWithEmptyParent(preserveParagraphInCell: true);
                 }
                 else
                 {
