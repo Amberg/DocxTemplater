@@ -2,6 +2,7 @@
 using System.Linq;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Wordprocessing;
+using DocxTemplater.Schema;
 
 namespace DocxTemplater.Blocks
 {
@@ -48,6 +49,14 @@ namespace DocxTemplater.Blocks
         public override string ToString()
         {
             return $"ConditionalBlock: {m_condition}";
+        }
+
+        public override void CollectSchema(SchemaBuilder builder)
+        {
+            // Extract identifiers used by the condition itself, then recurse into both branches
+            // (if-body and optional else-body) so paths only reachable on one side still appear in the schema.
+            SchemaExpressionParser.Extract(m_condition, builder.DeclareScalar);
+            base.CollectSchema(builder);
         }
     }
 }
