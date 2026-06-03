@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Linq;
 using DocumentFormat.OpenXml;
+using DocxTemplater.Schema;
 using Text = DocumentFormat.OpenXml.Wordprocessing.Text;
 
 namespace DocxTemplater.Blocks
@@ -68,6 +69,30 @@ namespace DocxTemplater.Blocks
         public override string ToString()
         {
             return $"LoopBlock: {m_collectionName}";
+        }
+
+        public override void CollectSchema(SchemaBuilder builder)
+        {
+            // m_collectionName can be dot-prefixed (e.g. `.subitems` for a nested loop on the outer item).
+            // The SchemaBuilder needs the absolute key against the current scope stack to register the item scope.
+            var absoluteKey = builder.ResolveAbsoluteScopeKey(m_collectionName);
+            var itemSchema = builder.DeclareCollection(m_collectionName);
+            if (itemSchema != null)
+            {
+                builder.OpenItemScope(absoluteKey, itemSchema);
+            }
+            else
+            {
+                builder.OpenTransparentScope();
+            }
+            try
+            {
+                base.CollectSchema(builder);
+            }
+            finally
+            {
+                builder.CloseScope();
+            }
         }
     }
 }

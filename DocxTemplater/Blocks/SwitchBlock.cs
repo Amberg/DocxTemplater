@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Wordprocessing;
+using DocxTemplater.Schema;
 
 namespace DocxTemplater.Blocks
 {
@@ -82,6 +83,12 @@ namespace DocxTemplater.Blocks
         public override string ToString()
         {
             return $"SwitchBlock: {m_switchVariable}";
+        }
+
+        public override void CollectSchema(SchemaBuilder builder)
+        {
+            SchemaExpressionParser.Extract(m_switchVariable, builder.DeclareScalar);
+            base.CollectSchema(builder);
         }
     }
 }

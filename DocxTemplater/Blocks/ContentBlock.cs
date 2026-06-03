@@ -1,5 +1,6 @@
 ﻿using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Wordprocessing;
+using DocxTemplater.Schema;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -100,6 +101,61 @@ namespace DocxTemplater.Blocks
             InsertContentAndReplaceVariables(models, parentNode);
             ExpandChildBlocks(models, parentNode);
             RemoveChildBlockInsertionPoints(parentNode);
+        }
+
+        /// <summary>
+        /// Adds the model paths referenced by this block (and its children) to the schema being built.
+        /// Base implementation declares the variables/expressions in this block's immediate content and
+        /// recurses into child blocks. Subclasses override to add their own contribution
+        /// (loop-collection, condition expression, switch selector, etc.) before/after the base call.
+        /// </summary>
+        public virtual void CollectSchema(SchemaBuilder builder)
+        {
+            CollectMarkedVariables(m_content, builder);
+            foreach (var child in m_childBlocks)
+            {
+                child.CollectSchema(builder);
+            }
+        }
+
+        /// <summary>
+        /// Scans the given OpenXml elements for marked Text nodes (Variable / Expression patterns)
+        /// and declares their paths in the schema. Uses the same marker-lookup as
+        /// <see cref="Formatter.VariableReplacer"/>; the text content holds the original
+        /// <c>{{...}}</c> pattern after the run-merge pass, so we recover the match without
+        /// walking the document tree manually.
+        /// </summary>
+        internal static void CollectMarkedVariables(IEnumerable<OpenXmlElement> elements, SchemaBuilder builder)
+        {
+            if (elements == null)
+            {
+                return;
+            }
+            foreach (var element in elements)
+            {
+                var marked = element.GetElementsWithMarker(PatternType.Variable)
+                    .Concat(element.GetElementsWithMarker(PatternType.Expression))
+                    .OfType<Text>();
+                foreach (var text in marked)
+                {
+                    var match = PatternMatcher.FindSyntaxPatterns(text.Text).FirstOrDefault();
+                    if (match == null)
+                    {
+                        continue;
+                    }
+                    if (match.Type == PatternType.Variable)
+                    {
+                        builder.DeclareScalar(match.Variable);
+                    }
+                    else if (match.Type == PatternType.Expression)
+                    {
+                        // match.Variable for an Expression includes the outer parentheses (e.g. "(x.y)").
+                        // Hand it to the parser as-is - DynamicExpresso treats `(e)` and `e` identically,
+                        // same as VariableReplacer.ReplaceVariables does at render time.
+                        SchemaExpressionParser.Extract(match.Variable, builder.DeclareScalar);
+                    }
+                }
+            }
         }
 
         protected virtual void InsertContentAndReplaceVariables(IModelLookup models, OpenXmlElement parentNode)

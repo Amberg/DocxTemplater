@@ -1,5 +1,6 @@
 ﻿using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Wordprocessing;
+using DocxTemplater.Schema;
 using System.Linq;
 
 namespace DocxTemplater.Blocks
@@ -35,6 +36,11 @@ namespace DocxTemplater.Blocks
         public override string ToString()
         {
             return $"IgnoreBlock";
+        }
+
+        public override void CollectSchema(SchemaBuilder builder)
+        {
+            // Content inside :ignore is dropped at render time; do not contribute to the schema.
         }
     }
 }
