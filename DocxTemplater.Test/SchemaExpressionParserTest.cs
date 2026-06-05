@@ -114,6 +114,42 @@ namespace DocxTemplater.Test
             Assert.That(paths, Is.Empty);
         }
 
+        // Operators applied directly to a *bare* identifier (no member access) make DynamicExpresso
+        // reject the whole expression - it cannot resolve the operator on the SchemaPlaceholder
+        // parameter type. The parser falls back to the detected root identifiers so the referenced
+        // variables still surface. (Member chains parse fine because member access dispatches dynamically.)
+        [Test]
+        public void Negation_OfBareIdentifier_YieldsRoot()
+        {
+            var paths = Collect("!Active");
+            Assert.That(paths.Select(p => p.ToString()), Is.EquivalentTo(["Active"]));
+        }
+
+        [Test]
+        public void Comparison_OfBareIdentifier_YieldsRoot()
+        {
+            var paths = Collect("Total > 0");
+            Assert.That(paths.Select(p => p.ToString()), Is.EquivalentTo(["Total"]));
+        }
+
+        [Test]
+        public void MixedBareAndChain_YieldsRoots()
+        {
+            // The whole parse fails because of the bare `Total > 0`, so the member chain degrades to
+            // its root: we get "Customer" (not "Customer.IsHidden") plus "Total".
+            var paths = Collect("!Customer.IsHidden && Total > 0");
+            Assert.That(paths.Select(p => p.ToString()), Is.EquivalentTo(["Customer", "Total"]));
+        }
+
+        [Test]
+        public void Comparison_OfMemberChain_StillKeepsFullChain()
+        {
+            // Regression guard: when operands are member chains the structured parse succeeds and the
+            // fallback must not kick in (full path preserved, no duplicate root).
+            var paths = Collect("customer.Score > 5 && customer.IsPremium");
+            Assert.That(paths.Select(p => p.ToString()), Is.EquivalentTo(["customer.Score", "customer.IsPremium"]));
+        }
+
         [Test]
         public void ExpressionWithOuterParens_TrailingToString_StaticallyResolved()
         {

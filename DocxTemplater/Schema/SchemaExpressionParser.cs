@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -46,26 +47,70 @@ namespace DocxTemplater.Schema
 
             var (rewritten, leadingDotsByRoot) = NormalizeLeadingDots(expression);
 
+            var interpreter = new Interpreter();
+            IReadOnlyList<string> unknownIdentifiers;
+            try
+            {
+                unknownIdentifiers = interpreter.DetectIdentifiers(rewritten).UnknownIdentifiers.ToList();
+            }
+            catch (Exception)
+            {
+                // Cannot even tokenize - nothing we can recover.
+                return;
+            }
+
+            foreach (var unknown in unknownIdentifiers)
+            {
+                // Bind as ParameterExpression (not a constant value) so the parsed tree carries
+                // the identifier's name on its root - we attribute paths via that name.
+                interpreter.SetExpression(unknown, Expression.Parameter(typeof(SchemaPlaceholder), unknown));
+            }
+
             Expression body;
             try
             {
-                var interpreter = new Interpreter();
-                var identifiers = interpreter.DetectIdentifiers(rewritten);
-                foreach (var unknown in identifiers.UnknownIdentifiers)
-                {
-                    // Bind as ParameterExpression (not a constant value) so the parsed tree carries
-                    // the identifier's name on its root - we attribute paths via that name.
-                    interpreter.SetExpression(unknown, Expression.Parameter(typeof(SchemaPlaceholder), unknown));
-                }
                 body = interpreter.Parse(rewritten).Expression;
             }
             catch (Exception)
             {
+                // Parse failed. The common cause is an operator applied directly to a bare identifier
+                // (e.g. "Total > 0", "!Active"): DynamicExpresso cannot resolve the operator on the
+                // concrete SchemaPlaceholder parameter type, so the whole expression is rejected.
+                // Member-access chains, in contrast, dispatch dynamically and parse fine.
+                // Fall back to the identifiers DynamicExpresso already detected so the referenced
+                // roots still surface in the schema. Member chains beyond the root are lost in this
+                // path (e.g. "!Customer.IsHidden" yields the root "Customer", not "Customer.IsHidden").
+                foreach (var root in unknownIdentifiers)
+                {
+                    onPath(MakeRootPath(root, leadingDotsByRoot));
+                }
                 return;
             }
 
             var visitor = new SchemaPathVisitor(leadingDotsByRoot, onPath);
             visitor.Visit(body);
+        }
+
+        /// <summary>
+        /// Builds a root-only <see cref="TemplatePath"/> for a detected identifier, applying the same
+        /// synthetic-prefix strip and leading-dot handling as the structured visitor.
+        /// </summary>
+        private static TemplatePath MakeRootPath(string rawRoot, Dictionary<string, int> leadingDotsByRoot)
+        {
+            var rootName = rawRoot;
+            int dots = 0;
+            if (leadingDotsByRoot.TryGetValue(rootName, out var d))
+            {
+                dots = d;
+                rootName = StripSyntheticPrefix(rootName);
+            }
+            return new TemplatePath(rootName, Array.Empty<PathSegment>()) { LeadingDotCount = dots };
+        }
+
+        private static string StripSyntheticPrefix(string syntheticName)
+        {
+            var underscore = syntheticName.IndexOf('_', 3);
+            return underscore > 0 ? syntheticName[(underscore + 1)..] : syntheticName;
         }
 
         private static (string Cleaned, Dictionary<string, int> LeadingDotsByRoot) NormalizeLeadingDots(string expression)
@@ -125,20 +170,7 @@ namespace DocxTemplater.Schema
 
             private void EmitRootPath(ParameterExpression param)
             {
-                var rootName = param.Name ?? string.Empty;
-                int dots = 0;
-                if (m_leadingDotsByRoot.TryGetValue(rootName, out var d))
-                {
-                    dots = d;
-                    rootName = StripSyntheticPrefix(rootName);
-                }
-                m_onPath(new TemplatePath(rootName, Array.Empty<PathSegment>()) { LeadingDotCount = dots });
-            }
-
-            private static string StripSyntheticPrefix(string syntheticName)
-            {
-                var underscore = syntheticName.IndexOf('_', 3);
-                return underscore > 0 ? syntheticName[(underscore + 1)..] : syntheticName;
+                m_onPath(SchemaExpressionParser.MakeRootPath(param.Name ?? string.Empty, m_leadingDotsByRoot));
             }
 
             private bool TryConsumeChain(InvocationExpression node, out TemplatePath path, out List<Expression> subExpressions)
@@ -171,7 +203,7 @@ namespace DocxTemplater.Schema
                 if (m_leadingDotsByRoot.TryGetValue(rootName, out var d))
                 {
                     dots = d;
-                    rootName = StripSyntheticPrefix(rootName);
+                    rootName = SchemaExpressionParser.StripSyntheticPrefix(rootName);
                 }
 
                 path = new TemplatePath(rootName, segments) { LeadingDotCount = dots };
