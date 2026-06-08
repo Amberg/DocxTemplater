@@ -21,6 +21,45 @@ namespace DocxTemplater.Extensions.Charts
     {
         private readonly Dictionary<string, ChartReference> m_insertedChartReferences = new();
         private const string spreadsheetContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+        // Describes how a concrete chart type is bound. The series child elements (cat/val/tx/...)
+        // are shared OpenXml types across chart kinds; only the chart element, the series element
+        // type, the number of usable series and the coloring differ.
+        private sealed class ChartTypeDescriptor
+        {
+            public ChartTypeDescriptor(Type chartElementType, Type seriesType, int maxSeries,
+                Action<OpenXmlCompositeElement, OpenXmlCompositeElement, int> applyColoring)
+            {
+                ChartElementType = chartElementType;
+                SeriesType = seriesType;
+                MaxSeries = maxSeries;
+                ApplyColoring = applyColoring;
+            }
+
+            public Type ChartElementType { get; }
+
+            public Type SeriesType { get; }
+
+            /// <summary>
+            /// Maximum number of series the chart can display (1 for pie/pie3d, unlimited otherwise).
+            /// </summary>
+            public int MaxSeries { get; }
+
+            /// <summary>
+            /// Applies type-specific coloring. Receives the chart element, the series and its index.
+            /// </summary>
+            public Action<OpenXmlCompositeElement, OpenXmlCompositeElement, int> ApplyColoring { get; }
+        }
+
+        // Registry of supported chart types. Add an entry to support a new chart kind.
+        private static readonly ChartTypeDescriptor[] s_supportedChartTypes =
+        [
+            new(typeof(BarChart), typeof(BarChartSeries), int.MaxValue, ColorBarSeries),
+            new(typeof(Bar3DChart), typeof(BarChartSeries), int.MaxValue, ColorBarSeries),
+            new(typeof(PieChart), typeof(PieChartSeries), 1, ColorPieSeries),
+            new(typeof(Pie3DChart), typeof(PieChartSeries), 1, ColorPieSeries),
+            new(typeof(DoughnutChart), typeof(PieChartSeries), int.MaxValue, ColorPieSeries),
+        ];
         public void PreProcess(OpenXmlCompositeElement content)
         {
             m_insertedChartReferences.Clear();
@@ -66,6 +105,13 @@ namespace DocxTemplater.Extensions.Charts
 
                                         ReplaceChartTitle(chartPart, chartData);
 
+                                        var plotArea = chartPart.ChartSpace.GetFirstChild<DocumentFormat.OpenXml.Drawing.Charts.Chart>()?.PlotArea;
+                                        var (chartElement, descriptor) = FindChart(plotArea);
+                                        if (chartElement == null)
+                                        {
+                                            continue; // unsupported chart type - leave untouched
+                                        }
+
                                         var externalData = chartPart.ChartSpace.GetFirstChild<ExternalData>();
                                         if (externalData?.Id != null) //  add check it is spead- sheet
                                         {
@@ -73,13 +119,13 @@ namespace DocxTemplater.Extensions.Charts
                                             if (part is EmbeddedPackagePart embeddedPart && embeddedPart.ContentType.Equals(spreadsheetContentType, StringComparison.OrdinalIgnoreCase))
                                             {
                                                 string sheetName = SpreadSheetHelper.ReplaceDataInSpreadSheet(embeddedPart, chartData);
-                                                PopulateSeriesWithReferences(chartPart, chartData, sheetName);
+                                                PopulateSeriesWithReferences(chartElement, descriptor, chartData, sheetName);
                                                 continue;
                                             }
                                         }
                                         else
                                         {
-                                            HandleBarChart(GetBarChartChild(chartPart.ChartSpace), chartData);
+                                            HandleLiteralChart(chartElement, descriptor, chartData);
                                         }
                                     }
                                 }
@@ -105,36 +151,44 @@ namespace DocxTemplater.Extensions.Charts
             }
         }
 
-        private static OpenXmlCompositeElement GetBarChartChild(OpenXmlCompositeElement root)
+        // Locates the first supported chart element under the given root and returns it together
+        // with its descriptor. Returns (null, null) when no supported chart type is found.
+        private static (OpenXmlCompositeElement chartElement, ChartTypeDescriptor descriptor) FindChart(OpenXmlCompositeElement root)
         {
             if (root == null)
             {
-                return null;
+                return (null, null);
             }
-            return (OpenXmlCompositeElement)root.Descendants<BarChart>().SingleOrDefault() ?? root.Descendants<Bar3DChart>().SingleOrDefault();
+            foreach (var element in root.Descendants<OpenXmlCompositeElement>())
+            {
+                var descriptor = Array.Find(s_supportedChartTypes, d => d.ChartElementType == element.GetType());
+                if (descriptor != null)
+                {
+                    return (element, descriptor);
+                }
+            }
+            return (null, null);
         }
 
-        private static void PopulateSeriesWithReferences(ChartPart chartPart, ChartData chartData, string sheetName)
+        // The spreadsheet path: the chart data lives in an embedded workbook and the series only
+        // reference its cells (plus a cache for display). Works for any chart type via the descriptor.
+        private static void PopulateSeriesWithReferences(OpenXmlCompositeElement chartElement, ChartTypeDescriptor descriptor, ChartData chartData, string sheetName)
         {
-            var barChart = GetBarChartChild(chartPart.ChartSpace.GetFirstChild<DocumentFormat.OpenXml.Drawing.Charts.Chart>()?.PlotArea);
-            if (barChart == null)
+            int seriesCount = Math.Min(chartData.Series.Count, descriptor.MaxSeries);
+            var clonedSeries = CloneSeriesAndRemoveOld(chartElement, descriptor, seriesCount, out var anchor);
+            if (clonedSeries == null)
             {
                 return;
             }
-            var clonedBarChartSeriesCopies = CloneBarChartSeriesAndRemoveOld(barChart, chartData);
-            for (uint i = 0; i < chartData.Series.Count; i++)
+            for (int i = 0; i < seriesCount; i++)
             {
+                var series = clonedSeries[i];
+                var data = chartData.Series[i];
+                string col = SpreadSheetHelper.GetColumnName(i + 1);  // 1 → A, 2 → B, 3 → C ...
 
-                var series = clonedBarChartSeriesCopies[i];
-                var data = chartData.Series[(int)i];
-                string col = SpreadSheetHelper.GetColumnName((int)i + 1);  // 1 → A, 2 → B, 3 → C ...
-
-                // index and order
-                series.Index = new Index { Val = i };
-                series.Order = new Order { Val = i };
-
-                // serie name cell ${col}1
-                series.SeriesText = new SeriesText(
+                // index, order and series name cell ${col}1 - replaces any cloned template data
+                ClearSeriesData(series);
+                SetSeriesHeader(series, (uint)i, new SeriesText(
                     new StringReference(
                         new Formula($"{sheetName}!${col}$1"),
                         new StringCache(
@@ -142,7 +196,7 @@ namespace DocxTemplater.Extensions.Charts
                             new StringPoint { Index = 0, NumericValue = new NumericValue(data.Name) }
                         )
                     )
-                );
+                ));
 
                 // categories from A2:A{n+1}
                 var catCount = (uint)chartData.Categories.Count();
@@ -153,8 +207,7 @@ namespace DocxTemplater.Extensions.Charts
                     strCache.Append(new StringPoint { Index = idx, NumericValue = new NumericValue(chartData.Categories.ElementAt((int)idx)) });
                 }
 
-                var axisData = new CategoryAxisData(new StringReference(new Formula($"{sheetName}!$A$2:$A${catCount + 1}"), strCache));
-                series.Append(axisData);
+                series.Append(new CategoryAxisData(new StringReference(new Formula($"{sheetName}!$A$2:$A${catCount + 1}"), strCache)));
 
                 // values aus {col}2:{col}{n+1}
                 var valCount = (uint)data.Values.Count();
@@ -173,8 +226,8 @@ namespace DocxTemplater.Extensions.Charts
                     )
                 ));
 
-                barChart.Append(series);
-
+                descriptor.ApplyColoring(chartElement, series, i);
+                anchor = InsertSeriesAfter(chartElement, series, anchor);
             }
         }
 
@@ -189,54 +242,74 @@ namespace DocxTemplater.Extensions.Charts
         }
 
 
-        private static BarChartSeries[] CloneBarChartSeriesAndRemoveOld(OpenXmlCompositeElement barChart, ChartData chartData)
+        // Clones the template series of the descriptor's series type (cloning preserves the concrete
+        // CLR type) and removes the originals. Returns null when the template has no series to clone.
+        // <paramref name="insertAnchor"/> receives the sibling the new series must be inserted after
+        // (the element preceding the original series, or null if the series were the first child) so
+        // the regenerated series land in their schema-correct position instead of at the very end.
+        private static OpenXmlCompositeElement[] CloneSeriesAndRemoveOld(OpenXmlCompositeElement chartElement, ChartTypeDescriptor descriptor, int seriesCount, out OpenXmlElement insertAnchor)
         {
-            // replace chart series
-            var series = barChart.ChildElements.OfType<BarChartSeries>().ToList();
-            BarChartSeries[] clonedBarChartSeriesCopies = new BarChartSeries[chartData.Series.Count];
-            for (int i = 0; i < clonedBarChartSeriesCopies.Length; i++)
+            var series = chartElement.ChildElements.Where(e => e.GetType() == descriptor.SeriesType).Cast<OpenXmlCompositeElement>().ToList();
+            if (series.Count == 0)
             {
-                if (i < series.Count)
-                {
-                    clonedBarChartSeriesCopies[i] = CloneBarChartSeries(i, (BarChartSeries)series.ElementAt(i));
-                }
-                else
-                {
-                    clonedBarChartSeriesCopies[i] = CloneBarChartSeries(i, series.Last());
-                }
+                insertAnchor = null;
+                return null;
             }
-            // rmove old series
+            insertAnchor = series[0].PreviousSibling();
+            var clones = new OpenXmlCompositeElement[seriesCount];
+            for (int i = 0; i < seriesCount; i++)
+            {
+                var template = i < series.Count ? series[i] : series[^1];
+                clones[i] = (OpenXmlCompositeElement)template.CloneNode(true);
+            }
+            // remove old series
             foreach (var old in series)
             {
                 old.Remove();
             }
-            return clonedBarChartSeriesCopies;
+            return clones;
         }
 
-        private static void HandleBarChart(OpenXmlCompositeElement barChart, ChartData chartData)
+        // Inserts a regenerated series after the given anchor (preserving schema order) and returns
+        // the inserted series so it can serve as the anchor for the next one.
+        private static OpenXmlElement InsertSeriesAfter(OpenXmlCompositeElement chartElement, OpenXmlElement series, OpenXmlElement anchor)
         {
-            var clonedBarChartSeriesCopies = CloneBarChartSeriesAndRemoveOld(barChart, chartData);
-            BarChartSeries appendAfterThisSeris = null;
-            for (int i = 0; i < chartData.Series.Count; i++)
+            if (anchor == null)
+            {
+                chartElement.InsertAt(series, 0);
+            }
+            else
+            {
+                chartElement.InsertAfter(series, anchor);
+            }
+            return series;
+        }
+
+        // The literal path: no embedded workbook, so categories and values are embedded directly
+        // into the chart XML as string/number literals. Works for any chart type via the descriptor.
+        private static void HandleLiteralChart(OpenXmlCompositeElement chartElement, ChartTypeDescriptor descriptor, ChartData chartData)
+        {
+            int seriesCount = Math.Min(chartData.Series.Count, descriptor.MaxSeries);
+            var clonedSeries = CloneSeriesAndRemoveOld(chartElement, descriptor, seriesCount, out var anchor);
+            if (clonedSeries == null)
+            {
+                return;
+            }
+            for (int i = 0; i < seriesCount; i++)
             {
                 var data = chartData.Series[i];
-                var cloneBarChartSeries = clonedBarChartSeriesCopies[i];
+                var series = clonedSeries[i];
 
-                cloneBarChartSeries.Index = new Index() { Val = new UInt32Value((uint)i) };
-                cloneBarChartSeries.Order = new Order() { Val = new UInt32Value((uint)i) };
-                cloneBarChartSeries.SeriesText = new SeriesText(new NumericValue(data.Name));
+                // preserve the template's number format before clearing the cloned data
+                var formatCode = (FormatCode)series.Descendants<FormatCode>().FirstOrDefault()?.CloneNode(true) ?? new FormatCode("General");
+
+                ClearSeriesData(series);
+                SetSeriesHeader(series, (uint)i, new SeriesText(new NumericValue(data.Name)));
+
                 var stringLiteral = new StringLiteral()
                 {
                     PointCount = new PointCount() { Val = new UInt32Value((uint)data.Values.Count()) },
                 };
-                var catData = new CategoryAxisData()
-                {
-                    StringLiteral = stringLiteral
-                };
-                cloneBarChartSeries.AddChild(catData);
-
-                var copiedValues = cloneBarChartSeries.GetFirstChild<Values>();
-                var formatCode = copiedValues?.GetFirstChild<FormatCode>() ?? new FormatCode("General");
                 var numberLiteral = new NumberLiteral
                 {
                     FormatCode = formatCode,
@@ -247,7 +320,7 @@ namespace DocxTemplater.Extensions.Charts
                 {
                     numberLiteral.AppendChild(new NumericPoint()
                     {
-                        NumericValue = new NumericValue(dataItem.ToString("F1")),
+                        NumericValue = new NumericValue(dataItem.ToString("F1", CultureInfo.InvariantCulture)),
                         Index = new UInt32Value((uint)counter)
                     });
                     stringLiteral.AppendChild(new StringPoint()
@@ -258,34 +331,46 @@ namespace DocxTemplater.Extensions.Charts
                     counter++;
                 }
 
-                copiedValues.AddChild(numberLiteral);
-                if (appendAfterThisSeris == null)
-                {
-                    barChart.AddChild(cloneBarChartSeries);
-                    appendAfterThisSeris = cloneBarChartSeries;
-                }
-                else
-                {
-                    barChart.InsertAfter(cloneBarChartSeries, appendAfterThisSeris);
-                    appendAfterThisSeris = cloneBarChartSeries;
-                }
-#if DEBUG
-                // charts are valid and can be opened in word but the validation fails
-                // barChart.ValidateOpenXmlElement();
-#endif
+                series.Append(new CategoryAxisData() { StringLiteral = stringLiteral });
+                series.Append(new Values() { NumberLiteral = numberLiteral });
+                descriptor.ApplyColoring(chartElement, series, i);
+
+                anchor = InsertSeriesAfter(chartElement, series, anchor);
             }
         }
 
-
-        private static BarChartSeries CloneBarChartSeries(int i, BarChartSeries firstSeriesEntry)
+        // Removes the index/order/series-name and re-adds them at the front in schema order, then
+        // sets fresh values. idx/order/tx are the first three children of every chart series type.
+        private static void SetSeriesHeader(OpenXmlCompositeElement series, uint index, SeriesText seriesText)
         {
-            var result = (BarChartSeries)firstSeriesEntry.CloneNode(true);
-            // search properties
+            series.GetFirstChild<Index>()?.Remove();
+            series.GetFirstChild<Order>()?.Remove();
+            series.GetFirstChild<SeriesText>()?.Remove();
+            series.InsertAt(seriesText, 0);
+            series.InsertAt(new Order { Val = index }, 0);
+            series.InsertAt(new Index { Val = index }, 0);
+        }
 
-            var solidFill = result.ChartShapeProperties?.GetFirstChild<SolidFill>();
+        // Removes any category/value data carried over from the cloned template series.
+        private static void ClearSeriesData(OpenXmlCompositeElement series)
+        {
+            foreach (var cat in series.Elements<CategoryAxisData>().ToList())
+            {
+                cat.Remove();
+            }
+            foreach (var val in series.Elements<Values>().ToList())
+            {
+                val.Remove();
+            }
+        }
+
+        // Bar/Bar3D: each series gets a distinct accent color cycling through the theme.
+        private static void ColorBarSeries(OpenXmlCompositeElement chartElement, OpenXmlCompositeElement series, int index)
+        {
+            var solidFill = series.GetFirstChild<ChartShapeProperties>()?.GetFirstChild<SolidFill>();
             if (solidFill?.SchemeColor != null)
             {
-                var value = (i % 6) switch
+                solidFill.SchemeColor.Val = (index % 6) switch
                 {
                     0 => SchemeColorValues.Accent1,
                     1 => SchemeColorValues.Accent2,
@@ -295,10 +380,28 @@ namespace DocxTemplater.Extensions.Charts
                     5 => SchemeColorValues.Accent6,
                     _ => SchemeColorValues.Accent1
                 };
-                solidFill.SchemeColor.Val = value;
+            }
+        }
+
+        // Pie/Pie3D/Doughnut: slices are colored per data-point by the chart's color-style part.
+        // Drop any per-slice colors baked into the template (their count no longer matches the data)
+        // and let Word vary colors automatically.
+        private static void ColorPieSeries(OpenXmlCompositeElement chartElement, OpenXmlCompositeElement series, int index)
+        {
+            foreach (var dataPoint in series.Elements<DataPoint>().ToList())
+            {
+                dataPoint.Remove();
             }
 
-            return result;
+            var varyColors = chartElement.GetFirstChild<VaryColors>();
+            if (varyColors == null)
+            {
+                chartElement.InsertAt(new VaryColors() { Val = true }, 0); // varyColors is the chart element's first child
+            }
+            else
+            {
+                varyColors.Val = true;
+            }
         }
 
 
