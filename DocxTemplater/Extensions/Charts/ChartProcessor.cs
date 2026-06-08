@@ -28,7 +28,7 @@ namespace DocxTemplater.Extensions.Charts
         private sealed class ChartTypeDescriptor
         {
             public ChartTypeDescriptor(Type chartElementType, Type seriesType, int maxSeries,
-                Action<OpenXmlCompositeElement, OpenXmlCompositeElement, int> applyColoring)
+                Action<OpenXmlCompositeElement, OpenXmlCompositeElement, int, int> applyColoring)
             {
                 ChartElementType = chartElementType;
                 SeriesType = seriesType;
@@ -46,9 +46,10 @@ namespace DocxTemplater.Extensions.Charts
             public int MaxSeries { get; }
 
             /// <summary>
-            /// Applies type-specific coloring. Receives the chart element, the series and its index.
+            /// Applies type-specific coloring. Receives the chart element, the series, the series
+            /// index and the number of data points (slices) in the series.
             /// </summary>
-            public Action<OpenXmlCompositeElement, OpenXmlCompositeElement, int> ApplyColoring { get; }
+            public Action<OpenXmlCompositeElement, OpenXmlCompositeElement, int, int> ApplyColoring { get; }
         }
 
         // Registry of supported chart types. Add an entry to support a new chart kind.
@@ -226,7 +227,7 @@ namespace DocxTemplater.Extensions.Charts
                     )
                 ));
 
-                descriptor.ApplyColoring(chartElement, series, i);
+                descriptor.ApplyColoring(chartElement, series, i, (int)valCount);
                 anchor = InsertSeriesAfter(chartElement, series, anchor);
             }
         }
@@ -333,7 +334,7 @@ namespace DocxTemplater.Extensions.Charts
 
                 series.Append(new CategoryAxisData() { StringLiteral = stringLiteral });
                 series.Append(new Values() { NumberLiteral = numberLiteral });
-                descriptor.ApplyColoring(chartElement, series, i);
+                descriptor.ApplyColoring(chartElement, series, i, data.Values.Count());
 
                 anchor = InsertSeriesAfter(chartElement, series, anchor);
             }
@@ -365,7 +366,7 @@ namespace DocxTemplater.Extensions.Charts
         }
 
         // Bar/Bar3D: each series gets a distinct accent color cycling through the theme.
-        private static void ColorBarSeries(OpenXmlCompositeElement chartElement, OpenXmlCompositeElement series, int index)
+        private static void ColorBarSeries(OpenXmlCompositeElement chartElement, OpenXmlCompositeElement series, int index, int pointCount)
         {
             var solidFill = series.GetFirstChild<ChartShapeProperties>()?.GetFirstChild<SolidFill>();
             if (solidFill?.SchemeColor != null)
@@ -383,14 +384,18 @@ namespace DocxTemplater.Extensions.Charts
             }
         }
 
-        // Pie/Pie3D/Doughnut: slices are colored per data-point by the chart's color-style part.
-        // Drop any per-slice colors baked into the template (their count no longer matches the data)
-        // and let Word vary colors automatically.
-        private static void ColorPieSeries(OpenXmlCompositeElement chartElement, OpenXmlCompositeElement series, int index)
+        // Pie/Pie3D/Doughnut: slices are colored per data point (dPt). The template author stays in
+        // control of those colors, so the cloned dPt are kept - only entries referring to slices that
+        // no longer exist (idx >= number of slices) are dropped. varyColors lets Word auto-color any
+        // slices the template did not define a color for.
+        private static void ColorPieSeries(OpenXmlCompositeElement chartElement, OpenXmlCompositeElement series, int index, int pointCount)
         {
             foreach (var dataPoint in series.Elements<DataPoint>().ToList())
             {
-                dataPoint.Remove();
+                if (dataPoint.Index?.Val != null && dataPoint.Index.Val.Value >= (uint)pointCount)
+                {
+                    dataPoint.Remove();
+                }
             }
 
             var varyColors = chartElement.GetFirstChild<VaryColors>();

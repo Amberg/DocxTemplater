@@ -2,6 +2,7 @@
 using System.Globalization;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Drawing.Charts;
+using SchemeColorValues = DocumentFormat.OpenXml.Drawing.SchemeColorValues;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using DocxTemplater.Extensions.Charts;
@@ -407,8 +408,14 @@ namespace DocxTemplater.Test
             Assert.That(GetCategoryTexts(series[0]), Is.EqualTo(expectedCategories));
             Assert.That(GetValueNumbers(series[0]), Is.EqualTo(expectedValuesA));
 
-            // stale per-slice colors are removed; the chart varies colors automatically
-            Assert.That(series.SelectMany(s => s.Elements<DataPoint>()).Count(), Is.EqualTo(0), "template dPt entries should be stripped");
+            // the template's per-slice colors are preserved (4 categories == 4 template dPt),
+            // and the chart still varies colors for any slices beyond the template's dPt.
+            SchemeColorValues?[] expectedSliceColors =
+                [SchemeColorValues.Accent1, SchemeColorValues.Accent2, SchemeColorValues.Accent3, SchemeColorValues.Accent4];
+            var dataPoints = series[0].Elements<DataPoint>().ToList();
+            Assert.That(dataPoints, Has.Count.EqualTo(4), "template dPt should be kept");
+            Assert.That(dataPoints.Select(d => d.ChartShapeProperties?.GetFirstChild<DocumentFormat.OpenXml.Drawing.SolidFill>()?.SchemeColor?.Val?.Value),
+                Is.EqualTo(expectedSliceColors), "template slice colors must survive");
             var chartElement = chartPart.ChartSpace.Descendants<OpenXmlCompositeElement>()
                 .First(e => e is PieChart or Pie3DChart or DoughnutChart);
             Assert.That(chartElement.GetFirstChild<VaryColors>()?.Val?.Value, Is.True, "varyColors must be enabled");
@@ -424,6 +431,47 @@ namespace DocxTemplater.Test
                 int lastSeriesIndex = children.FindLastIndex(c => c is PieChartSeries);
                 Assert.That(lastSeriesIndex, Is.LessThan(children.IndexOf(holeSize)), "series must precede holeSize");
             }
+        }
+
+        // The template carries 4 dPt (idx 0-3). With only 2 slices, the dPt for the slices that no
+        // longer exist (idx 2, 3) must be trimmed so they do not reference non-existent slices.
+        [Test]
+        public void RenderPieChart_TrimsDataPointsForRemovedSlices()
+        {
+            using var fileStream = File.OpenRead("Resources/PieChart.docx");
+            var docTemplate = new DocxTemplate(fileStream, new ProcessSettings() { BindingErrorHandling = BindingErrorHandling.ThrowException });
+            var model = new
+            {
+                Items = new[]
+                {
+                    new
+                    {
+                        Text = "Pie",
+                        MyChart = new ChartData()
+                        {
+                            ChartTitle = "Pie Title",
+                            Categories = ["A", "B"],
+                            Series = [new() { Name = "Series A", Values = [10.0, 20.0] }]
+                        }
+                    }
+                }
+            };
+
+            docTemplate.BindModel("ds", model);
+            var result = docTemplate.Process();
+            result.Position = 0;
+
+            using var document = WordprocessingDocument.Open(result, false);
+            var mainPart = document.MainDocumentPart;
+            var chartPart = mainPart.Document.Body.Descendants<ChartReference>()
+                .Select(r => (ChartPart)mainPart.GetPartById(r.Id))
+                .Single();
+
+            var series = chartPart.ChartSpace.Descendants<PieChartSeries>().Single();
+            var dataPoints = series.Elements<DataPoint>().ToList();
+            uint[] expectedKeptIndices = [0, 1];
+            Assert.That(dataPoints, Has.Count.EqualTo(2), "orphan dPt (idx >= slice count) must be trimmed");
+            Assert.That(dataPoints.Select(d => d.Index.Val.Value), Is.EqualTo(expectedKeptIndices));
         }
 
         private static string GetSeriesName(OpenXmlCompositeElement series)

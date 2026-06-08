@@ -172,7 +172,7 @@ To bind a chart to a data source, the chart’s title in the template must match
 
 To bind the chart correctly, the corresponding model property must be of th `ChartData` type.
 
-*Supported chart types: bar, 3-D bar, pie, 3-D pie and doughnut charts. Pie and 3-D pie show the first series only; doughnut charts show all series.*
+*Supported chart types: bar, 3-D bar, pie, 3-D pie and doughnut charts. Pie and 3-D pie show the first series only; doughnut charts show all series. Per-slice colors defined in the pie template are preserved; slices without a defined color are colored automatically.*
 
 ```
             using var fileStream = File.OpenRead("MyTemplate.docx");
