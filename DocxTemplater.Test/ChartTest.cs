@@ -1,5 +1,8 @@
 ﻿
+using System.Globalization;
+using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Drawing.Charts;
+using SchemeColorValues = DocumentFormat.OpenXml.Drawing.SchemeColorValues;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using DocxTemplater.Extensions.Charts;
@@ -292,6 +295,205 @@ namespace DocxTemplater.Test
             var document = WordprocessingDocument.Open(result, false);
             var body = document.MainDocumentPart.Document.Body;
             Assert.That(body.Descendants<ChartReference>().Count(), Is.EqualTo(4));
+        }
+
+        // Regression guard for the data-binding itself (not just that the chart parts exist).
+        // ChartTypesTest.docx contains 4 bar/bar3D charts bound to ds.Chart via the spreadsheet path.
+        // We assert the bound series names, categories and values actually land in every chart part.
+        [Test]
+        public void RenderBarChart_BindsSeriesNamesCategoriesAndValues()
+        {
+            using var fileStream = File.OpenRead("Resources/ChartTypesTest.docx");
+            var docTemplate = new DocxTemplate(fileStream, new ProcessSettings() { BindingErrorHandling = BindingErrorHandling.ThrowException });
+            var model = new
+            {
+                Chart = new ChartData()
+                {
+                    ChartTitle = "Foo",
+                    Categories = ["Alpha", "Beta", "Gamma"],
+                    Series =
+                    [
+                        new() { Name = "Series A", Values = [10.0, 20.0, 30.0] },
+                        new() { Name = "Series B", Values = [40.0, 50.0, 60.0] }
+                    ]
+                }
+            };
+
+            docTemplate.BindModel("ds", model);
+            var result = docTemplate.Process();
+            result.Position = 0;
+
+            using var document = WordprocessingDocument.Open(result, false);
+            var mainPart = document.MainDocumentPart;
+            var chartParts = mainPart.Document.Body.Descendants<ChartReference>()
+                .Select(r => (ChartPart)mainPart.GetPartById(r.Id))
+                .ToList();
+            Assert.That(chartParts, Has.Count.EqualTo(4));
+
+            string[] expectedCategories = ["Alpha", "Beta", "Gamma"];
+            double[] expectedValuesA = [10.0, 20.0, 30.0];
+            double[] expectedValuesB = [40.0, 50.0, 60.0];
+
+            foreach (var chartPart in chartParts)
+            {
+                var series = chartPart.ChartSpace.Descendants<BarChartSeries>().ToList();
+                Assert.That(series, Has.Count.EqualTo(2), "expected one BarChartSeries per bound series");
+
+                // no leftover cat/val from the cloned template series
+                Assert.That(series[0].Elements<CategoryAxisData>().Count(), Is.EqualTo(1));
+                Assert.That(series[0].Elements<Values>().Count(), Is.EqualTo(1));
+
+                Assert.That(GetSeriesName(series[0]), Is.EqualTo("Series A"));
+                Assert.That(GetSeriesName(series[1]), Is.EqualTo("Series B"));
+
+                Assert.That(GetCategoryTexts(series[0]), Is.EqualTo(expectedCategories));
+                Assert.That(GetCategoryTexts(series[1]), Is.EqualTo(expectedCategories));
+
+                Assert.That(GetValueNumbers(series[0]), Is.EqualTo(expectedValuesA));
+                Assert.That(GetValueNumbers(series[1]), Is.EqualTo(expectedValuesB));
+            }
+        }
+
+        // Pie/Pie3D show only the first series; Doughnut shows all of them.
+        [TestCase("Resources/PieChart.docx", 1)]
+        [TestCase("Resources/PieChart3d.docx", 1)]
+        [TestCase("Resources/Doughnut.docx", 3)]
+        public void RenderPieFamilyChart_BindsSeriesAndVariesColors(string templatePath, int expectedSeriesCount)
+        {
+            using var fileStream = File.OpenRead(templatePath);
+            var docTemplate = new DocxTemplate(fileStream, new ProcessSettings() { BindingErrorHandling = BindingErrorHandling.ThrowException });
+            var model = new
+            {
+                Items = new[]
+                {
+                    new
+                    {
+                        Text = "Pie",
+                        MyChart = new ChartData()
+                        {
+                            ChartTitle = "Pie Title",
+                            Categories = ["A", "B", "C", "D"],
+                            Series =
+                            [
+                                new() { Name = "Series A", Values = [10.0, 20.0, 30.0, 40.0] },
+                                new() { Name = "Series B", Values = [11.0, 21.0, 31.0, 41.0] },
+                                new() { Name = "Series C", Values = [12.0, 22.0, 32.0, 42.0] }
+                            ]
+                        }
+                    }
+                }
+            };
+
+            docTemplate.BindModel("ds", model);
+            var result = docTemplate.Process();
+            result.SaveAsFileAndOpenInWord();
+            result.Position = 0;
+
+            string[] expectedCategories = ["A", "B", "C", "D"];
+            double[] expectedValuesA = [10.0, 20.0, 30.0, 40.0];
+
+            using var document = WordprocessingDocument.Open(result, false);
+            var mainPart = document.MainDocumentPart;
+            var chartPart = mainPart.Document.Body.Descendants<ChartReference>()
+                .Select(r => (ChartPart)mainPart.GetPartById(r.Id))
+                .Single();
+
+            var series = chartPart.ChartSpace.Descendants<PieChartSeries>().ToList();
+            Assert.That(series, Has.Count.EqualTo(expectedSeriesCount), "pie shows first series only; doughnut shows all");
+
+            // first (visible) series content
+            Assert.That(GetSeriesName(series[0]), Is.EqualTo("Series A"));
+            Assert.That(series[0].Elements<CategoryAxisData>().Count(), Is.EqualTo(1));
+            Assert.That(series[0].Elements<Values>().Count(), Is.EqualTo(1));
+            Assert.That(GetCategoryTexts(series[0]), Is.EqualTo(expectedCategories));
+            Assert.That(GetValueNumbers(series[0]), Is.EqualTo(expectedValuesA));
+
+            // the template's per-slice colors are preserved (4 categories == 4 template dPt),
+            // and the chart still varies colors for any slices beyond the template's dPt.
+            SchemeColorValues?[] expectedSliceColors =
+                [SchemeColorValues.Accent1, SchemeColorValues.Accent2, SchemeColorValues.Accent3, SchemeColorValues.Accent4];
+            var dataPoints = series[0].Elements<DataPoint>().ToList();
+            Assert.That(dataPoints, Has.Count.EqualTo(4), "template dPt should be kept");
+            Assert.That(dataPoints.Select(d => d.ChartShapeProperties?.GetFirstChild<DocumentFormat.OpenXml.Drawing.SolidFill>()?.SchemeColor?.Val?.Value),
+                Is.EqualTo(expectedSliceColors), "template slice colors must survive");
+            var chartElement = chartPart.ChartSpace.Descendants<OpenXmlCompositeElement>()
+                .First(e => e is PieChart or Pie3DChart or DoughnutChart);
+            Assert.That(chartElement.GetFirstChild<VaryColors>()?.Val?.Value, Is.True, "varyColors must be enabled");
+
+            // series must keep their schema position: varyColors before ser, ser before holeSize.
+            var children = chartElement.ChildElements.ToList();
+            int firstSeriesIndex = children.FindIndex(c => c is PieChartSeries);
+            int varyColorsIndex = children.FindIndex(c => c is VaryColors);
+            Assert.That(varyColorsIndex, Is.LessThan(firstSeriesIndex), "varyColors must precede the series");
+            var holeSize = chartElement.GetFirstChild<HoleSize>();
+            if (holeSize != null)
+            {
+                int lastSeriesIndex = children.FindLastIndex(c => c is PieChartSeries);
+                Assert.That(lastSeriesIndex, Is.LessThan(children.IndexOf(holeSize)), "series must precede holeSize");
+            }
+        }
+
+        // The template carries 4 dPt (idx 0-3). With only 2 slices, the dPt for the slices that no
+        // longer exist (idx 2, 3) must be trimmed so they do not reference non-existent slices.
+        [Test]
+        public void RenderPieChart_TrimsDataPointsForRemovedSlices()
+        {
+            using var fileStream = File.OpenRead("Resources/PieChart.docx");
+            var docTemplate = new DocxTemplate(fileStream, new ProcessSettings() { BindingErrorHandling = BindingErrorHandling.ThrowException });
+            var model = new
+            {
+                Items = new[]
+                {
+                    new
+                    {
+                        Text = "Pie",
+                        MyChart = new ChartData()
+                        {
+                            ChartTitle = "Pie Title",
+                            Categories = ["A", "B"],
+                            Series = [new() { Name = "Series A", Values = [10.0, 20.0] }]
+                        }
+                    }
+                }
+            };
+
+            docTemplate.BindModel("ds", model);
+            var result = docTemplate.Process();
+            result.Position = 0;
+
+            using var document = WordprocessingDocument.Open(result, false);
+            var mainPart = document.MainDocumentPart;
+            var chartPart = mainPart.Document.Body.Descendants<ChartReference>()
+                .Select(r => (ChartPart)mainPart.GetPartById(r.Id))
+                .Single();
+
+            var series = chartPart.ChartSpace.Descendants<PieChartSeries>().Single();
+            var dataPoints = series.Elements<DataPoint>().ToList();
+            uint[] expectedKeptIndices = [0, 1];
+            Assert.That(dataPoints, Has.Count.EqualTo(2), "orphan dPt (idx >= slice count) must be trimmed");
+            Assert.That(dataPoints.Select(d => d.Index.Val.Value), Is.EqualTo(expectedKeptIndices));
+        }
+
+        private static string GetSeriesName(OpenXmlCompositeElement series)
+        {
+            return series.GetFirstChild<SeriesText>()?.Descendants<StringPoint>().FirstOrDefault()?.NumericValue?.Text
+                   ?? series.GetFirstChild<SeriesText>()?.Descendants<NumericValue>().FirstOrDefault()?.Text;
+        }
+
+        // The current code appends fresh cat/val onto a clone that already carries the template's
+        // cat/val, so use the last element - it is the generated one both before and after the refactor.
+        private static string[] GetCategoryTexts(OpenXmlCompositeElement series)
+        {
+            var cat = series.Elements<CategoryAxisData>().LastOrDefault();
+            return cat?.Descendants<StringPoint>().Select(p => p.NumericValue?.Text).ToArray() ?? [];
+        }
+
+        private static double[] GetValueNumbers(OpenXmlCompositeElement series)
+        {
+            var val = series.Elements<Values>().LastOrDefault();
+            return val?.Descendants<NumericPoint>()
+                .Select(p => double.Parse(p.NumericValue?.Text ?? "0", CultureInfo.InvariantCulture))
+                .ToArray() ?? [];
         }
     }
 }
