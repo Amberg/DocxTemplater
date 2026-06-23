@@ -331,11 +331,14 @@ namespace DocxTemplater.Test
             // check document contains newline
             var document = WordprocessingDocument.Open(result, false);
             var body = document.MainDocumentPart.Document.Body;
+            // Breaks appear only BETWEEN lines. The value has no trailing newline, so " End"
+            // stays on the same line as "ThirdLine" - a trailing <w:br/> here would push " End"
+            // onto a spurious extra line (and, for a value alone in a table cell, add an empty row).
             Assert.That(body.InnerXml, Is.EqualTo("<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:r><w:t xml:space=\"preserve\">" +
                                                   "Start </w:t><w:t>FirstLine</w:t>" +
                                                   "<w:br /><w:t>SecondLine</w:t>" +
                                                   "<w:br /><w:t>ThirdLine</w:t>" +
-                                                  "<w:br /><w:t xml:space=\"preserve\"> End</w:t></w:r></w:p>"));
+                                                  "<w:t xml:space=\"preserve\"> End</w:t></w:r></w:p>"));
         }
 
         [Test]
