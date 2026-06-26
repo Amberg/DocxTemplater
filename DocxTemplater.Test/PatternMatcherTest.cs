@@ -9,7 +9,7 @@ namespace DocxTemplater.Test
         [Test, TestCaseSource(nameof(TestPatternMatch_Cases))]
         public PatternType[] TestPatternMatch(string input)
         {
-            var matches = PatternMatcher.FindSyntaxPatterns(input);
+            var matches = PatternMatcher.Default.FindSyntaxPatterns(input);
             foreach (var match in matches)
             {
                 Assert.That(match.Match.Value.First(), Is.EqualTo('{'));
@@ -98,7 +98,7 @@ namespace DocxTemplater.Test
         [Test, TestCaseSource(nameof(PatternMatcherArgumentParsingTest_Cases))]
         public string[] PatternMatcherArgumentParsingTest(string syntax)
         {
-            var match = PatternMatcher.FindSyntaxPatterns(syntax).First();
+            var match = PatternMatcher.Default.FindSyntaxPatterns(syntax).First();
             return match.Arguments;
         }
 
@@ -138,7 +138,7 @@ namespace DocxTemplater.Test
         [TestCase("Some TExt {{ Variable }} Some other text", ExpectedResult = "Variable")]
         public string AllowWhiteSpaceForVariables(string syntax)
         {
-            var match = PatternMatcher.FindSyntaxPatterns(syntax).First();
+            var match = PatternMatcher.Default.FindSyntaxPatterns(syntax).First();
             return match.Variable;
         }
 
@@ -148,7 +148,7 @@ namespace DocxTemplater.Test
         [TestCase("{?{ds.QrBills._Idx}}", ExpectedResult = "ds.QrBills._Idx")]
         public string TestConditionExpression(string syntax)
         {
-            var match = PatternMatcher.FindSyntaxPatterns(syntax).First();
+            var match = PatternMatcher.Default.FindSyntaxPatterns(syntax).First();
             Assert.That(match.Type, Is.EqualTo(PatternType.Condition));
             return match.Condition;
         }
@@ -157,7 +157,7 @@ namespace DocxTemplater.Test
         public void FindSyntax_SwitchCaseStatements()
         {
             var text = "{{#switch: Item.Value}}...{{#case: 'A'}}...{{/}}...{{#default}}...{{/}}...{{/}}";
-            var matches = PatternMatcher.FindSyntaxPatterns(text).ToList();
+            var matches = PatternMatcher.Default.FindSyntaxPatterns(text).ToList();
             Assert.Multiple(() =>
             {
                 Assert.That(matches, Has.Count.EqualTo(6));
@@ -175,32 +175,32 @@ namespace DocxTemplater.Test
         {
             // The :<value> suffix must NOT be parsed for regular collection variables.
             // {{#Items:foo}} should return 0 matches because colon syntax is only valid for switch/case or range loops.
-            var matches = PatternMatcher.FindSyntaxPatterns("{{#Items:foo}}").ToList();
+            var matches = PatternMatcher.Default.FindSyntaxPatterns("{{#Items:foo}}").ToList();
             Assert.That(matches, Has.Count.EqualTo(0));
 
             // {{Foo:Bar}} without prefix: colon should be treated as formatter separator, not varname
-            var noPrefix = PatternMatcher.FindSyntaxPatterns("{{Foo:Bar}}").ToList();
+            var noPrefix = PatternMatcher.Default.FindSyntaxPatterns("{{Foo:Bar}}").ToList();
             Assert.That(noPrefix, Has.Count.EqualTo(1));
             Assert.That(noPrefix[0].Type, Is.EqualTo(PatternType.Variable));
 
             // Dot-separated variable names must still work as normal collection starts.
-            var dotMatches = PatternMatcher.FindSyntaxPatterns("{{#Items.foo}}").ToList();
+            var dotMatches = PatternMatcher.Default.FindSyntaxPatterns("{{#Items.foo}}").ToList();
             Assert.That(dotMatches, Has.Count.EqualTo(1));
             Assert.That(dotMatches[0].Type, Is.EqualTo(PatternType.CollectionStart));
             Assert.That(dotMatches[0].Variable, Is.EqualTo("Items.foo"));
 
             // Range loops with @ prefix SHOULD accept colon syntax
-            var rangeMatches = PatternMatcher.FindSyntaxPatterns("{{@i:count}}").ToList();
+            var rangeMatches = PatternMatcher.Default.FindSyntaxPatterns("{{@i:count}}").ToList();
             Assert.That(rangeMatches, Has.Count.EqualTo(1));
             Assert.That(rangeMatches[0].Type, Is.EqualTo(PatternType.RangeStart));
             Assert.That(rangeMatches[0].Variable, Is.EqualTo("i:count"));
 
             // switch/case keywords SHOULD capture the :<value> suffix
-            var switchMatches = PatternMatcher.FindSyntaxPatterns("{{#switch: MyVar}}").ToList();
+            var switchMatches = PatternMatcher.Default.FindSyntaxPatterns("{{#switch: MyVar}}").ToList();
             Assert.That(switchMatches, Has.Count.EqualTo(1));
             Assert.That(switchMatches[0].Type, Is.EqualTo(PatternType.Switch));
 
-            var caseMatches = PatternMatcher.FindSyntaxPatterns("{{#case: 'A'}}").ToList();
+            var caseMatches = PatternMatcher.Default.FindSyntaxPatterns("{{#case: 'A'}}").ToList();
             Assert.That(caseMatches, Has.Count.EqualTo(1));
             Assert.That(caseMatches[0].Type, Is.EqualTo(PatternType.Case));
         }
@@ -210,7 +210,94 @@ namespace DocxTemplater.Test
         {
             // {{@}} without a variable name should throw
             Assert.Throws<OpenXmlTemplateException>(() =>
-                PatternMatcher.FindSyntaxPatterns("{{@}}").ToList());
+                PatternMatcher.Default.FindSyntaxPatterns("{{@}}").ToList());
+        }
+
+        [Test]
+        public void CustomDelimiters_AngleBrackets_MatchVariable()
+        {
+            var matcher = new PatternMatcher("<<", ">>");
+            var matches = matcher.FindSyntaxPatterns("<<Foo>>").ToList();
+            Assert.That(matches, Has.Count.EqualTo(1));
+            Assert.That(matches[0].Type, Is.EqualTo(PatternType.Variable));
+            Assert.That(matches[0].Variable, Is.EqualTo("Foo"));
+        }
+
+        [Test]
+        public void CustomDelimiters_AngleBrackets_MatchCondition()
+        {
+            var matcher = new PatternMatcher("<<", ">>");
+            // Conditional syntax: outer-open + '?' + inner-open  →  '<?<' for '<<' delimiter
+            // (same pattern as '{?{' for '{{')
+            // Note: conditions cannot contain the inner close char ('>') when using ">>" as delimiter.
+            var matches = matcher.FindSyntaxPatterns("<?<IsActive>>").ToList();
+            Assert.That(matches, Has.Count.EqualTo(1));
+            Assert.That(matches[0].Type, Is.EqualTo(PatternType.Condition));
+            Assert.That(matches[0].Condition.Trim(), Is.EqualTo("IsActive"));
+        }
+
+        [Test]
+        public void CustomDelimiters_AngleBrackets_MatchLoopStartAndEnd()
+        {
+            var matcher = new PatternMatcher("<<", ">>");
+            var matches = matcher.FindSyntaxPatterns("<<#items>>content<</items>>").ToList();
+            Assert.That(matches, Has.Count.EqualTo(2));
+            Assert.That(matches[0].Type, Is.EqualTo(PatternType.CollectionStart));
+            Assert.That(matches[1].Type, Is.EqualTo(PatternType.CollectionEnd));
+        }
+
+        [Test]
+        public void CustomDelimiters_AngleBrackets_MatchVariableWithFormatter()
+        {
+            var matcher = new PatternMatcher("<<", ">>");
+            var matches = matcher.FindSyntaxPatterns("<<Foo>:toupper>").ToList();
+            Assert.That(matches, Has.Count.EqualTo(1));
+            Assert.That(matches[0].Type, Is.EqualTo(PatternType.Variable));
+            Assert.That(matches[0].Variable, Is.EqualTo("Foo"));
+            Assert.That(matches[0].Formatter, Is.EqualTo("toupper"));
+        }
+
+        [Test]
+        public void CustomDelimiters_AngleBrackets_MatchConditionEnd()
+        {
+            var matcher = new PatternMatcher("<<", ">>");
+            var matches = matcher.FindSyntaxPatterns("<</ >>").ToList();
+            Assert.That(matches, Has.Count.EqualTo(1));
+            Assert.That(matches[0].Type, Is.EqualTo(PatternType.ConditionEnd));
+        }
+
+        [Test]
+        public void CustomDelimiters_DefaultSyntaxNotRecognized()
+        {
+            var matcher = new PatternMatcher("<<", ">>");
+            var matches = matcher.FindSyntaxPatterns("{{Foo}}").ToList();
+            Assert.That(matches, Is.Empty);
+        }
+
+        [TestCase(null, "}}")]
+        [TestCase("", "}}")]
+        [TestCase("{", "}}")]
+        [TestCase("{{", null)]
+        [TestCase("{{", "")]
+        [TestCase("{{", "}")]
+        [TestCase("{{", "{{")]
+        public void CustomDelimiters_InvalidArguments_ThrowsArgumentException(string open, string close)
+        {
+            Assert.Throws<ArgumentException>(() => new PatternMatcher(open, close));
+        }
+
+        [Test]
+        public void CustomDelimiters_ProcessSettings_UsedByDefault()
+        {
+            var settings = new ProcessSettings
+            {
+                OpenDelimiter = "<<",
+                CloseDelimiter = ">>"
+            };
+            var matcher = settings.PatternMatcher;
+            var matches = matcher.FindSyntaxPatterns("<<MyVar>>").ToList();
+            Assert.That(matches, Has.Count.EqualTo(1));
+            Assert.That(matches[0].Variable, Is.EqualTo("MyVar"));
         }
     }
 }

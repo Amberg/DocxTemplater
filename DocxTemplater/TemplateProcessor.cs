@@ -119,11 +119,11 @@ namespace DocxTemplater
             }
         }
 
-        private static IReadOnlyCollection<(PatternMatch, Text)> IsolateAndMergeTextTemplateMarkers(OpenXmlCompositeElement content)
+        private static IReadOnlyCollection<(PatternMatch, Text)> IsolateAndMergeTextTemplateMarkers(OpenXmlCompositeElement content, PatternMatcher patternMatcher)
         {
             var charMap = new CharacterMap(content);
             List<(PatternMatch, Text)> patternMatches = [];
-            foreach (var m in PatternMatcher.FindSyntaxPatterns(charMap.Text))
+            foreach (var m in patternMatcher.FindSyntaxPatterns(charMap.Text))
             {
                 var firstChar = charMap[m.Index];
                 var lastChar = charMap[m.Index + m.Length - 1];
@@ -314,7 +314,7 @@ namespace DocxTemplater
             Console.WriteLine(rootElement.ToPrettyPrintXml());
 #endif
             PreProcess(rootElement);
-            var matches = IsolateAndMergeTextTemplateMarkers(rootElement);
+            var matches = IsolateAndMergeTextTemplateMarkers(rootElement, Context.ProcessSettings.PatternMatcher);
             RemoveLineBreaksAroundSyntaxPatterns(matches);
 #if DEBUG
             Console.WriteLine("----------- Isolate Texts --------");

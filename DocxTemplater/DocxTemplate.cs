@@ -201,7 +201,7 @@ namespace DocxTemplater
             m_prebuiltBlocks[rootElement] = rootBlocks;
             // Root-level variables outside any block remain as marked Text nodes in the rootElement
             // after the block-tree pipeline extracts each block's content. Pick those up directly.
-            ContentBlock.CollectMarkedVariables([rootElement], builder);
+            ContentBlock.CollectMarkedVariables([rootElement], builder, Context.ProcessSettings.PatternMatcher);
             foreach (var block in rootBlocks)
             {
                 block.CollectSchema(builder);

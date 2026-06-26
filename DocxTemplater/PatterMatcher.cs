@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace DocxTemplater
@@ -16,7 +17,7 @@ namespace DocxTemplater
         int Index,
         int Length);
 
-    internal static class PatternMatcher
+    internal class PatternMatcher
     {
         /* matches:
         {{a > 5}} -- conditional - only capture
@@ -28,65 +29,30 @@ namespace DocxTemplater
         {{images}:foo(arg1,arg2)} -- variable with formatter and arguments
          */
 
-        private static readonly Regex PatternRegex = new(@"\{\s*(?<condMarker>\?\s*)?\{\s*
-        (?:   
-            (?<separator>:\s*s\s*:) |
-            (?<else>(?:else|:(?!\s*[^\s}]+))) |  # Match : only if nothing but whitespace follows before }
-            (?(condMarker)
-                (?<condition>[^}]+) # allow any character except }
-                |
-                (?:
-                    (?<prefix>[\/\#:@]{1,2})?
-                    (?:
-                        (?<varname>  # Constrain Switch/Case capturing to strictly known prefix variables
-                            (?i:switch|s|case|c)
-                            (?:
-                                \s*:\s* # match colon for switch/case
-                                (?:
-                                    (?:'[^']*') | # match single quotes
-                                    (?:""[^""]*"") | # match double quotes
-                                    [\p{L}\p{N}\._()]+ # match unquoted values
-                                )
-                            )?
-                        )
-                        |
-                        (?<varname> # Range loop pattern: identifier:count
-                            [\p{L}\p{N}\._]+
-                            :
-                            [\p{L}\p{N}\._]+
-                        )
-                        |
-                        (?<varname> # the default variable matcher
-                            [\p{L}\p{N}\._]+ # match variable name
-                        )
-                        |
-                        (?<expression> # the expression matcher
-                            \(
-                            (?>[^()]+|(?<o>\()|(?<-o>\)))*
-                            \)
-                            (?(o)(?!))
-                        )
-                    )?
-                ) 
-            )
-        )
-        \s*\}
-        (?::
-            (?<formatter>[\p{L}\p{N}]+)
-            (?:\(
-                (?:
-                   (?:
-                       (?:'(?<arg>(?:(?:\\['])|[^'}])*?)'|""""(?<arg>(?:(?:\\[""""])|[^""""}])*?)"""") # Allow any character except ' and } in quoted strings
-                        |
-                        (?<arg>[^,)}]+) # Allow any character except delimiters in unquoted strings
-                    )(?:\s*,\s*)?
-                )*
-                \))?
-        )?
-        \s*\}
-        ", RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace, TimeSpan.FromSeconds(1));
+        private readonly Regex _regex;
+        private readonly string _openDelimiter;
+        private readonly string _closeDelimiter;
 
-        public static IEnumerable<PatternMatch> FindSyntaxPatterns(string text)
+        internal static PatternMatcher Default { get; } = new("{{", "}}");
+
+        internal PatternMatcher(string openDelimiter, string closeDelimiter)
+        {
+            ValidateDelimiters(openDelimiter, closeDelimiter);
+            _openDelimiter = openDelimiter;
+            _closeDelimiter = closeDelimiter;
+            _regex = BuildRegex(openDelimiter, closeDelimiter);
+        }
+
+        /// <summary>
+        /// Builds the synthetic string used internally to parse a formatter spec from metadata,
+        /// e.g. "{{x}:F(n)}" for the default delimiters, or "&lt;&lt;x&gt;:F(n)&gt;" for "&lt;&lt;"/"&gt;&gt;" delimiters.
+        /// </summary>
+        internal string BuildFormatterCheckSyntax(string formatterSpec)
+        {
+            return _openDelimiter + "x" + _closeDelimiter[..^1] + ":" + formatterSpec + _closeDelimiter[^1..];
+        }
+
+        internal IEnumerable<PatternMatch> FindSyntaxPatterns(string text)
         {
             try
             {
@@ -95,7 +61,7 @@ namespace DocxTemplater
                     return Array.Empty<PatternMatch>();
                 }
 
-                var matches = PatternRegex.Matches(text);
+                var matches = _regex.Matches(text);
                 var result = new List<PatternMatch>(matches.Count);
                 foreach (Match match in matches)
                 {
@@ -220,9 +186,6 @@ namespace DocxTemplater
                             ? argGroup.Captures.Select(x => x.Value?.Replace("\\'", "'")).ToArray()
                             : Array.Empty<string>();
 
-                        // we want to extract the expression string but keep the original match structure similar to Variable
-                        // the expression group includes the outer parenthesis `(a > 5)`
-                        // let's pass the whole captured expression as the variable name for now, the block can trim if needed.
                         result.Add(new PatternMatch(match, PatternType.Expression, null, null,
                             match.Groups["expression"].Value,
                             match.Groups["formatter"].Value, arguments, match.Index, match.Length));
@@ -249,6 +212,126 @@ namespace DocxTemplater
             {
                 throw new OpenXmlTemplateException($"Invalid syntax '{text}' - match timeout");
             }
+        }
+
+        private static Regex BuildRegex(string open, string close)
+        {
+            // Split delimiter into outer char and inner chars:
+            //   open[0]     = outer open  (e.g. '{' for "{{")
+            //   open[1..]   = inner open  (e.g. '{' for "{{")
+            //   close[..^1] = inner close (e.g. '}' for "}}")
+            //   close[^1..] = outer close (e.g. '}' for "}}")
+            //
+            // For "<<" / ">>": outer='<', inner='<', inner-close='>', outer-close='>'
+            // Conditional syntax: outerOpen + '?' + innerOpen  (e.g. '{?{' or '<?<')
+            string eo = Regex.Escape(open[0].ToString());
+            string ei = Regex.Escape(open[1..]);
+            string c0 = Regex.Escape(close[..^1]);
+            string c1 = Regex.Escape(close[^1..]);
+            string cc0 = EscapeForCharClass(close[..^1]);
+            string dq = "\"\"";
+
+            // Build the full regex pattern. RegexOptions.IgnorePatternWhitespace is used so
+            // whitespace outside character classes is ignored, allowing readability via newlines.
+            string pattern =
+                eo + @"\s*(?<condMarker>\?\s*)?" + ei + @"\s*" +
+                @"(?:" +
+                    @"(?<separator>:\s*s\s*:) |" +
+                    @"(?<else>(?:else|:(?!\s*[^\s" + cc0 + @"]+))) |" +
+                    @"(?(condMarker)" +
+                        @"(?<condition>[^" + cc0 + @"]+)" +
+                        @"|" +
+                        @"(?:" +
+                            @"(?<prefix>[\/\#:@]{1,2})?" +
+                            @"(?:" +
+                                @"(?<varname>" +
+                                    @"(?i:switch|s|case|c)" +
+                                    @"(?:" +
+                                        @"\s*:\s*" +
+                                        @"(?:" +
+                                            @"(?:'[^']*') |" +
+                                            @"(?:""[^""]*"") |" +
+                                            @"[\p{L}\p{N}\._()]+" +
+                                        @")" +
+                                    @")?" +
+                                @")" +
+                                @"|" +
+                                @"(?<varname>" +
+                                    @"[\p{L}\p{N}\._]+" +
+                                    @":" +
+                                    @"[\p{L}\p{N}\._]+" +
+                                @")" +
+                                @"|" +
+                                @"(?<varname>" +
+                                    @"[\p{L}\p{N}\._]+" +
+                                @")" +
+                                @"|" +
+                                @"(?<expression>" +
+                                    @"\(" +
+                                    @"(?>[^()]+|(?<o>\()|(?<-o>\)))*" +
+                                    @"\)" +
+                                    @"(?(o)(?!))" +
+                                @")" +
+                            @")?" +
+                        @")" +
+                    @")" +
+                @")" +
+                @"\s*" + c0 +
+                @"(?::" +
+                    @"(?<formatter>[\p{L}\p{N}]+)" +
+                    @"(?:\(" +
+                        @"(?:" +
+                            @"(?:" +
+                                "(?:'(?<arg>(?:(?:\\\\['])|[^'" + cc0 + "])*?)'|" +
+                                dq + "(?<arg>(?:(?:\\\\[" + dq + "])|[^" + dq[0] + cc0 + "])*?)" + dq +
+                                @")" +
+                                @"|" +
+                                "(?<arg>[^,)" + cc0 + "]+)" +
+                            @")(?:\s*,\s*)?" +
+                        @")*" +
+                        @"\))?" +
+                @")?" +
+                @"\s*" + c1;
+
+            return new Regex(pattern, RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace, TimeSpan.FromSeconds(1));
+        }
+
+        private static void ValidateDelimiters(string open, string close)
+        {
+            if (string.IsNullOrEmpty(open))
+            {
+                throw new ArgumentException("OpenDelimiter must not be null or empty.", nameof(open));
+            }
+            if (open.Length < 2)
+            {
+                throw new ArgumentException("OpenDelimiter must be at least 2 characters.", nameof(open));
+            }
+            if (string.IsNullOrEmpty(close))
+            {
+                throw new ArgumentException("CloseDelimiter must not be null or empty.", nameof(close));
+            }
+            if (close.Length < 2)
+            {
+                throw new ArgumentException("CloseDelimiter must be at least 2 characters.", nameof(close));
+            }
+            if (open == close)
+            {
+                throw new ArgumentException("OpenDelimiter and CloseDelimiter must not be the same.");
+            }
+        }
+
+        private static string EscapeForCharClass(string s)
+        {
+            var sb = new StringBuilder(s.Length * 2);
+            foreach (char c in s)
+            {
+                if (c is '\\' or ']' or '^' or '-')
+                {
+                    sb.Append('\\');
+                }
+                sb.Append(c);
+            }
+            return sb.ToString();
         }
     }
 }

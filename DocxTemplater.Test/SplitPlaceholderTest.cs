@@ -107,7 +107,7 @@ namespace DocxTemplater.Test
                     </w:p>";
             var paragraph = new Paragraph(xml);
             var characterMap = new CharacterMap(paragraph);
-            foreach (var m in PatternMatcher.FindSyntaxPatterns(characterMap.Text))
+            foreach (var m in PatternMatcher.Default.FindSyntaxPatterns(characterMap.Text))
             {
                 var firstChar = characterMap[m.Index];
                 var lastChar = characterMap[m.Index + m.Length - 1];
