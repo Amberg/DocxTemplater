@@ -16,6 +16,7 @@ _DocxTemplater is a library to generate docx documents from a docx template. The
 - HTML Snippets - Replace placeholder with HTML Content
 - Dynamic Tables - Columns are defined by the datasource
 - Template Schema - Statically inspect which variables a template expects, without rendering
+- Custom Delimiters - Use any delimiter pair (e.g. `<<`/`>>`) instead of the default `{{`/`}}`
 
 ## Quickstart
 
@@ -396,6 +397,33 @@ var docTemplate = new DocxTemplate(memStream, new ProcessSettings()
 var result = docTemplate.Process();
 ```
 
+## Custom Delimiters
+
+By default, DocxTemplater uses `{{` and `}}` as template delimiters. You can change them to any two-character (or longer) sequence via `ProcessSettings`:
+
+```csharp
+var docTemplate = new DocxTemplate(memStream, new ProcessSettings()
+{
+    OpenDelimiter = "<<",
+    CloseDelimiter = ">>"
+});
+var result = docTemplate.Process();
+```
+
+With `<<`/`>>` delimiters, all template syntax works the same way — just replace `{{` and `}}`:
+
+| Default syntax | Custom syntax (`<<`/`>>`) |
+|---|---|
+| `{{ds.Name}}` | `<<ds.Name>>` |
+| `{{#ds.Items}}` / `{{/ds.Items}}` | `<<#ds.Items>>` / `<</ds.Items>>` |
+| `{?{ds.IsActive}}` / `{{/}}` | `<?<ds.IsActive>>` / `<</>>` |
+| `{{ds.Value}:toupper}` | `<<ds.Value>:toupper>` |
+
+**Constraints:**
+- Both delimiters must be at least 2 characters long.
+- Open and close delimiters must be different.
+
+---
 ## Advanced Model Binding: `ITemplateModel` and `TemplateModelWithDisplayNames`
 
 ### `ITemplateModel` Interface
