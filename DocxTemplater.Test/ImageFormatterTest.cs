@@ -1,90 +1,47 @@
-﻿using DocumentFormat.OpenXml.Packaging;
-using DocumentFormat.OpenXml.Wordprocessing;
-using DocumentFormat.OpenXml;
+﻿using DocxTemplater.ImageBase;
 using DocxTemplater.Images;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Processing;
+using DocxTemplater.Test.Contracts;
 
 namespace DocxTemplater.Test
 {
-    internal class ImageFormatterTest
+    [NUnit.Framework.TestFixture]
+    internal sealed class ImageFormatterServiceLifecycleTests
     {
-        [TestCase("jpg", "testImage")]
-        [TestCase("tiff", "testImage")]
-        [TestCase("png", "testImage")]
-        [TestCase("png", "testImage_rot")]
-        [TestCase("bmp", "testImage")]
-        [TestCase("gif", "testImage")]
-        public void ProcessTemplateWithDifferentImageTypes(string extension, string image)
+        [NUnit.Framework.Test]
+        public void CreateImageService_ReturnsNewInstance_PerCall()
         {
-            var imageBytes = File.ReadAllBytes($"Resources/{image}.jpg");
-            var img = Image.Load(imageBytes);
-            Assert.That(img.Configuration.ImageFormatsManager.TryFindFormatByFileExtension(extension, out var format));
-            var memStream = new MemoryStream();
-            img.Save(memStream, format);
-            imageBytes = memStream.ToArray();
+            var formatter = new ImageFormatter(new CoreTestImageMetadataReader());
 
-            using var fileStream = File.OpenRead("Resources/ImageFormatterTest.docx");
-            var docTemplate = new DocxTemplate(fileStream);
-            docTemplate.RegisterFormatter(new ImageFormatter());
-            docTemplate.BindModel("ds", new { MyLogo = imageBytes, EmptyArray = Array.Empty<byte>(), NullValue = (byte[])null });
+            var first = formatter.CreateImageService();
+            var second = formatter.CreateImageService();
 
-            var result = docTemplate.Process();
-            docTemplate.Validate();
-            result.SaveAsFileAndOpenInWord();
+            NUnit.Framework.Assert.That(second, NUnit.Framework.Is.Not.SameAs(first));
         }
+    }
 
-        [Test]
-        public void InsertSVGAndScaleAndRotate()
+    internal sealed class CoreImageFormatterContractTests : ImageFormatterContractTests
+    {
+        protected override DocxTemplater.Formatter.IFormatter CreateFormatter()
         {
-            var imageBytes = File.ReadAllBytes("Resources/testImage.svg");
-            using var memStream = new MemoryStream();
-            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
-            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
-            mainPart.Document = new Document(new Body(new Paragraph(new Run(new Text("{{ds}:img(h:1cm, r:90)}")))));
-            wpDocument.Save();
-            memStream.Position = 0;
-
-            var docTemplate = new DocxTemplate(memStream);
-            docTemplate.RegisterFormatter(new ImageFormatter());
-            docTemplate.BindModel("ds", imageBytes);
-            var result = docTemplate.Process();
-            docTemplate.Validate();
-            result.SaveAsFileAndOpenInWord();
+            return new ImageFormatter(new CoreTestImageMetadataReader());
         }
+    }
 
-
-        [TestCase("w:14cm,h:3cm")]
-        [TestCase("w:14cm")]
-        [TestCase("h:1cm, r:90")]
-        [TestCase("w:1cm")]
-        [TestCase("h:1cm")]
-        [TestCase("h:15mm")]
-        public void InsertHugeImageInsertWithoutContainerFitsToPage(string argument)
+    internal sealed class CoreTestImageMetadataReader : IImageMetadataReader
+    {
+        public ImageMetadata Read(byte[] imageBytes)
         {
-            var imageBytes = File.ReadAllBytes("Resources/testImage.jpg");
+            if (imageBytes is null || imageBytes.Length < 4)
+            {
+                throw new ImageMetadataReadException("Image bytes are invalid.", new ArgumentException("Image bytes are invalid."));
+            }
 
-            // change the size to be bigger than the page
-            var img = Image.Load(imageBytes);
-            img.Mutate(x => x.Resize(img.Width * 10, img.Height * 10));
+            if (imageBytes[0] == 0xFF && imageBytes[1] == 0xD8)
+            {
+                return new ImageMetadata(100, 100, ImageFormat.Jpeg, ImageRotation.CreateFromUnits(0));
+            }
 
-            var bigImgStream = new MemoryStream();
-            img.SaveAsJpeg(bigImgStream);
-            imageBytes = bigImgStream.ToArray();
-
-            using var memStream = new MemoryStream();
-            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
-            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
-            mainPart.Document = new Document(new Body(new Paragraph(new Run(new Text("{{ds}:img(" + argument + ")}")))));
-            wpDocument.Save();
-            memStream.Position = 0;
-
-            var docTemplate = new DocxTemplate(memStream);
-            docTemplate.RegisterFormatter(new ImageFormatter());
-            docTemplate.BindModel("ds", imageBytes);
-            var result = docTemplate.Process();
-            docTemplate.Validate();
-            result.SaveAsFileAndOpenInWord();
+            throw new ImageMetadataReadException("Unsupported image format for core tests.", new ArgumentException("Unsupported image format for core tests."));
         }
     }
 }

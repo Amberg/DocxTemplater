@@ -12,7 +12,7 @@ namespace DocxTemplater.Test
 
             using var fileStream = File.OpenRead("Resources/MultipleRowsBoundToCollection.docx");
             var docTemplate = new DocxTemplate(fileStream);
-            docTemplate.RegisterFormatter(new ImageFormatter());
+            docTemplate.RegisterFormatter(new ImageFormatter(new CoreTestImageMetadataReader()));
 
             var timeReportFaker = new AutoFaker<TimeReportDate>();
             var activityFaker = new AutoFaker<TimeReportActivity>()

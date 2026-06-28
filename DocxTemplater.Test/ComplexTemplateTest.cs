@@ -11,7 +11,7 @@ namespace DocxTemplater.Test
             var imageBytes = File.ReadAllBytes("Resources/testImage.jpg");
             using var fileStream = File.OpenRead("Resources/ComplexTemplate.docx");
             var docTemplate = new DocxTemplate(fileStream);
-            docTemplate.RegisterFormatter(new ImageFormatter());
+            docTemplate.RegisterFormatter(new ImageFormatter(new CoreTestImageMetadataReader()));
 
             var model = CreateModel(imageBytes);
             docTemplate.BindModel("ds", model);

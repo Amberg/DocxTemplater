@@ -1043,7 +1043,7 @@ namespace DocxTemplater.Test
 
             using var fileStream = File.OpenRead("Resources/BillTemplate.docx");
             var docTemplate = new DocxTemplate(fileStream);
-            docTemplate.RegisterFormatter(new ImageFormatter());
+            docTemplate.RegisterFormatter(new ImageFormatter(new CoreTestImageMetadataReader()));
             docTemplate.BindModel("ds", new
             {
                 Company = new
@@ -1113,7 +1113,7 @@ namespace DocxTemplater.Test
             var imageBytes = File.ReadAllBytes("Resources/testImage.jpg");
             using var fileStream = File.OpenRead("Resources/BillTemplate2.docx");
             var docTemplate = new DocxTemplate(fileStream);
-            docTemplate.RegisterFormatter(new ImageFormatter());
+            docTemplate.RegisterFormatter(new ImageFormatter(new CoreTestImageMetadataReader()));
 
             var model = CrateBillTemplate2Model();
             docTemplate.BindModel("ds", model);

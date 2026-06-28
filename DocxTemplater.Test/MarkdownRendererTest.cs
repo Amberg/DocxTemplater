@@ -313,7 +313,7 @@ namespace DocxTemplater.Test
             using var fileStream = File.OpenRead("Resources/MarkdownBase64Image.docx");
             var docTemplate = new DocxTemplate(fileStream);
             docTemplate.RegisterFormatter(new MarkdownFormatter());
-            docTemplate.RegisterFormatter(new ImageFormatter());
+            docTemplate.RegisterFormatter(new ImageFormatter(new CoreTestImageMetadataReader()));
             docTemplate.BindModel("ds", new Dictionary<string, object>()
             {
                 { "MyMarkdown", new ValueWithMetadata(markdownTextAndPic, new ValueMetadata("md")) },

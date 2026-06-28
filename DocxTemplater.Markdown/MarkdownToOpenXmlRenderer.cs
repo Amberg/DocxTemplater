@@ -255,7 +255,7 @@ namespace DocxTemplater.Markdown
                     m_buffer.Append(markdownObject.GetType().Name);
                     if (markdownObject is LiteralInline)
                     {
-                        m_buffer.Append($" : '{markdownObject.ToString()}'");
+                        m_buffer.Append($" : '{markdownObject}'");
                     }
 
                     m_buffer.AppendLine();

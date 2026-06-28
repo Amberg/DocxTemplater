@@ -1,7 +1,6 @@
 ﻿using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Wordprocessing;
 using DocxTemplater.Formatter;
-using SixLabors.ImageSharp;
 using System;
 using System.Text.RegularExpressions;
 using DocxTemplater.ImageBase;
@@ -14,6 +13,34 @@ namespace DocxTemplater.Images
     public class ImageFormatter : IFormatter, IImageServiceProvider
     {
         private static readonly Regex ArgumentRegex = new(@"(?<key>[whr]):(?<value>\d+)(?<unit>px|cm|in|pt|mm)?", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
+        private readonly Func<IImageService> m_imageServiceFactory;
+
+        public ImageFormatter(IImageMetadataReader imageMetadataReader)
+        {
+            if (imageMetadataReader == null)
+            {
+                throw new ArgumentNullException(nameof(imageMetadataReader));
+            }
+
+            m_imageServiceFactory = () => new ImageService(imageMetadataReader);
+        }
+
+        public ImageFormatter(IImageService imageService)
+        {
+            if (imageService == null)
+            {
+                throw new ArgumentNullException(nameof(imageService));
+            }
+
+            if (imageService is ImageService concreteImageService)
+            {
+                // Keep per-run isolation even when callers pass a concrete ImageService.
+                m_imageServiceFactory = () => new ImageService(concreteImageService.ImageMetadataReader);
+                return;
+            }
+
+            m_imageServiceFactory = () => imageService;
+        }
 
         public bool CanHandle(Type type, string prefix)
         {
@@ -45,7 +72,7 @@ namespace DocxTemplater.Images
                 }
 
             }
-            catch (Exception e) when (e is InvalidImageContentException or UnknownImageFormatException)
+            catch (ImageMetadataReadException e)
             {
                 throw new OpenXmlTemplateException("Could not detect image format", e);
             }
@@ -296,7 +323,7 @@ namespace DocxTemplater.Images
 
         public IImageService CreateImageService()
         {
-            return new ImageService();
+            return m_imageServiceFactory() ?? throw new OpenXmlTemplateException("Image service factory returned null.");
         }
     }
 }

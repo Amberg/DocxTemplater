@@ -29,7 +29,10 @@ namespace DocxTemplater
         private DocxTemplate(Stream docXStream, ProcessSettings settings, ModelLookup modelLookup)
         : base(CreateContext(settings, modelLookup))
         {
-            ArgumentNullException.ThrowIfNull(docXStream);
+            if (docXStream == null)
+            {
+                throw new ArgumentNullException(nameof(docXStream));
+            }
             m_stream = new MemoryStream();
             docXStream.CopyTo(m_stream);
             m_stream.Position = 0;

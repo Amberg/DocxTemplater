@@ -10,7 +10,7 @@ namespace DocxTemplater.Formatter
             if (prefix.Equals("FORMAT", StringComparison.CurrentCultureIgnoreCase) ||
                 prefix.Equals("F", StringComparison.CurrentCultureIgnoreCase))
             {
-                return type.IsAssignableTo(typeof(IFormattable));
+                return typeof(IFormattable).IsAssignableFrom(type);
             }
 
             return false;

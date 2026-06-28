@@ -45,7 +45,7 @@ namespace DocxTemplater.Test
             memStream.Position = 0;
 
             var docTemplate = new DocxTemplate(memStream);
-            docTemplate.RegisterFormatter(new ImageFormatter());
+            docTemplate.RegisterFormatter(new ImageFormatter(new CoreTestImageMetadataReader()));
             docTemplate.BindModel("ds", new { ImageData = svgBytes });
 
             // Act
@@ -103,7 +103,7 @@ namespace DocxTemplater.Test
             memStream.Position = 0;
 
             var docTemplate = new DocxTemplate(memStream);
-            docTemplate.RegisterFormatter(new ImageFormatter());
+            docTemplate.RegisterFormatter(new ImageFormatter(new CoreTestImageMetadataReader()));
             docTemplate.BindModel("ds", new { ImageData = svgBytes });
 
             // Act
@@ -161,7 +161,7 @@ namespace DocxTemplater.Test
             memStream.Position = 0;
 
             var docTemplate = new DocxTemplate(memStream);
-            docTemplate.RegisterFormatter(new ImageFormatter());
+            docTemplate.RegisterFormatter(new ImageFormatter(new CoreTestImageMetadataReader()));
             docTemplate.BindModel("ds", new { ImageData = svgBytes });
 
             // Act

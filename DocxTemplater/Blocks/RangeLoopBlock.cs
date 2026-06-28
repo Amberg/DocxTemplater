@@ -74,11 +74,7 @@ namespace DocxTemplater.Blocks
                     {
                         if (model is IEnumerable enumerable)
                         {
-                            var enumerableObjects = enumerable.Cast<object>();
-                            if (!Enumerable.TryGetNonEnumeratedCount(enumerableObjects, out count))
-                            {
-                                count = enumerableObjects.Count();
-                            }
+                            count = GetEnumerableCount(enumerable);
                         }
                         else
                         {
@@ -115,6 +111,23 @@ namespace DocxTemplater.Blocks
         public override string ToString()
         {
             return $"RangeLoopBlock: {m_indexName}:{m_countVariable}";
+        }
+
+        private static int GetEnumerableCount(IEnumerable enumerable)
+        {
+            if (enumerable is ICollection collection)
+            {
+                return collection.Count;
+            }
+
+            var enumerableObjects = enumerable.Cast<object>();
+#if NET6_0_OR_GREATER
+            if (Enumerable.TryGetNonEnumeratedCount(enumerableObjects, out var count))
+            {
+                return count;
+            }
+#endif
+            return enumerableObjects.Count();
         }
     }
 }

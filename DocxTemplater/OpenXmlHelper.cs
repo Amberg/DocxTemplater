@@ -16,9 +16,15 @@ namespace DocxTemplater
     {
         public static bool IsChildOf(this OpenXmlElement element, OpenXmlElement parent)
         {
-            ArgumentNullException.ThrowIfNull(element, nameof(element));
-            ArgumentNullException.ThrowIfNull(element);
-            ArgumentNullException.ThrowIfNull(parent);
+            if (element == null)
+            {
+                throw new ArgumentNullException(nameof(element));
+            }
+
+            if (parent == null)
+            {
+                throw new ArgumentNullException(nameof(parent));
+            }
             var current = element.Parent;
             while (current != null)
             {
@@ -148,8 +154,15 @@ namespace DocxTemplater
 
         public static OpenXmlElement FindCommonParent(this OpenXmlElement element, OpenXmlElement otherElement)
         {
-            ArgumentNullException.ThrowIfNull(element);
-            ArgumentNullException.ThrowIfNull(otherElement);
+            if (element == null)
+            {
+                throw new ArgumentNullException(nameof(element));
+            }
+
+            if (otherElement == null)
+            {
+                throw new ArgumentNullException(nameof(otherElement));
+            }
             var current = element.Parent;
             while (current != null)
             {
@@ -506,8 +519,37 @@ namespace DocxTemplater
             return element;
         }
 
+        public static OpenXmlElement GetFirstChildWithTagName(this OpenXmlElement element, string tagName)
+        {
+            if (element == null)
+            {
+                throw new ArgumentNullException(nameof(element));
+            }
+
+            if (tagName == null)
+            {
+                throw new ArgumentNullException(nameof(tagName));
+            }
+
+            return element.ChildElements.FirstOrDefault(x => x.LocalName == tagName);
+        }
+        public static OpenXmlElement GetFirstDescendantWithTagName(this OpenXmlElement element, string tagName)
+        {
+            if (element == null)
+            {
+                throw new ArgumentNullException(nameof(element));
+            }
+
+            if (tagName == null)
+            {
+                throw new ArgumentNullException(nameof(tagName));
+            }
+
+            return element.Descendants().FirstOrDefault(x => x.LocalName == tagName);
+        }
+
         /* Conversion functions
-         // 914 400 EMUs = 1 inch
+        // 914 400 EMUs = 1 inch
         // 	2,54 cm = 1 inch
         // 	360 000 EMUs = 1 cm
         // we assume 96 DPI
