@@ -54,7 +54,8 @@ Enhance DocxTemplater with these optional extension packages:
 | Package      | Description                             
 |--------------|-----------------------------------
 | [DocxTemplater.Images ](https://www.nuget.org/packages/DocxTemplater.Images)  |Enables embedding images in generated Word documents|
-| DocxTemplater.Images.Bcl (not published) | Proof-of-concept .NET BCL metadata adapter with no third-party image dependency |
+| [DocxTemplater.Images.ImageSharp](https://www.nuget.org/packages/DocxTemplater.Images.ImageSharp) |Default ImageSharp metadata adapter for DocxTemplater images|
+| DocxTemplater.Images.Bcl (not published) | Proof-of-concept .NET BCL metadata adapter with no third-party image dependency|
 | [DocxTemplater.Markdown ](https://www.nuget.org/packages/DocxTemplater.Markdown)  | Allows use of Markdown syntax for generating parts of Word documents|
 
 For a dependency-free proof of concept, register the .NET BCL metadata adapter:
