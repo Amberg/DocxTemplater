@@ -26,7 +26,7 @@ namespace DocxTemplater.Images.ImageSharp.Test
         {
             using var img = Image.Load(sourceImageBytes);
             Assert.That(img.Configuration.ImageFormatsManager.TryFindFormatByFileExtension(extension, out var format));
-            var memStream = new MemoryStream();
+            using var memStream = new MemoryStream();
             img.Save(memStream, format);
             return memStream.ToArray();
         }
