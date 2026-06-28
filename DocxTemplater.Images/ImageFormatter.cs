@@ -74,7 +74,7 @@ namespace DocxTemplater.Images
             }
             catch (ImageMetadataReadException e)
             {
-                throw new OpenXmlTemplateException("Could not detect image format", e);
+                throw new OpenXmlTemplateException("Could not read image metadata", e);
             }
         }
 
