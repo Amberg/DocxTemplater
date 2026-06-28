@@ -12,6 +12,11 @@ namespace DocxTemplater.Images.Bcl
     /// </remarks>
     public sealed class BclImageMetadataReader : IImageMetadataReader
     {
+        // These caps bound parser work for untrusted JPEGs to avoid CPU-heavy scans through
+        // long metadata/padding runs while still allowing common real-world files.
+        internal const int MaxJpegSegmentsToScan = 1024;
+        internal const int MaxJpegMetadataBytesToScan = 1024 * 1024;
+
         private static readonly byte[] PngSignature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
         private static readonly byte[] Gif87aSignature = [0x47, 0x49, 0x46, 0x38, 0x37, 0x61];
         private static readonly byte[] Gif89aSignature = [0x47, 0x49, 0x46, 0x38, 0x39, 0x61];
@@ -99,13 +104,28 @@ namespace DocxTemplater.Images.Bcl
             var width = 0;
             var height = 0;
             var rotation = ImageRotation.CreateFromUnits(0);
+            var orientationDetermined = false;
+            var scanStartPosition = position;
+            var scannedSegments = 0;
+
+            void ThrowIfJpegScanLimitsExceeded()
+            {
+                var scannedMetadataBytes = position - scanStartPosition;
+                if (scannedSegments > MaxJpegSegmentsToScan || scannedMetadataBytes > MaxJpegMetadataBytesToScan)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(bytes), "JPEG metadata exceeds safe parsing limits.");
+                }
+            }
 
             while (position < bytes.Length)
             {
                 while (position < bytes.Length && bytes[position] == 0xFF)
                 {
                     position++;
+                    ThrowIfJpegScanLimitsExceeded();
                 }
+
+                ThrowIfJpegScanLimitsExceeded();
 
                 if (position >= bytes.Length)
                 {
@@ -113,6 +133,7 @@ namespace DocxTemplater.Images.Bcl
                 }
 
                 var marker = bytes[position++];
+                ThrowIfJpegScanLimitsExceeded();
                 if (marker is 0xD9 or 0xDA)
                 {
                     break;
@@ -130,15 +151,25 @@ namespace DocxTemplater.Images.Bcl
 
                 var segmentLength = BinaryPrimitives.ReadUInt16BigEndian(bytes.Slice(position, 2));
                 position += 2;
-                if (segmentLength < 2 || position + segmentLength - 2 > bytes.Length)
+                var payloadLength = segmentLength - 2;
+                if (segmentLength < 2 || payloadLength > bytes.Length - position)
                 {
                     throw new ArgumentOutOfRangeException(nameof(bytes), "Invalid JPEG segment length.");
                 }
 
-                var segment = bytes.Slice(position, segmentLength - 2);
-                if (marker == 0xE1)
+                scannedSegments++;
+                var nextPosition = position + payloadLength;
+                position = nextPosition;
+                ThrowIfJpegScanLimitsExceeded();
+
+                var segment = bytes.Slice(nextPosition - payloadLength, payloadLength);
+                if (!orientationDetermined && marker == 0xE1)
                 {
-                    rotation = ReadExifRotationFromApplicationSegment(segment);
+                    if (TryReadExifRotationFromApplicationSegment(segment, out var exifRotation))
+                    {
+                        rotation = exifRotation;
+                        orientationDetermined = true;
+                    }
                 }
                 else if (IsStartOfFrameMarker(marker) && segment.Length >= 7)
                 {
@@ -146,7 +177,10 @@ namespace DocxTemplater.Images.Bcl
                     width = BinaryPrimitives.ReadUInt16BigEndian(segment.Slice(3, 2));
                 }
 
-                position += segment.Length;
+                if (width > 0 && height > 0 && orientationDetermined)
+                {
+                    break;
+                }
             }
 
             if (width <= 0 || height <= 0)
@@ -166,7 +200,7 @@ namespace DocxTemplater.Images.Bcl
                 return false;
             }
 
-            if (!TryReadTiffDirectory(bytes, firstIfdOffset, littleEndian, out var width, out var height, out var rotation)
+            if (!TryReadTiffDirectory(bytes, firstIfdOffset, littleEndian, out var width, out var height, out var rotation, out _)
                 || width == null
                 || height == null)
             {
@@ -214,11 +248,13 @@ namespace DocxTemplater.Images.Bcl
             bool littleEndian,
             out int? width,
             out int? height,
-            out ImageRotation rotation)
+            out ImageRotation rotation,
+            out bool orientationFound)
         {
             width = null;
             height = null;
             rotation = ImageRotation.CreateFromUnits(0);
+            orientationFound = false;
 
             if (directoryOffset < 0 || directoryOffset + 2 > bytes.Length)
             {
@@ -257,6 +293,7 @@ namespace DocxTemplater.Images.Bcl
                 else if (tag == 0x0112 && type == 3)
                 {
                     rotation = CreateRotationFromExifOrientation(ReadUInt16(entry.Slice(8, 2), littleEndian));
+                    orientationFound = true;
                 }
             }
 
@@ -279,8 +316,9 @@ namespace DocxTemplater.Images.Bcl
             }
         }
 
-        private static ImageRotation ReadExifRotationFromApplicationSegment(ReadOnlySpan<byte> segment)
+        private static bool TryReadExifRotationFromApplicationSegment(ReadOnlySpan<byte> segment, out ImageRotation rotation)
         {
+            rotation = ImageRotation.CreateFromUnits(0);
             if (segment.Length < 14
                 || segment[0] != 0x45
                 || segment[1] != 0x78
@@ -289,17 +327,26 @@ namespace DocxTemplater.Images.Bcl
                 || segment[4] != 0x00
                 || segment[5] != 0x00)
             {
-                return ImageRotation.CreateFromUnits(0);
+                return false;
             }
 
             var tiff = segment[6..];
-            if (!TryReadTiffHeader(tiff, out var littleEndian, out var firstIfdOffset)
-                || !TryReadTiffDirectory(tiff, firstIfdOffset, littleEndian, out _, out _, out var rotation))
+            try
             {
-                return ImageRotation.CreateFromUnits(0);
-            }
+                if (!TryReadTiffHeader(tiff, out var littleEndian, out var firstIfdOffset)
+                    || !TryReadTiffDirectory(tiff, firstIfdOffset, littleEndian, out _, out _, out rotation, out var orientationFound))
+                {
+                    rotation = ImageRotation.CreateFromUnits(0);
+                    return false;
+                }
 
-            return rotation;
+                return orientationFound;
+            }
+            catch (Exception e) when (e is ArgumentOutOfRangeException or OverflowException)
+            {
+                rotation = ImageRotation.CreateFromUnits(0);
+                return false;
+            }
         }
 
         private static ImageRotation CreateRotationFromExifOrientation(ushort orientation)

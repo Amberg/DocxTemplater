@@ -7,4 +7,8 @@
   <ItemGroup>
     <ProjectReference Include="..\DocxTemplater.Images\DocxTemplater.Images.csproj" />
   </ItemGroup>
+
+    <ItemGroup>
+    <InternalsVisibleTo Include="DocxTemplater.Images.Bcl.Test" />
+  </ItemGroup>
 </Project>
