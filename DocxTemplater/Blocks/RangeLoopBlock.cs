@@ -1,7 +1,9 @@
 using System;
 using System.Collections;
+using System.Globalization;
 using System.Linq;
 using DocumentFormat.OpenXml;
+using DocxTemplater.Schema;
 using Text = DocumentFormat.OpenXml.Wordprocessing.Text;
 
 namespace DocxTemplater.Blocks
@@ -128,6 +130,25 @@ namespace DocxTemplater.Blocks
             }
 #endif
             return enumerableObjects.Count();
+        }
+        
+        public override void CollectSchema(SchemaBuilder builder)
+        {
+            // The count side can be either an int literal or a path on the model; only declare paths.
+            if (!int.TryParse(m_countVariable, NumberStyles.Integer, CultureInfo.InvariantCulture, out _))
+            {
+                SchemaExpressionParser.Extract(m_countVariable, builder.DeclareScalar);
+            }
+            // Range loops introduce a scope level for dot-resolution but no named item.
+            builder.OpenTransparentScope();
+            try
+            {
+                base.CollectSchema(builder);
+            }
+            finally
+            {
+                builder.CloseScope();
+            }
         }
     }
 }

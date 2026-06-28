@@ -15,6 +15,7 @@ _DocxTemplater is a library to generate docx documents from a docx template. The
 - Markdown Support - Converts Markdown to OpenXML
 - HTML Snippets - Replace placeholder with HTML Content
 - Dynamic Tables - Columns are defined by the datasource
+- Template Schema - Statically inspect which variables a template expects, without rendering
 
 ## Quickstart
 
@@ -180,7 +181,7 @@ To bind a chart to a data source, the chart’s title in the template must match
 
 To bind the chart correctly, the corresponding model property must be of th `ChartData` type.
 
-*Currently, only bar charts are supported.*
+*Supported chart types: bar, 3-D bar, pie, 3-D pie and doughnut charts. Pie and 3-D pie show the first series only; doughnut charts show all series. Per-slice colors defined in the pie template are preserved; slices without a defined color are colored automatically.*
 
 ```
             using var fileStream = File.OpenRead("MyTemplate.docx");
@@ -441,6 +442,53 @@ public class PersonModel : TemplateModelWithDisplayNames
 ```
 
 In your template, you can then use either `{{person.Vorname}}` or `{{person.FirstName}}` to access the property.
+
+## Template Schema Inspection
+
+`GetTemplateSchema()` statically analyzes a template **without rendering it** and returns the structural schema of the variables, collections, and nested objects the template references.
+Use it to validate a caller's model against the template's expectations before rendering, or to generate a skeleton model for callers to fill in.
+
+```csharp
+using var template = DocxTemplate.Open("template.docx");
+
+// Template: "Hello {{customer.Name}}" and "{{#items}}{{items.Price}}{{/items}}"
+var schema = template.GetTemplateSchema();
+
+// Roots are the top-level models you would pass to BindModel (case-insensitive)
+foreach (var root in schema.Roots.Values)
+{
+    Console.WriteLine($"{root.Name}: {root.Kind}");
+}
+
+schema.Roots["customer"].Properties["Name"].Kind;          // Scalar
+schema.Roots["items"].Kind;                                // Collection
+schema.Roots["items"].ItemSchema.Properties["Price"].Kind; // Scalar
+```
+
+Each `TemplateSchemaNode` exposes:
+
+| Member        | Description                                                                 |
+|---------------|-----------------------------------------------------------------------------|
+| `Name`        | Name as referenced in the template (case-insensitive against the model).    |
+| `Kind`        | `Scalar`, `Object`, or `Collection`.                                        |
+| `Properties`  | Child properties of an `Object` node (empty for scalars/collections).       |
+| `ItemSchema`  | Element shape of a `Collection` node (`null` if items are never accessed).  |
+
+The schema is the **union over all branches** (both `if` and `else`, every `case`, every loop body) - a caller must be prepared to bind anything the template could reach at runtime.
+
+`GetTemplateSchema()` may be called before `Process()` on the same instance; the analysis result is cached and reused when rendering, so there is no need to reopen the template:
+
+```csharp
+using var template = DocxTemplate.Open("template.docx");
+var schema = template.GetTemplateSchema();   // inspect
+template.BindModel("customer", customer);
+template.Save("generated.docx");             // render - reuses the cached analysis
+```
+
+**Known limitations** (these constructs may yield an incomplete schema):
+- Sub-template formatters (`:tmpl`): the referenced sub-template is itself a runtime template string and not visible to static analysis.
+- Dynamic tables (`:dyntable`): only the collection itself is reported, not its runtime-defined rows/columns.
+- String-key indexing (`props["key"]`): the key is not statically known and is not reflected in the schema.
 
 ## Support This Project
 

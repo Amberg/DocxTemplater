@@ -1,6 +1,8 @@
 using System;
+using System.Globalization;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Wordprocessing;
+using DocxTemplater.Schema;
 
 namespace DocxTemplater.Blocks
 {
@@ -48,6 +50,30 @@ namespace DocxTemplater.Blocks
             {
                 base.Expand(models, parentNode);
             }
+        }
+
+        public override void CollectSchema(SchemaBuilder builder)
+        {
+            // The match expression of a non-default case can reference paths (rare, but allowed).
+            // Literals (quoted strings, numbers) contribute nothing - skip the parse in that case.
+            if (!IsDefault && !string.IsNullOrEmpty(MatchExpression) && !IsLiteral(MatchExpression))
+            {
+                SchemaExpressionParser.Extract(MatchExpression, builder.DeclareScalar);
+            }
+            base.CollectSchema(builder);
+        }
+
+        private static bool IsLiteral(string s)
+        {
+            if (s.Length == 0)
+            {
+                return true;
+            }
+            if (s[0] is '\'' or '"')
+            {
+                return true;
+            }
+            return double.TryParse(s, NumberStyles.Number, CultureInfo.InvariantCulture, out _);
         }
 
         private bool IsNestedUnderSwitch()

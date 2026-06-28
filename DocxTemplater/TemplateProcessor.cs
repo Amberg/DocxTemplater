@@ -27,22 +27,20 @@ namespace DocxTemplater
 
         protected void ProcessNode(OpenXmlCompositeElement rootElement)
         {
-#if DEBUG
-            Console.WriteLine("----------- Original --------");
-            Console.WriteLine(rootElement.ToPrettyPrintXml());
-#endif
-            PreProcess(rootElement);
+            var loops = BuildBlockTree(rootElement);
+            RenderNode(rootElement, loops);
+        }
 
-            var matches = DocxTemplate.IsolateAndMergeTextTemplateMarkers(rootElement);
-
-            RemoveLineBreaksAroundSyntaxPatterns(matches);
-
-#if DEBUG
-            Console.WriteLine("----------- Isolate Texts --------");
-            Console.WriteLine(rootElement.ToPrettyPrintXml());
-#endif
-
-            var loops = ExpandLoops(rootElement, matches);
+        /// <summary>
+        /// Renders the model into a node whose block tree has already been built by
+        /// <see cref="BuildBlockTree"/>. This is the model-dependent half of the pipeline
+        /// (variable replacement, extension rendering, loop/condition expansion, cleanup).
+        /// Splitting it out lets <see cref="DocxTemplate.GetTemplateSchema"/> build the tree once
+        /// and have <see cref="DocxTemplate.Process"/> reuse it instead of rebuilding (which would
+        /// fail on the already-mutated tree).
+        /// </summary>
+        private protected void RenderNode(OpenXmlCompositeElement rootElement, IReadOnlyCollection<ContentBlock> loops)
+        {
 #if DEBUG
             Console.WriteLine("----------- After Loops --------");
             Console.WriteLine(rootElement.ToPrettyPrintXml());
@@ -147,7 +145,7 @@ namespace DocxTemplater
                 if (removeEmptyElements && value is not PatternType.Variable && value is not PatternType.Expression)
                 {
                     var parent = markedText.Parent;
-                    markedText.RemoveWithEmptyParent();
+                    markedText.RemoveWithEmptyParent(preserveParagraphInCell: true);
                 }
                 else
                 {
@@ -299,6 +297,30 @@ namespace DocxTemplater
         public void RegisterExtension(ITemplateProcessorExtension extension)
         {
             Context.RegisterExtension(extension);
+        }
+
+        /// <summary>
+        /// Runs the model-independent half of the pipeline: pre-process + isolate-text +
+        /// block-tree-build, without expanding/rendering any block. Returns the top-level blocks.
+        /// The document is mutated (marker attributes added, insertion points inserted, content
+        /// extracted into blocks), but the result is exactly the state <see cref="RenderNode"/>
+        /// expects. <see cref="DocxTemplate.GetTemplateSchema"/> caches the returned blocks so that a
+        /// subsequent <see cref="DocxTemplate.Process"/> can render from them instead of rebuilding.
+        /// </summary>
+        internal IReadOnlyCollection<ContentBlock> BuildBlockTree(OpenXmlCompositeElement rootElement)
+        {
+#if DEBUG
+            Console.WriteLine("----------- Original --------");
+            Console.WriteLine(rootElement.ToPrettyPrintXml());
+#endif
+            PreProcess(rootElement);
+            var matches = IsolateAndMergeTextTemplateMarkers(rootElement);
+            RemoveLineBreaksAroundSyntaxPatterns(matches);
+#if DEBUG
+            Console.WriteLine("----------- Isolate Texts --------");
+            Console.WriteLine(rootElement.ToPrettyPrintXml());
+#endif
+            return ExpandLoops(rootElement, matches);
         }
     }
 }

@@ -223,12 +223,25 @@ namespace DocxTemplater.Formatter
             text.Text = text.Text.Replace("\r\n", "\n").Replace("\r", "\n");
             if (text.Text.Contains('\n'))
             {
+                // Emit exactly one break per '\n' (i.e. one break between consecutive segments).
+                // A break is therefore only produced for a newline that is actually present in the
+                // value: "a\nb" -> a<br>b, "a\n" -> a<br>, "a\n\nb" -> a<br><br>b.
+                // The previous implementation added a break after every non-empty segment, which
+                // produced a spurious trailing break for multi-line values without a trailing
+                // newline (rendered as an empty line / extra blank table row).
                 var parts = text.Text.Split('\n');
                 OpenXmlElement lastElement = text;
-                foreach (var part in parts.Where(x => !string.IsNullOrWhiteSpace(x)))
+                for (var i = 0; i < parts.Length; i++)
                 {
-                    lastElement = lastElement.InsertAfterSelf(new Text(part));
-                    lastElement = lastElement.InsertAfterSelf(new Break());
+                    if (i > 0)
+                    {
+                        lastElement = lastElement.InsertAfterSelf(new Break());
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(parts[i]))
+                    {
+                        lastElement = lastElement.InsertAfterSelf(new Text(parts[i]));
+                    }
                 }
 
                 text.Remove();

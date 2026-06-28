@@ -1,5 +1,6 @@
 ﻿using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Wordprocessing;
+using DocxTemplater.Schema;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -62,6 +63,11 @@ namespace DocxTemplater.Blocks
             };
             res.Add(element);
             m_content = res;
+        }
+
+        public override void CollectSchema(SchemaBuilder builder)
+        {
+            // Inline keywords (page break, section break, ...) carry no model references.
         }
     }
 }

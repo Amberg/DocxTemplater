@@ -400,7 +400,7 @@ namespace DocxTemplater
         }
 
 
-        public static void RemoveWithEmptyParent(this OpenXmlElement element)
+        public static void RemoveWithEmptyParent(this OpenXmlElement element, bool preserveParagraphInCell = false)
         {
             var parent = element.Parent;
             bool removeParent = true;
@@ -431,6 +431,23 @@ namespace DocxTemplater
                 else
                 {
                     removeParent = element.HasOnlyPropertyChildren();
+
+                    // Keep an emptied paragraph inside a TableCell when no other paragraph
+                    // in the same cell has real content. Without this, TemplateProcessor.Cleanup's
+                    // safety net replaces it with a bare <w:p/> (no pPr), and the cell falls
+                    // back to docDefaults/Normal style instead of the paragraph's own formatting.
+                    // Only protect when no sibling paragraph survives — if real content remains
+                    // its pPr is already on the cell, and a leftover empty paragraph would be stray.
+                    if (removeParent
+                        && preserveParagraphInCell
+                        && element is Paragraph
+                        && parent is TableCell cell
+                        && !cell.ChildElements.OfType<Paragraph>()
+                            .Where(p => p != element)
+                            .Any(p => !p.HasOnlyPropertyChildren()))
+                    {
+                        removeParent = false;
+                    }
                 }
 
                 if (removeParent)
@@ -438,7 +455,7 @@ namespace DocxTemplater
                     parent.RemoveChild(element);
                     if (parent is not Body and not Document)
                     {
-                        RemoveWithEmptyParent(parent);
+                        RemoveWithEmptyParent(parent, preserveParagraphInCell);
                     }
                 }
             }

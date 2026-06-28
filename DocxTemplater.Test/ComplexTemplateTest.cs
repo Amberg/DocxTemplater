@@ -16,6 +16,9 @@ namespace DocxTemplater.Test
             var model = CreateModel(imageBytes);
             docTemplate.BindModel("ds", model);
 
+
+            var shema = docTemplate.GetTemplateSchema();
+
             var result = docTemplate.Process();
             docTemplate.Validate();
             result.Position = 0;
