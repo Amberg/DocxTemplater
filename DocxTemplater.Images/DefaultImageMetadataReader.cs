@@ -39,7 +39,7 @@ namespace DocxTemplater.Images
             }
             catch (Exception e) when (e is ArgumentOutOfRangeException or OverflowException)
             {
-                throw new ImageMetadataReadException("Could not read image metadata using the .NET BCL adapter.", e);
+                throw new ImageMetadataReadException("Could not read image metadata using the default metadata reader, either a malformed image or consider using an adapter package.", e);
             }
 
             throw new ImageMetadataReadException("Unsupported or invalid image format for the .NET BCL adapter.", null);
