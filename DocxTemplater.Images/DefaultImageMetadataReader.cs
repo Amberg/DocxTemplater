@@ -42,7 +42,7 @@ namespace DocxTemplater.Images
                 throw new ImageMetadataReadException("Could not read image metadata using the default metadata reader, either a malformed image or consider using an adapter package.", e);
             }
 
-            throw new ImageMetadataReadException("Unsupported or invalid image format for the .NET BCL adapter.", null);
+            throw new ImageMetadataReadException("Unsupported or invalid image format for the default metadata reader.", null);
         }
 
         private static bool TryReadPng(ReadOnlySpan<byte> bytes, out ImageMetadata metadata)
@@ -110,7 +110,9 @@ namespace DocxTemplater.Images
                 var scannedMetadataBytes = position - scanStartPosition;
                 if (scannedSegments > MaxJpegSegmentsToScan || scannedMetadataBytes > MaxJpegMetadataBytesToScan)
                 {
-                    throw new ArgumentOutOfRangeException(nameof(bytes), "JPEG metadata exceeds safe parsing limits.");
+                    throw new ImageMetadataReadException(
+                        "JPEG metadata exceeds safe parsing limits. Use an image adapter package for JPEGs with larger metadata blocks.",
+                        null);
                 }
             }
 
@@ -151,7 +153,7 @@ namespace DocxTemplater.Images
                 var payloadLength = segmentLength - 2;
                 if (segmentLength < 2 || payloadLength > bytes.Length - position)
                 {
-                    throw new ArgumentOutOfRangeException(nameof(bytes), "Invalid JPEG segment length.");
+                    throw new ImageMetadataReadException("Invalid JPEG segment length.", null);
                 }
 
                 scannedSegments++;

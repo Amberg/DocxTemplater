@@ -271,8 +271,8 @@ namespace DocxTemplater.Images.Bcl.Test
                 0xFF, 0xFF,
                 0x00]));
 
-            Assert.That(ex.Message, Is.EqualTo("Could not read image metadata using the default metadata reader, either a malformed image or consider using an adapter package."));
-            Assert.That(ex.InnerException, Is.InstanceOf<ArgumentOutOfRangeException>());
+            Assert.That(ex.Message, Is.EqualTo("Invalid JPEG segment length."));
+            Assert.That(ex.InnerException, Is.Null);
         }
 
         [Test]
@@ -286,9 +286,8 @@ namespace DocxTemplater.Images.Bcl.Test
 
             var ex = Assert.Throws<ImageMetadataReadException>(() => m_reader.Read(JpegWithSegments(segments)));
 
-            Assert.That(ex.Message, Is.EqualTo("Could not read image metadata using the default metadata reader, either a malformed image or consider using an adapter package."));
-            Assert.That(ex.InnerException, Is.InstanceOf<ArgumentOutOfRangeException>());
-            Assert.That(ex.InnerException.Message, Does.Contain("JPEG metadata exceeds safe parsing limits."));
+            Assert.That(ex.Message, Is.EqualTo("JPEG metadata exceeds safe parsing limits. Use an image adapter package for JPEGs with larger metadata blocks."));
+            Assert.That(ex.InnerException, Is.Null);
         }
 
         [Test]
@@ -304,9 +303,8 @@ namespace DocxTemplater.Images.Bcl.Test
 
             var ex = Assert.Throws<ImageMetadataReadException>(() => m_reader.Read(JpegWithSegments(segments)));
 
-            Assert.That(ex.Message, Is.EqualTo("Could not read image metadata using the default metadata reader, either a malformed image or consider using an adapter package."));
-            Assert.That(ex.InnerException, Is.InstanceOf<ArgumentOutOfRangeException>());
-            Assert.That(ex.InnerException.Message, Does.Contain("JPEG metadata exceeds safe parsing limits."));
+            Assert.That(ex.Message, Is.EqualTo("JPEG metadata exceeds safe parsing limits. Use an image adapter package for JPEGs with larger metadata blocks."));
+            Assert.That(ex.InnerException, Is.Null);
         }
 
         [Test]
@@ -314,9 +312,8 @@ namespace DocxTemplater.Images.Bcl.Test
         {
             var ex = Assert.Throws<ImageMetadataReadException>(() => m_reader.Read(JpegWithFillPaddingRun(DefaultImageMetadataReader.MaxJpegMetadataBytesToScan + 1)));
 
-            Assert.That(ex.Message, Is.EqualTo("Could not read image metadata using the default metadata reader, either a malformed image or consider using an adapter package."));
-            Assert.That(ex.InnerException, Is.InstanceOf<ArgumentOutOfRangeException>());
-            Assert.That(ex.InnerException.Message, Does.Contain("JPEG metadata exceeds safe parsing limits."));
+            Assert.That(ex.Message, Is.EqualTo("JPEG metadata exceeds safe parsing limits. Use an image adapter package for JPEGs with larger metadata blocks."));
+            Assert.That(ex.InnerException, Is.Null);
         }
 
         [TestCase(new byte[] { 0x89, 0x50, 0x4E })]
@@ -328,7 +325,7 @@ namespace DocxTemplater.Images.Bcl.Test
         {
             var ex = Assert.Throws<ImageMetadataReadException>(() => m_reader.Read(bytes));
 
-            Assert.That(ex.Message, Is.EqualTo("Unsupported or invalid image format for the .NET BCL adapter."));
+            Assert.That(ex.Message, Is.EqualTo("Unsupported or invalid image format for the default metadata reader."));
             Assert.That(ex.InnerException, Is.Null);
         }
     }
