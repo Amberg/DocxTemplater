@@ -76,7 +76,11 @@ namespace DocxTemplater.Blocks
                     {
                         if (model is IEnumerable enumerable)
                         {
-                            count = GetEnumerableCount(enumerable);
+                            var enumerableObjects = enumerable.Cast<object>();
+                            if (!Enumerable.TryGetNonEnumeratedCount(enumerableObjects, out count))
+                            {
+                                count = enumerableObjects.Count();
+                            }
                         }
                         else
                         {
@@ -115,23 +119,6 @@ namespace DocxTemplater.Blocks
             return $"RangeLoopBlock: {m_indexName}:{m_countVariable}";
         }
 
-        private static int GetEnumerableCount(IEnumerable enumerable)
-        {
-            if (enumerable is ICollection collection)
-            {
-                return collection.Count;
-            }
-
-            var enumerableObjects = enumerable.Cast<object>();
-#if NET6_0_OR_GREATER
-            if (Enumerable.TryGetNonEnumeratedCount(enumerableObjects, out var count))
-            {
-                return count;
-            }
-#endif
-            return enumerableObjects.Count();
-        }
-        
         public override void CollectSchema(SchemaBuilder builder)
         {
             // The count side can be either an int literal or a path on the model; only declare paths.

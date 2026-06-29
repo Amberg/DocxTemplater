@@ -102,9 +102,7 @@ namespace DocxTemplater.Markdown.Renderer
             var styleId = numberingStyle.StyleId;
             // find abstract numberings with this style
             m_abstractNum = m_mainDocumentPart.NumberingDefinitionsPart.Numbering.Elements<AbstractNum>()
-                .Where(r => r.StyleLink != null && r.StyleLink.Val == styleId)
-                .Aggregate((AbstractNum)null, (currentMax, next) =>
-                    currentMax == null || next.ChildElements.Count > currentMax.ChildElements.Count ? next : currentMax);
+                .Where(r => r.StyleLink != null && r.StyleLink.Val == styleId).MaxBy(x => x.ChildElements.Count);
             if (m_abstractNum == null)
             {
                 return false;

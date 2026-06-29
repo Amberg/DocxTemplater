@@ -16,15 +16,9 @@ namespace DocxTemplater
     {
         public static bool IsChildOf(this OpenXmlElement element, OpenXmlElement parent)
         {
-            if (element == null)
-            {
-                throw new ArgumentNullException(nameof(element));
-            }
-
-            if (parent == null)
-            {
-                throw new ArgumentNullException(nameof(parent));
-            }
+            ArgumentNullException.ThrowIfNull(element, nameof(element));
+            ArgumentNullException.ThrowIfNull(element);
+            ArgumentNullException.ThrowIfNull(parent);
             var current = element.Parent;
             while (current != null)
             {
@@ -154,15 +148,8 @@ namespace DocxTemplater
 
         public static OpenXmlElement FindCommonParent(this OpenXmlElement element, OpenXmlElement otherElement)
         {
-            if (element == null)
-            {
-                throw new ArgumentNullException(nameof(element));
-            }
-
-            if (otherElement == null)
-            {
-                throw new ArgumentNullException(nameof(otherElement));
-            }
+            ArgumentNullException.ThrowIfNull(element);
+            ArgumentNullException.ThrowIfNull(otherElement);
             var current = element.Parent;
             while (current != null)
             {
@@ -534,35 +521,6 @@ namespace DocxTemplater
                 throw new InvalidOperationException("Unsupported OpenXml element: " + localName);
             }
             return element;
-        }
-
-        public static OpenXmlElement GetFirstChildWithTagName(this OpenXmlElement element, string tagName)
-        {
-            if (element == null)
-            {
-                throw new ArgumentNullException(nameof(element));
-            }
-
-            if (tagName == null)
-            {
-                throw new ArgumentNullException(nameof(tagName));
-            }
-
-            return element.ChildElements.FirstOrDefault(x => x.LocalName == tagName);
-        }
-        public static OpenXmlElement GetFirstDescendantWithTagName(this OpenXmlElement element, string tagName)
-        {
-            if (element == null)
-            {
-                throw new ArgumentNullException(nameof(element));
-            }
-
-            if (tagName == null)
-            {
-                throw new ArgumentNullException(nameof(tagName));
-            }
-
-            return element.Descendants().FirstOrDefault(x => x.LocalName == tagName);
         }
 
         /* Conversion functions
