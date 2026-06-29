@@ -2,7 +2,7 @@ namespace DocxTemplater.Images.Bcl.Test
 {
     internal sealed class BclImageMetadataReaderTest
     {
-        private readonly BclImageMetadataReader m_reader = new();
+        private readonly DefaultImageMetadataReader m_reader = new();
 
         private static byte[] JpegWithSegments(params byte[][] segments)
         {
@@ -278,7 +278,7 @@ namespace DocxTemplater.Images.Bcl.Test
         [Test]
         public void ThrowsWrappedException_WhenJpegSegmentCountExceedsSafeLimit()
         {
-            var segments = new byte[BclImageMetadataReader.MaxJpegSegmentsToScan + 1][];
+            var segments = new byte[DefaultImageMetadataReader.MaxJpegSegmentsToScan + 1][];
             for (var i = 0; i < segments.Length; i++)
             {
                 segments[i] = App2Segment(2);
@@ -310,7 +310,7 @@ namespace DocxTemplater.Images.Bcl.Test
         [Test]
         public void ThrowsWrappedException_WhenJpegFillPaddingRunExceedsSafeLimit()
         {
-            var ex = Assert.Throws<ImageMetadataReadException>(() => m_reader.Read(JpegWithFillPaddingRun(BclImageMetadataReader.MaxJpegMetadataBytesToScan + 1)));
+            var ex = Assert.Throws<ImageMetadataReadException>(() => m_reader.Read(JpegWithFillPaddingRun(DefaultImageMetadataReader.MaxJpegMetadataBytesToScan + 1)));
 
             Assert.That(ex.Message, Is.EqualTo("Could not read image metadata using the .NET BCL adapter."));
             Assert.That(ex.InnerException, Is.InstanceOf<ArgumentOutOfRangeException>());

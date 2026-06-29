@@ -21,6 +21,6 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\DocxTemplater.Images.Bcl\DocxTemplater.Images.Bcl.csproj" />
+    <ProjectReference Include="..\DocxTemplater.Images\DocxTemplater.Images.csproj" />
   </ItemGroup>
 </Project>

@@ -15,6 +15,11 @@ namespace DocxTemplater.Images
         private static readonly Regex ArgumentRegex = new(@"(?<key>[whr]):(?<value>\d+)(?<unit>px|cm|in|pt|mm)?", RegexOptions.Compiled, TimeSpan.FromMilliseconds(500));
         private readonly Func<IImageService> m_imageServiceFactory;
 
+        public ImageFormatter()
+            : this(new DefaultImageMetadataReader())
+        {
+        }
+
         public ImageFormatter(IImageMetadataReader imageMetadataReader)
         {
             ArgumentNullException.ThrowIfNull(imageMetadataReader);

@@ -1,6 +1,6 @@
-# .NET BCL image metadata adapter proof of concept
+# Dependency-free image metadata reader
 
-DocxTemplater.Images.Bcl is a proof-of-concept adapter that avoids third-party image libraries. It reads only the metadata DocxTemplater needs for image insertion:
+DocxTemplater.Images now includes a built-in dependency-free image metadata reader. It reads only the metadata DocxTemplater needs for image insertion:
 
 - image format;
 - pixel width;
@@ -12,14 +12,14 @@ It deliberately does not decode, resize, render, transform or validate the full 
 ## Usage
 
 ```csharp
-using DocxTemplater.Images.Bcl;
+using DocxTemplater.Images;
 
-template.RegisterFormatter(new BclImageFormatter());
+template.RegisterFormatter(new ImageFormatter());
 ```
 
 ## Supported formats
 
-The POC supports the formats currently used by the OpenXML image service:
+The built-in reader supports the formats currently used by the OpenXML image service:
 
 - JPEG
 - PNG
@@ -31,6 +31,6 @@ SVG remains handled by DocxTemplater.Images directly because it can be embedded 
 
 ## Limitations
 
-This adapter is not a general image processing library. It reads headers and selected TIFF/EXIF tags only. It will not recover from unusual or corrupt image structures as comprehensively as ImageSharp, SkiaSharp or Magick.NET.
+This reader is not a general image processing library. It reads headers and selected TIFF/EXIF tags only. It will not recover from unusual or corrupt image structures as comprehensively as ImageSharp, SkiaSharp or Magick.NET.
 
-The value is that it proves the default DocxTemplater image path does not necessarily need a third-party dependency if the required operation is metadata extraction rather than image manipulation.
+The value is that the default DocxTemplater image path does not need a third-party dependency when the required operation is metadata extraction rather than image manipulation.

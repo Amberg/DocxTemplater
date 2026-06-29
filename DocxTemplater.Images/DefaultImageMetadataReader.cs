@@ -2,15 +2,15 @@ using System;
 using System.Buffers.Binary;
 using DocxTemplater.ImageBase;
 
-namespace DocxTemplater.Images.Bcl
+namespace DocxTemplater.Images
 {
     /// <summary>
     /// Reads image dimensions, format and EXIF orientation using only .NET base class library APIs.
     /// </summary>
     /// <remarks>
-    /// This adapter deliberately reads file headers only. It does not decode, transform, resize or validate the full image payload.
+    /// This reader deliberately reads file headers only. It does not decode, transform, resize or validate the full image payload.
     /// </remarks>
-    public sealed class BclImageMetadataReader : IImageMetadataReader
+    public sealed class DefaultImageMetadataReader : IImageMetadataReader
     {
         // These caps bound parser work for untrusted JPEGs to avoid CPU-heavy scans through
         // long metadata/padding runs while still allowing common real-world files.

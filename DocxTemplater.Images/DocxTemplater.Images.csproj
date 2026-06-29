@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <Description>Library-agnostic image formatting support for DocxTemplater. Reference an adapter package, such as DocxTemplater.Images.ImageSharp, to read image metadata.</Description>
+    <Description>Image formatting support for DocxTemplater with a built-in dependency-free metadata reader. Optional adapters such as DocxTemplater.Images.ImageSharp can be plugged in for more robust decoding.</Description>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\DocxTemplater\DocxTemplater.csproj" />
