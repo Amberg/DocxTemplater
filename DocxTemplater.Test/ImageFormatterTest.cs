@@ -7,6 +7,20 @@ namespace DocxTemplater.Test
     [NUnit.Framework.TestFixture]
     internal sealed class ImageFormatterServiceLifecycleTests
     {
+        private sealed class DummyImageService : IImageService
+        {
+            public uint GetImage(DocumentFormat.OpenXml.OpenXmlElement root, byte[] imageBytes, out ImageInformation imageInfoInformation)
+            {
+                imageInfoInformation = null;
+                throw new NotSupportedException();
+            }
+
+            public DocumentFormat.OpenXml.Drawing.Pictures.Picture CreatePicture(string impagepartRelationShipId, uint propertyId, long cx, long cy, ImageRotation rotation)
+            {
+                throw new NotSupportedException();
+            }
+        }
+
         [NUnit.Framework.Test]
         public void CreateImageService_ReturnsNewInstance_PerCall()
         {
@@ -16,6 +30,25 @@ namespace DocxTemplater.Test
             var second = formatter.CreateImageService();
 
             NUnit.Framework.Assert.That(second, NUnit.Framework.Is.Not.SameAs(first));
+        }
+
+        [NUnit.Framework.Test]
+        public void CreateImageService_UsesFactoryAndReturnsNewInstance_PerCall()
+        {
+            var formatter = new ImageFormatter(() => new DummyImageService());
+
+            var first = formatter.CreateImageService();
+            var second = formatter.CreateImageService();
+
+            NUnit.Framework.Assert.That(second, NUnit.Framework.Is.Not.SameAs(first));
+        }
+
+        [NUnit.Framework.Test]
+        public void Constructor_WithCustomIImageServiceInstance_ThrowsImageServiceFactoryRequiredException()
+        {
+            NUnit.Framework.Assert.That(
+                () => new ImageFormatter(new DummyImageService()),
+                NUnit.Framework.Throws.TypeOf<ImageServiceFactoryRequiredException>());
         }
     }
 

@@ -27,6 +27,13 @@ namespace DocxTemplater.Images
             m_imageServiceFactory = () => new ImageService(imageMetadataReader);
         }
 
+        public ImageFormatter(Func<IImageService> imageServiceFactory)
+        {
+            ArgumentNullException.ThrowIfNull(imageServiceFactory);
+
+            m_imageServiceFactory = imageServiceFactory;
+        }
+
         public ImageFormatter(IImageService imageService)
         {
             ArgumentNullException.ThrowIfNull(imageService);
@@ -38,7 +45,9 @@ namespace DocxTemplater.Images
                 return;
             }
 
-            m_imageServiceFactory = () => imageService;
+            throw new ImageServiceFactoryRequiredException(
+                $"Custom {nameof(IImageService)} instances can hold mutable per-run state. " +
+                $"Use {nameof(ImageFormatter)}(Func<IImageService>) to provide a factory that returns a fresh instance per run.");
         }
 
         public bool CanHandle(Type type, string prefix)
