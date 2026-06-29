@@ -23,10 +23,7 @@ namespace DocxTemplater.Images.Bcl
 
         public ImageMetadata Read(byte[] imageBytes)
         {
-            if (imageBytes == null)
-            {
-                throw new ArgumentNullException(nameof(imageBytes));
-            }
+            ArgumentNullException.ThrowIfNull(imageBytes);
 
             try
             {

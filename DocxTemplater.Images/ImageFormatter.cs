@@ -17,20 +17,14 @@ namespace DocxTemplater.Images
 
         public ImageFormatter(IImageMetadataReader imageMetadataReader)
         {
-            if (imageMetadataReader == null)
-            {
-                throw new ArgumentNullException(nameof(imageMetadataReader));
-            }
+            ArgumentNullException.ThrowIfNull(imageMetadataReader);
 
             m_imageServiceFactory = () => new ImageService(imageMetadataReader);
         }
 
         public ImageFormatter(IImageService imageService)
         {
-            if (imageService == null)
-            {
-                throw new ArgumentNullException(nameof(imageService));
-            }
+            ArgumentNullException.ThrowIfNull(imageService);
 
             if (imageService is ImageService concreteImageService)
             {
