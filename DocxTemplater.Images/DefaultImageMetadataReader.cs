@@ -18,6 +18,7 @@ namespace DocxTemplater.Images
         internal const int MaxJpegMetadataBytesToScan = 1024 * 1024;
 
         private static readonly byte[] PngSignature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+        private static readonly byte[] PngIhdrChunkType = [0x49, 0x48, 0x44, 0x52];
         private static readonly byte[] Gif87aSignature = [0x47, 0x49, 0x46, 0x38, 0x37, 0x61];
         private static readonly byte[] Gif89aSignature = [0x47, 0x49, 0x46, 0x38, 0x39, 0x61];
 
@@ -53,6 +54,13 @@ namespace DocxTemplater.Images
                 return false;
             }
 
+            var ihdrLength = BinaryPrimitives.ReadUInt32BigEndian(bytes.Slice(8, 4));
+            var ihdrChunkType = bytes.Slice(12, 4);
+            if (ihdrLength != 13 || !ihdrChunkType.SequenceEqual(PngIhdrChunkType))
+            {
+                throw new ImageMetadataReadException($"Invalid PNG IHDR chunk. Expected length 13 and type IHDR; found length {ihdrLength} and type 0x{Convert.ToHexString(ihdrChunkType)}.", null);
+            }
+
             var width = checked((int)BinaryPrimitives.ReadUInt32BigEndian(bytes.Slice(16, 4)));
             var height = checked((int)BinaryPrimitives.ReadUInt32BigEndian(bytes.Slice(20, 4)));
             metadata = CreateMetadata(width, height, ImageFormat.Png);
@@ -78,15 +86,51 @@ namespace DocxTemplater.Images
         private static bool TryReadBmp(ReadOnlySpan<byte> bytes, out ImageMetadata metadata)
         {
             metadata = null;
-            if (bytes.Length < 26 || bytes[0] != 0x42 || bytes[1] != 0x4D)
+            if (bytes.Length < 18 || bytes[0] != 0x42 || bytes[1] != 0x4D)
             {
                 return false;
             }
 
-            var width = BinaryPrimitives.ReadInt32LittleEndian(bytes.Slice(18, 4));
-            var signedHeight = BinaryPrimitives.ReadInt32LittleEndian(bytes.Slice(22, 4));
-            metadata = CreateMetadata(width, Math.Abs(signedHeight), ImageFormat.Bmp);
+            var dibHeaderSize = BinaryPrimitives.ReadUInt32LittleEndian(bytes.Slice(14, 4));
+            int width;
+            int rawHeight;
+            if (dibHeaderSize == 12)
+            {
+                if (bytes.Length < 26)
+                {
+                    throw new ImageMetadataReadException($"Truncated BMP DIB header. Header size {dibHeaderSize} requires at least 26 bytes.", null);
+                }
+
+                width = BinaryPrimitives.ReadUInt16LittleEndian(bytes.Slice(18, 2));
+                rawHeight = BinaryPrimitives.ReadUInt16LittleEndian(bytes.Slice(20, 2));
+            }
+            else if (dibHeaderSize >= 40)
+            {
+                if (dibHeaderSize > int.MaxValue - 14 || bytes.Length < 14 + (int)dibHeaderSize)
+                {
+                    throw new ImageMetadataReadException($"Truncated BMP DIB header. Header size {dibHeaderSize} requires at least {14 + (long)dibHeaderSize} bytes.", null);
+                }
+
+                width = BinaryPrimitives.ReadInt32LittleEndian(bytes.Slice(18, 4));
+                rawHeight = BinaryPrimitives.ReadInt32LittleEndian(bytes.Slice(22, 4));
+            }
+            else
+            {
+                throw new ImageMetadataReadException($"Unsupported BMP DIB header size {dibHeaderSize}. Supported header sizes are 12 or at least 40 bytes.", null);
+            }
+
+            metadata = CreateMetadata(width, GetBmpPixelHeight(rawHeight), ImageFormat.Bmp);
             return true;
+        }
+
+        private static int GetBmpPixelHeight(int rawHeight)
+        {
+            if (rawHeight == int.MinValue)
+            {
+                throw new ImageMetadataReadException("Invalid BMP image height.", null);
+            }
+
+            return Math.Abs(rawHeight);
         }
 
         private static bool TryReadJpeg(ReadOnlySpan<byte> bytes, out ImageMetadata metadata)

@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using NUnit.Framework;
+
 namespace DocxTemplater.Images.Bcl.Test
 {
     internal sealed class BclImageMetadataReaderTest
@@ -6,7 +10,7 @@ namespace DocxTemplater.Images.Bcl.Test
 
         private static byte[] JpegWithSegments(params byte[][] segments)
         {
-            var bytes = new System.Collections.Generic.List<byte> { 0xFF, 0xD8 };
+            var bytes = new List<byte> { 0xFF, 0xD8 };
             foreach (var segment in segments)
             {
                 bytes.AddRange(segment);
@@ -129,11 +133,160 @@ namespace DocxTemplater.Images.Bcl.Test
                 0x00, 0x00, 0x00, 0x00,
                 0x28, 0x00, 0x00, 0x00,
                 0x80, 0x02, 0x00, 0x00,
-                0xE0, 0x01, 0x00, 0x00]);
+                0xE0, 0x01, 0x00, 0x00,
+                0x01, 0x00, 0x18, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00]);
 
             Assert.That(metadata.Format, Is.EqualTo(ImageFormat.Bmp));
             Assert.That(metadata.PixelWidth, Is.EqualTo(640));
             Assert.That(metadata.PixelHeight, Is.EqualTo(480));
+        }
+
+        [Test]
+        public void ReadsBitmapCoreBmpHeader()
+        {
+            var metadata = m_reader.Read([
+                0x42, 0x4D,
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                0x0C, 0x00, 0x00, 0x00,
+                0x80, 0x02,
+                0xE0, 0x01,
+                0x01, 0x00,
+                0x18, 0x00]);
+
+            Assert.That(metadata.Format, Is.EqualTo(ImageFormat.Bmp));
+            Assert.That(metadata.PixelWidth, Is.EqualTo(640));
+            Assert.That(metadata.PixelHeight, Is.EqualTo(480));
+        }
+
+        [Test]
+        public void ReadsTopDownBmpHeader_AsPositivePixelHeight()
+        {
+            var metadata = m_reader.Read([
+                0x42, 0x4D,
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                0x28, 0x00, 0x00, 0x00,
+                0x80, 0x02, 0x00, 0x00,
+                0x20, 0xFE, 0xFF, 0xFF,
+                0x01, 0x00, 0x18, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00]);
+
+            Assert.That(metadata.Format, Is.EqualTo(ImageFormat.Bmp));
+            Assert.That(metadata.PixelWidth, Is.EqualTo(640));
+            Assert.That(metadata.PixelHeight, Is.EqualTo(480));
+        }
+
+        [Test]
+        public void ThrowsInvalidBmpImageHeight_WhenSignedHeightCannotBeAbsolutized()
+        {
+            var ex = Assert.Throws<ImageMetadataReadException>(() => m_reader.Read([
+                0x42, 0x4D,
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                0x28, 0x00, 0x00, 0x00,
+                0x80, 0x02, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x80,
+                0x01, 0x00, 0x18, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00]));
+
+            Assert.That(ex.Message, Is.EqualTo("Invalid BMP image height."));
+            Assert.That(ex.InnerException, Is.Null);
+        }
+
+        [Test]
+        public void ThrowsInvalidPngIhdrChunk_ForPngWithWrongFirstChunk()
+        {
+            var ex = Assert.Throws<ImageMetadataReadException>(() => m_reader.Read([
+                0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
+                0x00, 0x00, 0x00, 0x0D,
+                0x74, 0x45, 0x58, 0x74,
+                0x00, 0x00, 0x01, 0x90,
+                0x00, 0x00, 0x00, 0xF0]));
+
+            Assert.That(ex.Message, Is.EqualTo("Invalid PNG IHDR chunk. Expected length 13 and type IHDR; found length 13 and type 0x74455874."));
+            Assert.That(ex.InnerException, Is.Null);
+        }
+
+        [Test]
+        public void ThrowsInvalidPngIhdrChunk_ForPngWithWrongIhdrLength()
+        {
+            var ex = Assert.Throws<ImageMetadataReadException>(() => m_reader.Read([
+                0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
+                0x00, 0x00, 0x00, 0x0C,
+                0x49, 0x48, 0x44, 0x52,
+                0x00, 0x00, 0x01, 0x90,
+                0x00, 0x00, 0x00, 0xF0]));
+
+            Assert.That(ex.Message, Is.EqualTo("Invalid PNG IHDR chunk. Expected length 13 and type IHDR; found length 12 and type 0x49484452."));
+            Assert.That(ex.InnerException, Is.Null);
+        }
+
+        [Test]
+        public void ThrowsUnsupportedBmpDibHeader_ForUnknownBmpDibHeaderSize()
+        {
+            var ex = Assert.Throws<ImageMetadataReadException>(() => m_reader.Read([
+                0x42, 0x4D,
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                0x01, 0x00, 0x00, 0x00]));
+
+            Assert.That(ex.Message, Is.EqualTo("Unsupported BMP DIB header size 1. Supported header sizes are 12 or at least 40 bytes."));
+            Assert.That(ex.InnerException, Is.Null);
+        }
+
+        [Test]
+        public void ThrowsTruncatedBmpDibHeader_WhenClaimedBmpInfoHeaderIsMissing()
+        {
+            var ex = Assert.Throws<ImageMetadataReadException>(() => m_reader.Read([
+                0x42, 0x4D,
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                0x28, 0x00, 0x00, 0x00,
+                0x80, 0x02, 0x00, 0x00,
+                0xE0, 0x01, 0x00, 0x00]));
+
+            Assert.That(ex.Message, Is.EqualTo("Truncated BMP DIB header. Header size 40 requires at least 54 bytes."));
+            Assert.That(ex.InnerException, Is.Null);
+        }
+
+        [Test]
+        public void ThrowsTruncatedBmpDibHeader_WhenClaimedBitmapCoreHeaderIsMissing()
+        {
+            var ex = Assert.Throws<ImageMetadataReadException>(() => m_reader.Read([
+                0x42, 0x4D,
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                0x0C, 0x00, 0x00, 0x00,
+                0x80, 0x02]));
+
+            Assert.That(ex.Message, Is.EqualTo("Truncated BMP DIB header. Header size 12 requires at least 26 bytes."));
+            Assert.That(ex.InnerException, Is.Null);
         }
 
         [Test]
