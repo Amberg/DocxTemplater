@@ -42,14 +42,6 @@ namespace DocxTemplater.Test
 
             NUnit.Framework.Assert.That(second, NUnit.Framework.Is.Not.SameAs(first));
         }
-
-        [NUnit.Framework.Test]
-        public void Constructor_WithCustomIImageServiceInstance_ThrowsImageServiceFactoryRequiredException()
-        {
-            NUnit.Framework.Assert.That(
-                () => new ImageFormatter(new DummyImageService()),
-                NUnit.Framework.Throws.TypeOf<ImageServiceFactoryRequiredException>());
-        }
     }
 
     internal sealed class CoreImageFormatterContractTests : ImageFormatterContractTests

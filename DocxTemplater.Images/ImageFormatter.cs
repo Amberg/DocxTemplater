@@ -34,22 +34,6 @@ namespace DocxTemplater.Images
             m_imageServiceFactory = imageServiceFactory;
         }
 
-        public ImageFormatter(IImageService imageService)
-        {
-            ArgumentNullException.ThrowIfNull(imageService);
-
-            if (imageService is ImageService concreteImageService)
-            {
-                // Keep per-run isolation even when callers pass a concrete ImageService.
-                m_imageServiceFactory = () => new ImageService(concreteImageService.ImageMetadataReader);
-                return;
-            }
-
-            throw new ImageServiceFactoryRequiredException(
-                $"Custom {nameof(IImageService)} instances can hold mutable per-run state. " +
-                $"Use {nameof(ImageFormatter)}(Func<IImageService>) to provide a factory that returns a fresh instance per run.");
-        }
-
         public bool CanHandle(Type type, string prefix)
         {
             var prefixUpper = prefix.ToUpper();
