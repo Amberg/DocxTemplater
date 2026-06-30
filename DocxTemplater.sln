@@ -27,7 +27,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DocxTemplater.Markdown", "DocxTemplater.Markdown\DocxTemplater.Markdown.csproj", "{D4CFD3BD-84B8-400C-A088-26FC15ADE80D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DocxTemplater.Images.Test", "DocxTemplater.Images.Bcl.Test\DocxTemplater.Images.Test.csproj", "{B24E421D-A4CE-4709-95B1-D3D2AE275A42}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DocxTemplater.Images.Test", "DocxTemplater.Images.Test\DocxTemplater.Images.Test.csproj", "{B24E421D-A4CE-4709-95B1-D3D2AE275A42}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
