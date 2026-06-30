@@ -54,7 +54,7 @@ namespace DocxTemplater.Test
         [Test]
         public void ImageService_ReusesImagePartFromCache()
         {
-            var imageService = new ImageService(new CoreTestImageMetadataReader());
+            var imageService = new ImageService(new DefaultImageMetadataReader());
             var imageBytes = File.ReadAllBytes("Resources/testImage.jpg");
 
             using var memStream = new MemoryStream();
@@ -73,7 +73,7 @@ namespace DocxTemplater.Test
         [Test]
         public void ImageService_AddsImagePartsToHeaderAndFooter()
         {
-            var imageService = new ImageService(new CoreTestImageMetadataReader());
+            var imageService = new ImageService(new DefaultImageMetadataReader());
             var imageBytes = File.ReadAllBytes("Resources/testImage.jpg");
 
             using var memStream = new MemoryStream();
