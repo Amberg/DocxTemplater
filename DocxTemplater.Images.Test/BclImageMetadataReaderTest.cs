@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 
-namespace DocxTemplater.Images.Bcl.Test
+namespace DocxTemplater.Images.Test
 {
     internal sealed class BclImageMetadataReaderTest
     {
