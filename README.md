@@ -54,7 +54,20 @@ Enhance DocxTemplater with these optional extension packages:
 | Package      | Description                             
 |--------------|-----------------------------------
 | [DocxTemplater.Images ](https://www.nuget.org/packages/DocxTemplater.Images)  |Enables embedding images in generated Word documents|
+| [DocxTemplater.Images.ImageSharp](https://www.nuget.org/packages/DocxTemplater.Images.ImageSharp) |Optional ImageSharp metadata adapter for more robust image decoding|
 | [DocxTemplater.Markdown ](https://www.nuget.org/packages/DocxTemplater.Markdown)  | Allows use of Markdown syntax for generating parts of Word documents|
+
+Image metadata defaults to the dependency-free built-in header reader in `DocxTemplater.Images`.
+If you need ImageSharp's broader format handling, pass it explicitly:
+
+```csharp
+using DocxTemplater.Images;
+using DocxTemplater.Images.ImageSharp;
+
+template.RegisterFormatter(new ImageFormatter(new ImageSharpImageMetadataReader()));
+```
+
+Migration note: `ImageFormatter()` now uses a dependency-free default metadata reader out of the box. If your application should continue using ImageSharp metadata detection, install `DocxTemplater.Images.ImageSharp` and register `new ImageFormatter(new ImageSharpImageMetadataReader())`.
 
 ## Placeholder Syntax
 

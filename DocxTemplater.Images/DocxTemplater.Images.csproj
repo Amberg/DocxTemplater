@@ -1,10 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <Description>Image formatting support for DocxTemplater with a built-in dependency-free metadata reader. Optional adapters such as DocxTemplater.Images.ImageSharp can be plugged in for more robust decoding.</Description>
   </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="SixLabors.ImageSharp" Version="[3.1.12,4.0.0)" />
-  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DocxTemplater\DocxTemplater.csproj" />
   </ItemGroup>

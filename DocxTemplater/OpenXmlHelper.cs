@@ -524,7 +524,7 @@ namespace DocxTemplater
         }
 
         /* Conversion functions
-         // 914 400 EMUs = 1 inch
+        // 914 400 EMUs = 1 inch
         // 	2,54 cm = 1 inch
         // 	360 000 EMUs = 1 cm
         // we assume 96 DPI

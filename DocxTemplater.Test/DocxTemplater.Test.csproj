@@ -5,6 +5,7 @@
     <Nullable>disable</Nullable>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <RollForward>Major</RollForward>
   </PropertyGroup>
   <PropertyGroup>
     <AnalysisLevelPerformance>None</AnalysisLevelPerformance>

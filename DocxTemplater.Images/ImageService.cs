@@ -1,11 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocxTemplater.ImageBase;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Metadata;
-using SixLabors.ImageSharp.Metadata.Profiles.Exif;
 using A = DocumentFormat.OpenXml.Drawing;
 using PIC = DocumentFormat.OpenXml.Drawing.Pictures; // http://schemas.openxmlformats.org/drawingml/2006/picture"
 
@@ -17,6 +15,13 @@ namespace DocxTemplater.Images
         private readonly Dictionary<byte[], ImageInformation> m_imagePartRelIdCache = new();
         private OpenXmlPartRootElement m_currentRoot;
 
+        public ImageService(IImageMetadataReader imageMetadataReader)
+        {
+            ImageMetadataReader = imageMetadataReader ?? throw new ArgumentNullException(nameof(imageMetadataReader));
+        }
+
+        internal IImageMetadataReader ImageMetadataReader { get; }
+
         public uint GetImage(OpenXmlElement root, byte[] imageBytes, out ImageInformation imageInfoInformation)
         {
             if (root is OpenXmlPartRootElement openXmlPartRootElement && openXmlPartRootElement.OpenXmlPart != null)
@@ -27,7 +32,7 @@ namespace DocxTemplater.Images
                 {
                     if (SvgHelper.TryReadAsSvg(imageBytes, out int width, out int height))
                     {
-                        // Handle SVG specifically
+                        // Handle SVG specifically. It can be embedded without a bitmap decoder.
                         string imagePartRelId = null;
                         if (openXmlPartRootElement.OpenXmlPart is HeaderPart headerPart)
                         {
@@ -52,14 +57,9 @@ namespace DocxTemplater.Images
                     }
                     else
                     {
-                        using var image = Image.Load(imageBytes);
-                        ImageRotation exifRotation = ImageRotation.CreateFromUnits(0);
-                        if (image.Metadata?.ExifProfile?.TryGetValue(ExifTag.Orientation, out var orientationValue) == true)
-                        {
-                            exifRotation = ImageRotation.CreateFromExifRotation((ExifRotation)orientationValue.Value);
-                        }
+                        var metadata = ImageMetadataReader.Read(imageBytes);
                         string imagePartRelId = null;
-                        var imagePartType = DetectPartTypeInfo(image.Metadata);
+                        var imagePartType = DetectPartTypeInfo(metadata.Format);
                         if (openXmlPartRootElement.OpenXmlPart is HeaderPart headerPart)
                         {
                             imagePartRelId = CreateImagePart(headerPart, imageBytes, imagePartType);
@@ -76,7 +76,7 @@ namespace DocxTemplater.Images
                         {
                             throw new OpenXmlTemplateException("Could not find a valid image part");
                         }
-                        imageInfoInformation = new ImageInformation(image.Width, image.Height, imagePartRelId, exifRotation);
+                        imageInfoInformation = new ImageInformation(metadata.PixelWidth, metadata.PixelHeight, imagePartRelId, metadata.ExifRotation);
                         m_imagePartRelIdCache[imageBytes] = imageInfoInformation;
                     }
                 }
@@ -141,16 +141,16 @@ namespace DocxTemplater.Images
         ///     the size of the text box is adjusted to the size of the image.
         /// </summary>
 
-        private static PartTypeInfo DetectPartTypeInfo(ImageMetadata imageMetadata)
+        private static PartTypeInfo DetectPartTypeInfo(ImageFormat imageFormat)
         {
-            return imageMetadata switch
+            return imageFormat switch
             {
-                { DecodedImageFormat.Name: "TIFF" } => ImagePartType.Tiff,
-                { DecodedImageFormat.Name: "BMP" } => ImagePartType.Bmp,
-                { DecodedImageFormat.Name: "GIF" } => ImagePartType.Gif,
-                { DecodedImageFormat.Name: "JPEG" } => ImagePartType.Jpeg,
-                { DecodedImageFormat.Name: "PNG" } => ImagePartType.Png,
-                _ => throw new OpenXmlTemplateException($"Could not detect image format for image in {imageMetadata}")
+                ImageFormat.Tiff => ImagePartType.Tiff,
+                ImageFormat.Bmp => ImagePartType.Bmp,
+                ImageFormat.Gif => ImagePartType.Gif,
+                ImageFormat.Jpeg => ImagePartType.Jpeg,
+                ImageFormat.Png => ImagePartType.Png,
+                _ => throw new OpenXmlTemplateException($"Could not detect image format for image format {imageFormat}")
             };
         }
 
