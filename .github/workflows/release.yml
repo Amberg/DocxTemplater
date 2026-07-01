@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       BUILD_CONFIG: 'Release'
-      SOLUTION: 'DocxTemplater.sln'
+      SOLUTION: 'DocxTemplater.slnx'
 
     steps:
     - name: echo

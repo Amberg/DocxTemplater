@@ -1,6 +1,4 @@
-#if DEBUG
 using System;
-#endif
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Drawing.Wordprocessing;
 using DocumentFormat.OpenXml.Wordprocessing;
