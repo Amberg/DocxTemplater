@@ -69,10 +69,7 @@ namespace DocxTemplater.Blocks
 
             matchedBlock ??= defaultBlock;
 
-            if (matchedBlock != null)
-            {
-                matchedBlock.IsMatched = true;
-            }
+            matchedBlock?.IsMatched = true;
 
             // Expanding the generic block expands its children (CaseBlocks)
             genericChildBlock.Expand(models, parentNode);

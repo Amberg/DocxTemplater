@@ -217,7 +217,7 @@ namespace DocxTemplater
                     {
                         var argGroup = match.Groups["arg"];
                         var arguments = argGroup.Success
-                            ? argGroup.Captures.Select(x => x.Value?.Replace("\\'", "'")).ToArray()
+                            ? argGroup.Captures.Cast<Capture>().Select(x => x.Value?.Replace("\\'", "'")).ToArray()
                             : Array.Empty<string>();
 
                         // we want to extract the expression string but keep the original match structure similar to Variable
@@ -231,7 +231,7 @@ namespace DocxTemplater
                     {
                         var argGroup = match.Groups["arg"];
                         var arguments = argGroup.Success
-                            ? argGroup.Captures.Select(x => x.Value?.Replace("\\'", "'")).ToArray()
+                            ? argGroup.Captures.Cast<Capture>().Select(x => x.Value?.Replace("\\'", "'")).ToArray()
                             : Array.Empty<string>();
                         result.Add(new PatternMatch(match, PatternType.Variable, null, null,
                             match.Groups["varname"].Value,

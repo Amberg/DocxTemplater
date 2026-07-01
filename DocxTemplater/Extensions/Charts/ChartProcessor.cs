@@ -236,10 +236,7 @@ namespace DocxTemplater.Extensions.Charts
         {
             var chartTitle = chartPart.ChartSpace.Descendants<Title>().FirstOrDefault();
             var title = chartTitle.Descendants<DocumentFormat.OpenXml.Drawing.Text>().FirstOrDefault();
-            if (title != null)
-            {
-                title.Text = chartData.ChartTitle;
-            }
+            title?.Text = chartData.ChartTitle;
         }
 
 

@@ -77,7 +77,7 @@ namespace DocxTemplater.Blocks
                         if (model is IEnumerable enumerable)
                         {
                             var enumerableObjects = enumerable.Cast<object>();
-                            if (!Enumerable.TryGetNonEnumeratedCount(enumerableObjects, out count))
+                            if (!enumerableObjects.TryGetNonEnumeratedCount(out count))
                             {
                                 count = enumerableObjects.Count();
                             }
