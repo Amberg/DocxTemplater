@@ -68,6 +68,22 @@ namespace DocxTemplater
             // remove spell check 'ProofError' elements
             content.Descendants<ProofError>().ToList().ForEach(x => x.Remove());
 
+            // Remove review comments -> they are editorial annotations that are not useful in a
+            // generated document, and a comment inside a loop would be cloned into several markers
+            // sharing the same comment id, which corrupts the document (duplicate w:id).
+            foreach (var comment in content.Descendants<CommentRangeStart>().ToList())
+            {
+                comment.RemoveWithEmptyParent();
+            }
+            foreach (var comment in content.Descendants<CommentRangeEnd>().ToList())
+            {
+                comment.RemoveWithEmptyParent();
+            }
+            foreach (var comment in content.Descendants<CommentReference>().ToList())
+            {
+                comment.RemoveWithEmptyParent();
+            }
+
             // Bookmarks are intentionally kept so that cross-references (REF fields) and
             // internal hyperlinks (w:anchor) keep working in the generated document (issue #128).
             // They are sanitized after processing in MakeBookmarksValid, because loop expansion
