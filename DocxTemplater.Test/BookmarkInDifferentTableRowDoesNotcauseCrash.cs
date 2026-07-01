@@ -48,8 +48,11 @@ namespace DocxTemplater.Test
             // get body
             var document = WordprocessingDocument.Open(result, false);
             var body = document.MainDocumentPart.Document.Body;
-            Assert.That(body.Descendants<BookmarkEnd>().Count(), Is.EqualTo(0));
-            Assert.That(body.Descendants<BookmarkStart>().Count(), Is.EqualTo(0));
+            // Bookmarks are now preserved (issue #128) - the start/end pair spanning two
+            // paragraphs must survive processing and stay a matched, valid pair.
+            var start = body.Descendants<BookmarkStart>().Single();
+            Assert.That(start.Name?.Value, Is.EqualTo("testing123"));
+            Assert.That(body.Descendants<BookmarkEnd>().Single().Id?.Value, Is.EqualTo(start.Id?.Value));
         }
     }
 }
