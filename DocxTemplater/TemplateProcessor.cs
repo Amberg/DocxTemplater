@@ -1,12 +1,11 @@
-#if DEBUG
 using System;
-#endif
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Drawing.Wordprocessing;
 using DocumentFormat.OpenXml.Wordprocessing;
 using DocxTemplater.Blocks;
 using DocxTemplater.Formatter;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using DocxTemplater.Extensions;
 using DocxTemplater.ImageBase;
@@ -67,17 +66,26 @@ namespace DocxTemplater
             // remove spell check 'ProofError' elements
             content.Descendants<ProofError>().ToList().ForEach(x => x.Remove());
 
-            // remove all bookmarks -> not useful for generated documents and complex to handle
-            // because of special cases in tables see
-            // https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.wordprocessing.bookmarkstart?view=openxml-3.0.1#remarks
-            foreach (var bookmark in content.Descendants<BookmarkStart>().ToList())
+            // Remove review comments -> they are editorial annotations that are not useful in a
+            // generated document, and a comment inside a loop would be cloned into several markers
+            // sharing the same comment id, which corrupts the document (duplicate w:id).
+            foreach (var comment in content.Descendants<CommentRangeStart>().ToList())
             {
-                bookmark.RemoveWithEmptyParent();
+                comment.RemoveWithEmptyParent();
             }
-            foreach (var bookmark in content.Descendants<BookmarkEnd>().ToList())
+            foreach (var comment in content.Descendants<CommentRangeEnd>().ToList())
             {
-                bookmark.RemoveWithEmptyParent();
+                comment.RemoveWithEmptyParent();
             }
+            foreach (var comment in content.Descendants<CommentReference>().ToList())
+            {
+                comment.RemoveWithEmptyParent();
+            }
+
+            // Bookmarks are intentionally kept so that cross-references (REF fields) and
+            // internal hyperlinks (w:anchor) keep working in the generated document (issue #128).
+            // They are sanitized after processing in MakeBookmarksValid, because loop expansion
+            // can duplicate them and content removal can separate start/end pairs.
 
             // call extensions
             foreach (var extension in Context.Extensions)
@@ -171,6 +179,8 @@ namespace DocxTemplater
                 }
             }
 
+            MakeBookmarksValid(element);
+
             //ensure all table cells have a paragraph
             // 'If a table cell does not include at least one block-level element, then this document shall be considered corrupt
             // https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.wordprocessing.tablecell?view=openxml-3.0.1#remarks
@@ -179,6 +189,82 @@ namespace DocxTemplater
                 if (!tableCell.ChildElements.OfType<Paragraph>().Any())
                 {
                     tableCell.Append(new Paragraph());
+                }
+            }
+        }
+
+        /// <summary>
+        /// Bookmarks (and their referencing REF fields / internal hyperlinks) are preserved during
+        /// processing. However loop expansion clones bookmarks - producing duplicate ids and names -
+        /// and removed content can separate a bookmarkStart from its bookmarkEnd. Word requires unique
+        /// bookmark ids and names and matching start/end pairs, so this restores those invariants:
+        /// orphaned starts/ends are removed, ids are renumbered uniquely and duplicate names are made unique.
+        /// Bookmarks are referenced by name (not by id), so renumbering ids never breaks a reference.
+        /// </summary>
+        private static void MakeBookmarksValid(OpenXmlCompositeElement element)
+        {
+            var bookmarkStarts = element.Descendants<BookmarkStart>().ToList();
+            var bookmarkEnds = element.Descendants<BookmarkEnd>().ToList();
+            if (bookmarkStarts.Count == 0 && bookmarkEnds.Count == 0)
+            {
+                return;
+            }
+
+            // group ends by their (original) id in document order so the k-th start of an id
+            // can be paired with the k-th end of the same id (loop clones keep start/end adjacent)
+            var endsByOriginalId = new Dictionary<string, Queue<BookmarkEnd>>();
+            foreach (var end in bookmarkEnds)
+            {
+                var key = end.Id?.Value ?? string.Empty;
+                if (!endsByOriginalId.TryGetValue(key, out var queue))
+                {
+                    queue = new Queue<BookmarkEnd>();
+                    endsByOriginalId[key] = queue;
+                }
+                queue.Enqueue(end);
+            }
+
+            var matchedEnds = new HashSet<BookmarkEnd>();
+            var usedNames = new HashSet<string>(StringComparer.Ordinal);
+            var nextId = 0;
+            foreach (var start in bookmarkStarts)
+            {
+                var key = start.Id?.Value ?? string.Empty;
+                if (!endsByOriginalId.TryGetValue(key, out var queue) || queue.Count == 0)
+                {
+                    // orphaned start without a matching end
+                    start.RemoveWithEmptyParent();
+                    continue;
+                }
+
+                var end = queue.Dequeue();
+                matchedEnds.Add(end);
+
+                var newId = nextId++.ToString(CultureInfo.InvariantCulture);
+                start.Id = newId;
+                end.Id = newId;
+
+                // ensure unique names (a bookmark inside a loop is cloned with the same name)
+                var name = start.Name?.Value ?? string.Empty;
+                if (!usedNames.Add(name))
+                {
+                    string uniqueName;
+                    var suffix = 1;
+                    do
+                    {
+                        uniqueName = string.Concat(name, "_", suffix++.ToString(CultureInfo.InvariantCulture));
+                    }
+                    while (!usedNames.Add(uniqueName));
+                    start.Name = uniqueName;
+                }
+            }
+
+            // remove ends that were never matched to a start
+            foreach (var end in bookmarkEnds)
+            {
+                if (!matchedEnds.Contains(end))
+                {
+                    end.RemoveWithEmptyParent();
                 }
             }
         }
