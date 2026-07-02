@@ -100,6 +100,7 @@ The syntax is case insensitive.
 | `{{(ds.Items[0].Name)}}`                                 | Expressions with array / list / dictionary index access.                                        |
 | `{{SomeBytes}:img()}`                                    | Image Formatter for image data.                                                                 |
 | `{{SomeHtmlString}:html()}`                              | Inserts HTML string into the word document.                                                     |
+| `{{ds}:template('ds.SubDocument')}`                      | Inserts another docx document (or OpenXML fragment) at the placeholder position.               |
 | `{{@i:ItemCount}}...{{i}}...{{/}}`                       | Range loop that repeats its content `ItemCount` times.                                          |
 | `{{#Items}}{?{Items._Idx % 2 == 0}}{{.}}{{/}}{{/Items}}` | Renders every second item in a list.                                                            |
 | `{{#switch: SomeVar}}{{#case: 'A'}}...{{/}}{{#default}}...{{/}}{{/}}` | Evaluates switch cases and renders the matching block. there is a short syntax too                                          |
@@ -377,6 +378,42 @@ In your template, you would have a placeholder like this:
 {{ds.MarkdownContent}:MD}
 ```
 ---
+## Sub-Template Formatter - Inserting Documents
+
+The sub-template formatter `:template(...)` (short form `:T(...)`) replaces a placeholder with the content of another docx document or an OpenXML fragment. It is registered by default - no additional setup is required.
+
+The first argument is the path to the model property that holds the template to insert. The following types are supported:
+
+| Type                      | Description                                                                        |
+|---------------------------|------------------------------------------------------------------------------------|
+| `byte[]` / `Stream`       | A complete docx document - its body content is inserted at the placeholder position |
+| `string`                  | An OpenXML fragment (paragraph, run or text)                                        |
+| `OpenXmlCompositeElement` | An OpenXML element (paragraph, run, table row or table cell)                        |
+
+```csharp
+var template = DocxTemplate.Open("template.docx");
+template.BindModel("ds", new
+{
+    Name = "John",
+    SubDocument = File.ReadAllBytes("insert.docx") // byte[] or Stream
+});
+template.Save("generated.docx");
+```
+
+Placeholder in `template.docx`:
+```
+{{ds}:template('ds.SubDocument')}
+```
+
+The value in front of the formatter (here `ds`) is bound as `ds` *inside* the inserted document - so the inserted document can itself contain placeholders, which are resolved against that value. This also works inside loops, to render a sub-template once per item:
+
+```
+{{#ds.Items}}{{.}:T('ds.ItemTemplate')}{{/ds.Items}}
+```
+
+**_NOTE:_** The content is inserted by copying the OpenXML body elements into the host document. Styles, numbering definitions and images stored in the inserted document's own parts are not imported.
+
+---
 ## Whitespace Trimming Around Directives
 
 To improve template readability without affecting the final output, line breaks before and after template directives (e.g., `{{#...}}, {{/}}, {{:}}`) can be automatically removed.
@@ -490,7 +527,7 @@ template.Save("generated.docx");             // render - reuses the cached analy
 ```
 
 **Known limitations** (these constructs may yield an incomplete schema):
-- Sub-template formatters (`:tmpl`): the referenced sub-template is itself a runtime template string and not visible to static analysis.
+- Sub-template formatters (`:template` / `:T`): the referenced sub-template is itself a runtime template string and not visible to static analysis.
 - Dynamic tables (`:dyntable`): only the collection itself is reported, not its runtime-defined rows/columns.
 - String-key indexing (`props["key"]`): the key is not statically known and is not reflected in the schema.
 

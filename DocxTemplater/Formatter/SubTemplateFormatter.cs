@@ -57,10 +57,10 @@ namespace DocxTemplater.Formatter
             if (templateElement is Body body)
             {
                 var parent = target.GetFirstAncestor<Paragraph>() ?? throw new OpenXmlTemplateException("Could not find parent to insert template");
-                var firstPart = parent.SplitAfterElement(target).First();
+                OpenXmlElement insertionPoint = parent.SplitAfterElement(target).First();
                 foreach (var childParagaphs in body.ChildElements)
                 {
-                    firstPart.InsertAfterSelf(childParagaphs.CloneNode(true));
+                    insertionPoint = insertionPoint.InsertAfterSelf(childParagaphs.CloneNode(true));
                 }
             }
             else if (templateElement is Paragraph paragraph)
