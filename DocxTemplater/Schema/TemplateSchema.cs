@@ -12,7 +12,7 @@ namespace DocxTemplater.Schema
     ///
     /// Known limitations (these constructs in templates may yield an incomplete schema):
     /// <list type="bullet">
-    ///   <item>Sub-template formatters (<c>:tmpl</c>): the referenced sub-template is itself a template
+    ///   <item>Sub-template formatters (<c>:template</c> / <c>:T</c>): the referenced sub-template is itself a template
     ///   string at run-time and not visible to static analysis.</item>
     ///   <item>Dynamic table contents (<c>:dyntable</c>): row/column data comes from a runtime
     ///   <see cref="DocxTemplater.Model.IDynamicTable"/>; only the collection itself is reported.</item>

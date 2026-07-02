@@ -968,6 +968,48 @@ namespace DocxTemplater.Test
             Assert.That(body.InnerText, Is.EqualTo("Start of DocumentItem1 Test Item1  55Item2 Test Item2  96"));
         }
 
+        [TestCase(true)]
+        [TestCase(false)]
+        public void SubTemplateInsertDocxDocument(bool bindAsStream)
+        {
+            // create the document to insert - it can itself contain placeholders
+            using var subDocStream = new MemoryStream();
+            using (var subDocument = WordprocessingDocument.Create(subDocStream, WordprocessingDocumentType.Document))
+            {
+                var subMainPart = subDocument.AddMainDocumentPart();
+                subMainPart.Document = new Document(new Body(
+                    new Paragraph(new Run(new Text("First inserted paragraph for {{ds.Name}}"))),
+                    new Paragraph(new Run(new Text("Second inserted paragraph")))));
+            }
+
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(
+                new Paragraph(new Run(new Text("Start of Document"))),
+                new Paragraph(new Run(new Text("{{ds}:template('ds.SubDocument')}"))),
+                new Paragraph(new Run(new Text("End of Document")))));
+            wpDocument.Save();
+            memStream.Position = 0;
+
+            var docTemplate = new DocxTemplate(memStream);
+            docTemplate.BindModel("ds", new
+            {
+                Name = "John",
+                SubDocument = bindAsStream ? new MemoryStream(subDocStream.ToArray()) : (object)subDocStream.ToArray()
+            });
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            Assert.That(result, Is.Not.Null);
+            result.Position = 0;
+
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            // the body content of the sub document is inserted at the placeholder position
+            // and placeholders in the sub document are resolved against the bound model
+            Assert.That(body.InnerText, Is.EqualTo("Start of DocumentFirst inserted paragraph for JohnSecond inserted paragraphEnd of Document"));
+        }
+
         [Test]
         public void BindCollectionToTable()
         {
