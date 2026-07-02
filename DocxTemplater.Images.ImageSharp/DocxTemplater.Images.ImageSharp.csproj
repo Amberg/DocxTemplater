@@ -1,5 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <!-- SixLabors.ImageSharp 3.x requires net6.0+, so this adapter cannot target netstandard2.0 -->
+    <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <Description>Default ImageSharp adapter for DocxTemplater image formatting.</Description>
     <PackageTags>$(PackageTags);imagesharp;image-adapter;image-metadata</PackageTags>

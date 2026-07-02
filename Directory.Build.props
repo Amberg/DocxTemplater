@@ -4,12 +4,37 @@
 	</PropertyGroup>
 
 	<PropertyGroup>
-		<TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+		<TargetFrameworks>netstandard2.0;net8.0;net9.0;net10.0</TargetFrameworks>
 	</PropertyGroup>
 
 	<PropertyGroup>
-		<LangVersion>default</LangVersion>
+		<!-- netstandard2.0 would default to C# 7.3; force a modern language version so the shared code compiles for all targets -->
+		<LangVersion>latest</LangVersion>
 	</PropertyGroup>
+
+	<!-- Polyfills so the shared code can target netstandard2.0. -->
+	<!-- Only referenced for netstandard2.0: on net8.0+ these language features and BCL APIs exist natively. -->
+	<!-- PolySharp: source-generated compiler/language feature polyfills (init, records, required, nullable attributes, ...) -->
+	<!-- Polyfill: source-only BCL API polyfills (ArgumentNullException.ThrowIfNull, string.Contains(char), ranges, ...) -->
+	<PropertyGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+		<!-- Opt in to Polyfill's ArgumentNullException/ArgumentException.ThrowIf* helpers (off by default) -->
+		<PolyArgumentExceptions>true</PolyArgumentExceptions>
+		<!-- Embed the polyfill types so each assembly keeps its own private copy; without this the copies
+		     from the core library and the referencing libraries clash (CS0121 ambiguous call) -->
+		<PolyUseEmbeddedAttribute>true</PolyUseEmbeddedAttribute>
+	</PropertyGroup>
+	<ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+		<PackageReference Include="PolySharp" Version="1.16.0">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Polyfill" Version="10.11.2">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<!-- Enables Polyfill's FeatureMemory members (Span, string.Join(char, ...), etc.) and Span<T> itself on netstandard2.0 -->
+		<PackageReference Include="System.Memory" Version="4.6.3" />
+	</ItemGroup>
 
 	<!--Code Analysis-->
 	<PropertyGroup>
