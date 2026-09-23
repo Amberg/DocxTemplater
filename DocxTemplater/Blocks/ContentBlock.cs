@@ -288,7 +288,7 @@ namespace DocxTemplater.Blocks
                     var nextElement = split.First().NextSibling();
 
                     // if two blocks opens there is already an anchor of the parent element
-                    while (nextElement != null && InsertionPoint.HasAlreadyInsertionPointMarker(nextElement))
+                    while (IsBlockAnchor(nextElement))
                     {
                         nextElement = nextElement.NextSibling();
                     }
@@ -315,6 +315,18 @@ namespace DocxTemplater.Blocks
             }
             m_insertionPoint = InsertionPoint.CreateForElement(FirstElement, $"{PatternType}");
             m_lastElementMarker = InsertionPoint.CreateForElement(LastElement, $"End_{PatternType}");
+        }
+
+        /// <summary>
+        /// True for the empty placeholder elements <see cref="AddInsertionPoints"/> inserts as the anchor
+        /// of a block. Only those may be skipped when looking for the position of a new anchor - an
+        /// insertion point marker on a content element, like the End_ marker an enclosing block puts on its
+        /// <c>{{/}}</c> text node, marks content the new anchor still has to be placed in front of.
+        /// </summary>
+        private static bool IsBlockAnchor(OpenXmlElement element)
+        {
+            return element is OpenXmlCompositeElement { HasChildren: false } &&
+                   InsertionPoint.HasAlreadyInsertionPointMarker(element);
         }
     }
 }
