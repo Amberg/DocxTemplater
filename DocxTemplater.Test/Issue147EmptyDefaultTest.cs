@@ -55,6 +55,34 @@ namespace DocxTemplater.Test
             Assert.That(Render("{{#switch: ds.Selector}}{{#case: 'x'}}{{/}}{{#default}}{{/}}{{/}}{?{ds.Flag}}b{{/}}"), Is.EqualTo("b"));
         }
 
+        /// <summary>
+        /// Same root cause, without a switch: the block ends in the next paragraph, and that paragraph
+        /// carries the End_ marker of the block while still holding the content of the following block.
+        /// The anchor of the body has to be placed in front of it, not behind it.
+        /// </summary>
+        [Test]
+        public void ConditionEndsInParagraphThatOpensTheNextCondition()
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(
+                new Paragraph(new Run(new Text("head{?{ds.A}}"))),
+                new Paragraph(new Run(new Text("{{/}}{?{ds.B}}"))),
+                new Paragraph(new Run(new Text("{{/}}tail")))
+            ));
+            wpDocument.Save();
+            memStream.Position = 0;
+
+            var docTemplate = new DocxTemplate(memStream);
+            docTemplate.BindModel("ds", new { A = true, B = true });
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+
+            var document = WordprocessingDocument.Open(result, false);
+            Assert.That(document.MainDocumentPart.Document.Body.InnerText, Is.EqualTo("headtail"));
+        }
+
         [TestCase("Herr", null, "Herrn Hans Muster")]
         [TestCase("Frau", "Dr.", "Frau Dr. Hans Muster")]
         [TestCase("", "Dr.", "Dr. Hans Muster")]
