@@ -318,6 +318,12 @@ namespace DocxTemplater
                 }
             }
         }
+        /// <summary>
+        /// The children of <paramref name="parent"/> between the two given children, both excluded.
+        /// <paramref name="endChild"/> has to follow <paramref name="startChild"/> - the callers remove
+        /// what is returned, so returning the rest of the parent when the two are in the wrong order
+        /// would silently delete document content. Report that as an error instead.
+        /// </summary>
         public static IEnumerable<OpenXmlElement> ChildsBetween(this OpenXmlElement parent, OpenXmlElement startChild, OpenXmlElement endChild)
         {
             bool found = false;
@@ -335,6 +341,11 @@ namespace DocxTemplater
                 {
                     found = true;
                 }
+            }
+            if (found)
+            {
+                throw new OpenXmlTemplateException(
+                    $"End element {endChild?.LocalName} does not follow start element {startChild?.LocalName} in {parent?.LocalName}");
             }
         }
 
@@ -460,7 +471,12 @@ namespace DocxTemplater
             {
                 if (element is TableCell)
                 {
-                    removeParent = parent.ChildElements.OfType<TableCell>().Count() == 1;
+                    // A cell is never dropped on its own - that would shift the remaining cells of the
+                    // row - only together with a row that holds nothing but this one cell. And only if
+                    // the cell is empty by now: the recursion gets here after one paragraph of the cell
+                    // was removed, the other paragraphs of the same cell may still carry content.
+                    removeParent = parent.ChildElements.OfType<TableCell>().Count() == 1 &&
+                                   !element.ChildElements.Any(x => x is not TableCellProperties);
                 }
                 else if (element is TableRow row)
                 {

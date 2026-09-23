@@ -238,6 +238,11 @@ namespace DocxTemplater.Blocks
             }
         }
 
+        /// <summary>
+        /// Checks that the anchor of every child block lies in the content of this block - for the whole
+        /// tree, not only for the direct children: a block two levels down, like the body of a
+        /// <c>{{#case}}</c> of a <c>{{#switch}}</c>, is where a misplaced anchor is least visible.
+        /// </summary>
         public virtual void Validate()
         {
             foreach (var child in ChildBlocks)
@@ -247,6 +252,7 @@ namespace DocxTemplater.Blocks
                 {
                     throw new OpenXmlTemplateException($"Insertion Point {childIp.Id} of child {child} not found in {this}\r\n{m_content.ToPrettyPrintXml()}");
                 }
+                child.Validate();
             }
         }
 

@@ -21,6 +21,7 @@ namespace DocxTemplater
         // root / footer). Process reuses these instead of rebuilding the (now mutated) tree.
         private readonly Dictionary<OpenXmlCompositeElement, IReadOnlyCollection<ContentBlock>> m_prebuiltBlocks = new();
         private TemplateSchema m_schema;
+        private bool m_faulted;
 
         private static readonly FileFormatVersions TargetMinimumVersion = FileFormatVersions.Office2010;
 
@@ -106,12 +107,21 @@ namespace DocxTemplater
 
         public Stream Process()
         {
+            if (m_faulted)
+            {
+                throw new OpenXmlTemplateException(
+                    "Rendering of this template has failed, the document is half rendered and cannot be used. " +
+                    "Create a new DocxTemplate from the template to try again.");
+            }
             if (m_wpDocument.MainDocumentPart == null || Processed)
             {
                 m_stream.Position = 0;
                 return m_stream;
             }
-            Processed = true;
+            // Rendering writes into the document as it goes. If it throws, the document holds a mix of
+            // template and result - remember that instead of marking it processed, otherwise the next
+            // call would take the early return above and hand out the unrendered template as a result.
+            m_faulted = true;
             foreach (var header in m_wpDocument.MainDocumentPart.HeaderParts.ToList())
             {
                 RenderOrProcessNode(header.Header);
@@ -123,6 +133,8 @@ namespace DocxTemplater
             }
             Context.VariableReplacer.WriteErrorMessages(m_wpDocument.MainDocumentPart.RootElement);
             m_wpDocument.Save();
+            m_faulted = false;
+            Processed = true;
             m_stream.Position = 0;
             return m_stream;
         }
