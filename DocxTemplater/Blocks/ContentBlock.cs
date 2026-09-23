@@ -288,7 +288,7 @@ namespace DocxTemplater.Blocks
                     var nextElement = split.First().NextSibling();
 
                     // if two blocks opens there is already an anchor of the parent element
-                    while (nextElement != null && InsertionPoint.HasAlreadyInsertionPointMarker(nextElement))
+                    while (IsBlockAnchor(nextElement))
                     {
                         nextElement = nextElement.NextSibling();
                     }
@@ -315,6 +315,25 @@ namespace DocxTemplater.Blocks
             }
             m_insertionPoint = InsertionPoint.CreateForElement(FirstElement, $"{PatternType}");
             m_lastElementMarker = InsertionPoint.CreateForElement(LastElement, $"End_{PatternType}");
+        }
+
+        /// <summary>
+        /// True for the empty placeholder elements <see cref="AddInsertionPoints"/> inserts as the anchor
+        /// of a block. Only those may be skipped when looking for the position of a new anchor - every other
+        /// marked element carries content the new anchor has to be placed in front of.
+        /// Both conditions are needed, each for a different shape of the End_ marker a block puts on its
+        /// <c>LastElement</c>:
+        /// <list type="bullet">
+        /// <item>the whole block is in one run - the marker sits on the <c>{{/}}</c> <see cref="Text"/> node,
+        /// which is a leaf and childless like an anchor, so only the composite type separates the two;</item>
+        /// <item>the block ends in another paragraph - the marker sits on that paragraph, which is composite
+        /// like an anchor, so only <c>HasChildren</c> separates the two.</item>
+        /// </list>
+        /// </summary>
+        private static bool IsBlockAnchor(OpenXmlElement element)
+        {
+            return element is OpenXmlCompositeElement { HasChildren: false } &&
+                   InsertionPoint.HasAlreadyInsertionPointMarker(element);
         }
     }
 }
