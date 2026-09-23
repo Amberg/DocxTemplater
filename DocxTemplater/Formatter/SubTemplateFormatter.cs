@@ -138,8 +138,12 @@ namespace DocxTemplater.Formatter
                 if (m_inlineSubTemplates)
                 {
                     var firstRun = (OpenXmlElement)target.GetFirstAncestor<Run>() ?? throw new OpenXmlTemplateException("Could not find run to insert inline template");
-                    var insertionPoint = firstRun.SplitBeforeElement(target).First();
-                    var targetProperties = insertionPoint.GetFirstChild<RunProperties>();
+                    // The split returns the part holding the target as last element - a part before it
+                    // only exists if the target is not the first content of the run. Inserting before
+                    // the part with the target works in both cases, anchoring on the leading part
+                    // would put the template after the text that follows the tag in the same run.
+                    var runWithTarget = firstRun.SplitBeforeElement(target).Last();
+                    var targetProperties = runWithTarget.GetFirstChild<RunProperties>();
 
                     foreach (var child in paragraph.ChildElements.Where(x => x is not ParagraphProperties))
                     {
@@ -157,8 +161,7 @@ namespace DocxTemplater.Formatter
                                 run.PrependChild((RunProperties)targetProperties.CloneNode(true));
                             }
                         }
-                        insertedElements.Add(insertionPoint.InsertAfterSelf(clonedChild));
-                        insertionPoint = clonedChild;
+                        insertedElements.Add(runWithTarget.InsertBeforeSelf(clonedChild));
                     }
                 }
                 else

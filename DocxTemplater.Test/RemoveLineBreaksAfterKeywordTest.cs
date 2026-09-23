@@ -18,7 +18,10 @@ namespace DocxTemplater.Test
             result.SaveAsFileAndOpenInWord();
             result.Position = 0;
             var document = WordprocessingDocument.Open(result, false);
-            Assert.That(TestHelper.ComputeSha256Hash(document.MainDocumentPart.Document.Body.InnerXml), Is.EqualTo("a35e599e953f103cc892b72886b2e50221e22697a71e80dc58b9e62f799d800b"));
+            // hash updated with the fix for https://github.com/Amberg/DocxTemplater/issues/146:
+            // splitting a run before its first content no longer leaves an empty run behind
+            // (one per loop iteration here), the rendered content is unchanged.
+            Assert.That(TestHelper.ComputeSha256Hash(document.MainDocumentPart.Document.Body.InnerXml), Is.EqualTo("13548eda4703d0316cd6bc02e327b024533782d2e503bcd5fb47c1008883d824"));
         }
 
 
