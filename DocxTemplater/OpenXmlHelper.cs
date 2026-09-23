@@ -163,14 +163,21 @@ namespace DocxTemplater
         }
 
         /// <summary>
-        /// Splits the element after the given descendant element.
-        /// And returns the two parts of the split element.
+        /// Splits the element after the given descendant element and returns the parts in document
+        /// order. The part holding the given element is the first one - a second part only exists
+        /// if there is content after the element, otherwise there is nothing to split off.
         /// </summary>
         public static IReadOnlyCollection<OpenXmlElement> SplitAfterElement(this OpenXmlElement elementToSplit, OpenXmlElement element)
         {
             return elementToSplit.SplitAtElement(element, false);
         }
 
+        /// <summary>
+        /// Splits the element before the given descendant element and returns the parts in document
+        /// order. The part holding the given element is the last one - a part before it only exists
+        /// if there is content before the element. Property elements (w:rPr, w:pPr, ...) do not
+        /// count as content, they describe the element itself and are kept on both parts.
+        /// </summary>
         public static IReadOnlyCollection<OpenXmlElement> SplitBeforeElement(this OpenXmlElement elementToSplit, OpenXmlElement element)
         {
             return elementToSplit.SplitAtElement(element, true);
@@ -184,7 +191,14 @@ namespace DocxTemplater
             }
             var result = new List<OpenXmlElement>() { elementToSplit };
             var parent = element.Parent ?? throw new ArgumentException("cannot split a root node without parent");
-            var childs = beforeElement ? parent.ChildsBefore(element).ToList() : parent.ChildsAfter(element).ToList();
+            // Property elements (w:rPr, w:pPr, w:tblPr, ...) describe the parent itself and not its
+            // content - they are never moved to the clone, RestorePropertyElements copies them.
+            var properties = parent.ChildElements.Where(IsPropertyElement).ToList();
+            // Range markup (w:bookmarkStart and friends) may legally precede the properties - remember
+            // the position so the copy is placed at the same spot in the clone.
+            var propertyIndex = properties.Count > 0 ? parent.ChildsBefore(properties[0]).Count() : 0;
+            var childs = (beforeElement ? parent.ChildsBefore(element) : parent.ChildsAfter(element))
+                .Where(x => !IsPropertyElement(x)).ToList();
             if (childs.Count > 0)
             {
                 var clonedParent = (OpenXmlElement)parent.CloneNode(false);
@@ -209,6 +223,8 @@ namespace DocxTemplater
                     child.Remove();
                     clonedParent.AppendChild(child);
                 }
+                // the clone is the first of the two halves when the split happens before the element
+                RestorePropertyElements(properties, clonedParent, beforeElement ? propertyIndex : 0, beforeElement);
 
                 if (beforeElement)
                 {
@@ -224,6 +240,55 @@ namespace DocxTemplater
                 return result;
             }
             return elementToSplit.SplitAtElement(parent, beforeElement);
+        }
+
+        /// <summary>
+        /// <see cref="OpenXmlElement.CloneNode"/> with deep=false does not copy child elements.
+        /// The formatting of the split elements is stored in child elements (w:rPr, w:pPr, w:tblPr, ...),
+        /// so the clone would fall back to docDefaults instead of the formatting of the template.
+        /// Give the clone its own copy of them.
+        /// Children that exist only once - section, numbering, page break and the tracked change
+        /// records with their document wide unique ids - must not end up on both halves.
+        /// They belong to the first of the two halves, as before the split.
+        /// </summary>
+        private static void RestorePropertyElements(IReadOnlyCollection<OpenXmlElement> properties,
+            OpenXmlElement clonedParent, int insertIndex, bool clonedParentIsFirstHalf)
+        {
+            // the range markup the index was taken from does not necessarily end up in the clone
+            insertIndex = Math.Min(insertIndex, clonedParent.ChildElements.Count);
+            foreach (var property in properties)
+            {
+                var copy = property.CloneNode(true);
+                // remove the not duplicable children from the half they do not belong to
+                var notDuplicable = clonedParentIsFirstHalf ? property : copy;
+                foreach (var child in notDuplicable.ChildElements.Where(IsSinglePropertyChild).ToList())
+                {
+                    child.Remove();
+                }
+                clonedParent.InsertAt(copy, insertIndex++);
+            }
+        }
+
+        private static bool IsPropertyElement(OpenXmlElement element)
+        {
+            return element is RunProperties or ParagraphProperties or TableProperties or TableGrid
+                or TableRowProperties or TablePropertyExceptions or TableCellProperties;
+        }
+
+        /// <summary>
+        /// Children of a property element that exist once per paragraph / table and may not be
+        /// duplicated: the section and numbering identity, the page break, the properties of the
+        /// paragraph mark and all tracked change records - the latter carry a w:id that has to be
+        /// unique within the document.
+        /// </summary>
+        private static bool IsSinglePropertyChild(OpenXmlElement element)
+        {
+            return element is SectionProperties or NumberingProperties or PageBreakBefore
+                or ParagraphMarkRunProperties
+                or ParagraphPropertiesChange or RunPropertiesChange or SectionPropertiesChange
+                or TablePropertiesChange or TableRowPropertiesChange or TableCellPropertiesChange
+                or TableGridChange or TablePropertyExceptionsChange
+                or Inserted or Deleted;
         }
 
         public static IEnumerable<OpenXmlElement> ChildsBefore(this OpenXmlElement parent, OpenXmlElement child)

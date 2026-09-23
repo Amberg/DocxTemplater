@@ -138,6 +138,47 @@ namespace DocxTemplater.Test
             Assert.That(para.ChildElements.OfType<ParagraphProperties>().Any(), Is.False);
         }
 
+        // Issue https://github.com/Amberg/DocxTemplater/issues/146
+        // The tag is the first content of its run and is followed by text in the same run, so the
+        // split before the tag has no leading part to anchor the inserted template on.
+        [TestCase(true)]
+        [TestCase(false)]
+        public void SubTemplateInlineAtStartOfRunKeepsTextOrder(bool withRunProperties)
+        {
+            using var memStreamSub = new MemoryStream();
+            using var wpSubTemplate = WordprocessingDocument.Create(memStreamSub, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPartSub = wpSubTemplate.AddMainDocumentPart();
+            mainPartSub.Document = new Document(new Body(new Paragraph(new Run(new Text("SUB")))));
+            wpSubTemplate.Save();
+            memStreamSub.Position = 0;
+
+            var run = new Run(new Text("{{.}:T('SubTemplate')} after"));
+            if (withRunProperties)
+            {
+                run.RunProperties = new RunProperties(new Bold());
+            }
+            using var memStream = new MemoryStream();
+            using var wpTemplate = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpTemplate.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(new Paragraph(run)));
+            wpTemplate.Save();
+            memStream.Position = 0;
+
+            using var docTemplate = new DocxTemplate(memStream, new ProcessSettings { InlineSubTemplates = true });
+            docTemplate.BindModel("ds", new { SubTemplate = memStreamSub });
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+            result.Position = 0;
+
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            Assert.That(body.InnerText, Is.EqualTo("SUB after"));
+            // the split must not take the run properties away from the run holding the tag,
+            // they are cascaded onto the inserted template runs
+            Assert.That(body.Descendants<Run>().Where(r => r.InnerText.Length > 0).Select(r => r.RunProperties?.Bold),
+                withRunProperties ? Has.All.Not.Null : Has.All.Null);
+        }
+
         [TestCase(false)]
         [TestCase(true)]
         public void SubTemplateInlineTestBody(bool multiParagraph)
