@@ -1,4 +1,5 @@
 ﻿using DocxTemplater.Model;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -9,12 +10,18 @@ namespace DocxTemplater
 {
     internal class ModelLookup : IModelLookup
     {
+        /// <summary>
+        /// Model prefixes and scope variables are matched the same way as property names -
+        /// case-insensitive (see <see cref="BindingFlags.IgnoreCase"/> in <see cref="GetValueWithMetadata"/>).
+        /// </summary>
+        internal static readonly StringComparer NameComparer = StringComparer.OrdinalIgnoreCase;
+
         private readonly Dictionary<string, object> m_rootScope;
         private readonly Stack<Dictionary<string, object>> m_blockScopes;
 
         public ModelLookup()
         {
-            m_rootScope = new Dictionary<string, object>();
+            m_rootScope = new Dictionary<string, object>(NameComparer);
             m_blockScopes = new Stack<Dictionary<string, object>>();
             m_blockScopes.Push(m_rootScope);
         }
@@ -23,6 +30,10 @@ namespace DocxTemplater
 
         public void Add(string prefix, object model)
         {
+            if (m_rootScope.ContainsKey(prefix))
+            {
+                throw new OpenXmlTemplateException($"A model with the prefix '{prefix}' has already been bound - model prefixes are case-insensitive");
+            }
             m_rootScope.Add(prefix, model);
         }
 
@@ -52,7 +63,7 @@ namespace DocxTemplater
                 {
                     var firstModelEntry = m_rootScope.First();
                     // a.b.c.d and b.c.d.e ==> a.b.c.d.e
-                    parts = firstModelEntry.Key.Split('.').Concat(variableName.Split('.')).Distinct().ToArray();
+                    parts = firstModelEntry.Key.Split('.').Concat(variableName.Split('.')).Distinct(NameComparer).ToArray();
                     model = SearchLongestPathInLookup(parts, out modelRootPath, out partIndex, 0);
                 }
 
@@ -92,7 +103,9 @@ namespace DocxTemplater
                 }
                 else if (model is IDictionary<string, object> dict)
                 {
-                    if (!dict.TryGetValue(propertyName, out model))
+                    // the dictionary can have any comparer - fall back to a case-insensitive
+                    // search to behave like the other model types
+                    if (!dict.TryGetValue(propertyName, out model) && !TryGetValueIgnoreCase(dict, propertyName, out model))
                     {
                         throw new OpenXmlTemplateException($"Property {propertyName} not found in {modelRootPath}");
                     }
@@ -107,7 +120,7 @@ namespace DocxTemplater
                     bool found = false;
                     foreach (var key in dictionary.Keys)
                     {
-                        if (string.Equals(key?.ToString(), propertyName, System.StringComparison.OrdinalIgnoreCase))
+                        if (string.Equals(key?.ToString(), propertyName, StringComparison.OrdinalIgnoreCase))
                         {
                             model = dictionary[key];
                             found = true;
@@ -159,6 +172,20 @@ namespace DocxTemplater
             return new ValueWithMetadata(model, lastValueMetadata ?? new ValueMetadata());
         }
 
+        private static bool TryGetValueIgnoreCase(IDictionary<string, object> dictionary, string propertyName, out object value)
+        {
+            foreach (var entry in dictionary)
+            {
+                if (NameComparer.Equals(entry.Key, propertyName))
+                {
+                    value = entry.Value;
+                    return true;
+                }
+            }
+            value = null;
+            return false;
+        }
+
         private object SearchLongestPathInLookup(string[] parts, out string modelRootPath, out int partIndex, int startScopeIndex)
         {
             modelRootPath = null;
@@ -188,7 +215,7 @@ namespace DocxTemplater
             public VariableScope(Stack<Dictionary<string, object>> scopeStack)
             {
                 m_scopeStack = scopeStack;
-                m_scope = new Dictionary<string, object>();
+                m_scope = new Dictionary<string, object>(NameComparer);
                 scopeStack.Push(m_scope);
             }
 
