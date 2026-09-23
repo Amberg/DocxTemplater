@@ -59,9 +59,13 @@ namespace DocxTemplater.Test
         /// Same root cause, without a switch: the block ends in the next paragraph, and that paragraph
         /// carries the End_ marker of the block while still holding the content of the following block.
         /// The anchor of the body has to be placed in front of it, not behind it.
+        /// a=false is the case that shows up in the rendered output instead of only in the Debug-only
+        /// block validation: with the anchor behind that paragraph the last paragraph becomes part of
+        /// the body of A, which is not rendered, so "tail" is dropped.
         /// </summary>
-        [Test]
-        public void ConditionEndsInParagraphThatOpensTheNextCondition()
+        [TestCase(true)]
+        [TestCase(false)]
+        public void ConditionEndsInParagraphThatOpensTheNextCondition(bool a)
         {
             using var memStream = new MemoryStream();
             using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
@@ -75,7 +79,7 @@ namespace DocxTemplater.Test
             memStream.Position = 0;
 
             var docTemplate = new DocxTemplate(memStream);
-            docTemplate.BindModel("ds", new { A = true, B = true });
+            docTemplate.BindModel("ds", new { A = a, B = true });
             var result = docTemplate.Process();
             docTemplate.Validate();
 
