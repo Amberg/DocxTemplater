@@ -31,6 +31,55 @@ namespace DocxTemplater.Test
         }
 
         [Test]
+        public void RangeLoopWithIntegerLiteral()
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(
+                new Paragraph(new Run(new Text("{{@i:3}}"))),
+                new Paragraph(new Run(new Text("Item {{i}}"))),
+                new Paragraph(new Run(new Text("{{/}}")))
+            ));
+            wpDocument.Save();
+            memStream.Position = 0;
+
+            // ThrowException makes sure the literal is not looked up on the model
+            var docTemplate = new DocxTemplate(memStream, new ProcessSettings { BindingErrorHandling = BindingErrorHandling.ThrowException });
+            docTemplate.BindModel("ds", new { Count = 3 });
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            Assert.That(body.InnerText.Trim(), Is.EqualTo("Item 0Item 1Item 2"));
+        }
+
+        [Test]
+        public void RangeLoopWithIntegerLiteralWithoutIndexVariable()
+        {
+            using var memStream = new MemoryStream();
+            using var wpDocument = WordprocessingDocument.Create(memStream, WordprocessingDocumentType.Document);
+            MainDocumentPart mainPart = wpDocument.AddMainDocumentPart();
+            mainPart.Document = new Document(new Body(
+                new Paragraph(new Run(new Text("{{@2}}"))),
+                new Paragraph(new Run(new Text("Item {{Index}}"))),
+                new Paragraph(new Run(new Text("{{/}}")))
+            ));
+            wpDocument.Save();
+            memStream.Position = 0;
+
+            var docTemplate = new DocxTemplate(memStream, new ProcessSettings { BindingErrorHandling = BindingErrorHandling.ThrowException });
+            docTemplate.BindModel("ds", new { Count = 3 });
+            var result = docTemplate.Process();
+            docTemplate.Validate();
+
+            var document = WordprocessingDocument.Open(result, false);
+            var body = document.MainDocumentPart.Document.Body;
+            Assert.That(body.InnerText.Trim(), Is.EqualTo("Item 0Item 1"));
+        }
+
+        [Test]
         public void RangeLoopWithEnumerableModel()
         {
             using var memStream = new MemoryStream();

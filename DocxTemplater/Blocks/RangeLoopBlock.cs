@@ -32,6 +32,13 @@ namespace DocxTemplater.Blocks
 
         public override void Expand(IModelLookup models, OpenXmlElement parentNode)
         {
+            // The count can be an integer literal ({{@i:3}}) - resolve it directly instead of looking it up on the model.
+            if (int.TryParse(m_countVariable, NumberStyles.Integer, CultureInfo.InvariantCulture, out int literalCount))
+            {
+                ExpandIterations(models, parentNode, literalCount);
+                return;
+            }
+
             object model = null;
             try
             {
@@ -99,11 +106,11 @@ namespace DocxTemplater.Blocks
                 }
             }
 
-            if (count < 0)
-            {
-                count = 0;
-            }
+            ExpandIterations(models, parentNode, count);
+        }
 
+        private void ExpandIterations(IModelLookup models, OpenXmlElement parentNode, int count)
+        {
             // Iterate backwards because InsertAfterSelf inserts elements immediately after the insertion point,
             // effectively reversing the output order if not iterated backward.
             for (int j = count - 1; j >= 0; j--)
