@@ -30,7 +30,8 @@ namespace DocxTemplater.Formatter
             }
             else
             {
-                throw new OpenXmlTemplateException($"Formatter {formatterContext.Formatter} can only be applied to string objects - property {formatterContext.Placeholder}");
+                throw OpenXmlTemplateException.Create(templateContext.ProcessSettings, TemplateErrorCode.FormatterRequiresString,
+                    formatterContext.Formatter, formatterContext.Placeholder);
             }
         }
     }

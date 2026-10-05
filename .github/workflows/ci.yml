@@ -44,9 +44,8 @@ jobs:
     - name: Run tests
       run: |
         dotnet test $SOLUTION -c $BUILD_CONFIG --no-restore --no-build --verbosity normal \
-        --logger "trx;LogFileName=test-results.trx" \
+        --logger "trx;LogFilePrefix=test-results" \
         --collect:"XPlat Code Coverage" \
-        --results-directory ./TestResults \
         -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
 
     - name: Test Report
@@ -54,7 +53,7 @@ jobs:
       if: always()
       with:
         name: .NET Tests
-        path: "TestResults/*.trx"
+        path: "TestResults/**/*.trx"
         reporter: dotnet-trx
         list-suites: all
         list-tests: failed
@@ -75,7 +74,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: test-results
-        path: ./TestResults/*.trx
+        path: ./TestResults/**/*.trx
 
     - name: Upload Coverage Report
       uses: actions/upload-artifact@v4

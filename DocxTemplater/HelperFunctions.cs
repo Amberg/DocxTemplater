@@ -21,7 +21,8 @@ namespace DocxTemplater
         /// Parses arguments in form foo:bar,foo2:bar2
         /// </summary>
         /// <param name="arguments"></param>
-        public static Dictionary<string, string> ParseArguments(string[] arguments)
+        /// <param name="settings">Determines the language of the error message; <c>null</c> for English.</param>
+        public static Dictionary<string, string> ParseArguments(string[] arguments, ProcessSettings settings = null)
         {
             var result = new Dictionary<string, string>(arguments.Length);
             foreach (var arg in arguments)
@@ -29,7 +30,7 @@ namespace DocxTemplater
                 var parts = arg.Split(':');
                 if (parts.Length != 2)
                 {
-                    throw new OpenXmlTemplateException("Arguments must be in the form foo:bar");
+                    throw OpenXmlTemplateException.Create(settings, TemplateErrorCode.InvalidFormatterArguments);
                 }
                 var val = SanitizeQuotes(parts[1]).Replace("\"", "").Trim();
                 result[parts[0]] = val;

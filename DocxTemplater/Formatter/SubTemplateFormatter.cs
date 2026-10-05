@@ -38,15 +38,16 @@ namespace DocxTemplater.Formatter
         public void ApplyFormat(ITemplateProcessingContext templateContext, FormatterContext formatterContext,
             Text target)
         {
+            var settings = templateContext.ProcessSettings;
             if (formatterContext.Args.Length == 0)
             {
-                throw new OpenXmlTemplateException("Template formatter requires a template name");
+                throw OpenXmlTemplateException.Create(settings, TemplateErrorCode.SubTemplateNameRequired);
             }
-            var loaded = LoadTemplateElements(formatterContext.Args[0]?.Trim(), templateContext.ModelLookup);
+            var loaded = LoadTemplateElements(formatterContext.Args[0]?.Trim(), templateContext.ModelLookup, settings);
             // Keep the (optional) source document open until the merge completes, so its parts can be copied;
             // disposed at the end of the method. Null for string / OpenXmlElement templates.
             using var loadedSource = loaded.SourceDocument;
-            var templateElement = loaded.Element ?? throw new OpenXmlTemplateException("Template is null or is not a valid OpenXML template");
+            var templateElement = loaded.Element ?? throw OpenXmlTemplateException.Create(settings, TemplateErrorCode.SubTemplateInvalid);
 
             // Resolve the destination part up front: the table-row / -cell branches remove target's ancestor,
             // after which target.GetRoot() can no longer reach the owning part.
@@ -71,7 +72,7 @@ namespace DocxTemplater.Formatter
                 }
                 else
                 {
-                    throw new OpenXmlTemplateException($"Invalid template formatter argument '{value}'");
+                    throw OpenXmlTemplateException.Create(settings, TemplateErrorCode.SubTemplateInvalidArgument, value);
                 }
             }
 
@@ -83,7 +84,7 @@ namespace DocxTemplater.Formatter
                     "run" => templateElement.Descendants<Run>().First(),
                     "tr" => templateElement.Descendants<TableRow>().First(),
                     "tc" => templateElement.Descendants<TableCell>().First(),
-                    _ => throw new OpenXmlTemplateException($"Invalid selector {selector}")
+                    _ => throw OpenXmlTemplateException.Create(settings, TemplateErrorCode.SubTemplateInvalidSelector, selector)
                 };
             }
 
@@ -92,7 +93,7 @@ namespace DocxTemplater.Formatter
             if (!raw)
             {
                 // create a new Template context with replaced ModelLookup
-                var templateModelLookup = new ModelLookup();
+                var templateModelLookup = new ModelLookup(settings);
                 templateModelLookup.Add("ds", formatterContext.Value);
                 foreach (var models in templateContext.ModelLookup.Models.Skip(1))
                 {
@@ -190,7 +191,7 @@ namespace DocxTemplater.Formatter
             }
             else
             {
-                throw new OpenXmlTemplateException("Template must be a paragraph, run, table row or table cell");
+                throw OpenXmlTemplateException.Create(settings, TemplateErrorCode.SubTemplateUnsupportedElement);
             }
 
             // Re-import parts referenced by the inserted content (images, external links) from the source
@@ -317,7 +318,7 @@ namespace DocxTemplater.Formatter
             }
         }
 
-        private static LoadedTemplate LoadTemplateElements(string templateVariable, IModelLookup modelLookup)
+        private static LoadedTemplate LoadTemplateElements(string templateVariable, IModelLookup modelLookup, ProcessSettings settings)
         {
             var value = modelLookup.GetValue(templateVariable);
             if (value is string templateString)
@@ -361,7 +362,7 @@ namespace DocxTemplater.Formatter
             {
                 return OpenFromDocumentStream(stream, stream);
             }
-            throw new OpenXmlTemplateException("Template must be a string, OpenXmlElement, byte[] or Stream");
+            throw OpenXmlTemplateException.Create(settings, TemplateErrorCode.SubTemplateUnsupportedType);
         }
 
         // The source document is kept open (returned via LoadedTemplate.SourceDocument) so its parts remain

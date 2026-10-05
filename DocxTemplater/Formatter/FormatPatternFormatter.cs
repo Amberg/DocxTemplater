@@ -22,8 +22,7 @@ namespace DocxTemplater.Formatter
 
             if (formatterContext.Args.Length != 1)
             {
-                throw new OpenXmlTemplateException(
-                    $"DateTime formatter requires exactly one argument, e.g. FORMAT(dd.MM.yyyy)");
+                throw OpenXmlTemplateException.Create(templateContext.ProcessSettings, TemplateErrorCode.FormatPatternRequiresArgument);
             }
 
             if (formatterContext.Value is IFormattable formattable)
@@ -35,13 +34,14 @@ namespace DocxTemplater.Formatter
                 }
                 catch (FormatException e)
                 {
-                    throw new OpenXmlTemplateException($"Format {formatString} cannot be applied to {formatterContext.Placeholder} of type {formatterContext.Value.GetType()}", e);
+                    throw OpenXmlTemplateException.Create(templateContext.ProcessSettings, e, TemplateErrorCode.FormatNotApplicable,
+                        formatString, formatterContext.Placeholder, formatterContext.Value.GetType());
                 }
             }
             else
             {
-                throw new OpenXmlTemplateException(
-                    $"Formatter {formatterContext.Formatter} can only be applied to IFormattable objects - property {formatterContext.Placeholder}");
+                throw OpenXmlTemplateException.Create(templateContext.ProcessSettings, TemplateErrorCode.FormatterRequiresFormattable,
+                    formatterContext.Formatter, formatterContext.Placeholder);
             }
         }
     }

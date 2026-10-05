@@ -73,6 +73,12 @@ namespace DocxTemplater.Formatter
             m_errors.Add(errorMessage);
         }
 
+        public void AddError(TemplateErrorCode errorCode, params object[] arguments)
+        {
+            var messages = ProcessSettings.ErrorMessages ?? TemplateErrorMessages.Default;
+            m_errors.Add(messages.Format(errorCode, ProcessSettings.UiCulture, arguments));
+        }
+
         public void RegisterFormatter(IFormatter formatter)
         {
             m_formatters.Add(formatter);
@@ -153,8 +159,8 @@ namespace DocxTemplater.Formatter
                 .OfType<Text>().ToList();
             foreach (var text in variables)
             {
-                var variableMatch = PatternMatcher.FindSyntaxPatterns(text.Text).FirstOrDefault() ??
-                                    throw new OpenXmlTemplateException($"Invalid variable syntax '{text.Text}'");
+                var variableMatch = PatternMatcher.FindSyntaxPatterns(text.Text, ProcessSettings).FirstOrDefault() ??
+                                    throw OpenXmlTemplateException.Create(ProcessSettings, TemplateErrorCode.InvalidVariableSyntax, text.Text);
                 try
                 {
                     if (variableMatch.Type == PatternType.Expression)
@@ -182,7 +188,8 @@ namespace DocxTemplater.Formatter
                     }
                     else
                     {
-                        throw new OpenXmlTemplateException($"'{text.InnerText}' could not be replaced: {text.ElementBeforeInDocument<Text>()?.InnerText} >> {text.InnerText} << {text.ElementAfterInDocument<Text>()?.InnerText}", e);
+                        throw OpenXmlTemplateException.Create(ProcessSettings, e, TemplateErrorCode.PlaceholderNotReplaced,
+                            text.InnerText, text.ElementBeforeInDocument<Text>()?.InnerText, text.ElementAfterInDocument<Text>()?.InnerText);
                     }
                 }
             }
@@ -227,7 +234,7 @@ namespace DocxTemplater.Formatter
                 PatternMatch match;
                 try
                 {
-                    match = PatternMatcher.FindSyntaxPatterns(tag).FirstOrDefault();
+                    match = PatternMatcher.FindSyntaxPatterns(tag, ProcessSettings).FirstOrDefault();
                 }
                 catch (OpenXmlTemplateException)
                 {
@@ -280,7 +287,7 @@ namespace DocxTemplater.Formatter
                 // The value resolved but there is nowhere to put it (e.g. an empty cell/row content control).
                 // Surface this per the error mode instead of silently dropping the resolved value.
                 ApplyContentControlErrorMode(contentControl, tag,
-                    new OpenXmlTemplateException("the resolved value has no text run to fill (empty cell/row content controls are not supported)"),
+                    OpenXmlTemplateException.Create(ProcessSettings, TemplateErrorCode.ContentControlHasNoText),
                     preparedTarget: null);
                 return;
             }
@@ -336,7 +343,7 @@ namespace DocxTemplater.Formatter
                     AddError(e.Message);
                     break;
                 default:
-                    throw new OpenXmlTemplateException($"Content control tag '{tag}' could not be replaced: {e.Message}", e);
+                    throw OpenXmlTemplateException.Create(ProcessSettings, e, TemplateErrorCode.ContentControlNotReplaced, tag, e);
             }
         }
 
@@ -415,7 +422,7 @@ namespace DocxTemplater.Formatter
         /// Use the formatter from the template, if not available use the default formatter from the metadata
         /// set through <see cref="ModelPropertyAttribute"/>
         /// </summary>
-        private static string GetFormatterText(PatternMatch patternMatch, ValueWithMetadata valueWithMetadata,
+        private string GetFormatterText(PatternMatch patternMatch, ValueWithMetadata valueWithMetadata,
             out string[] formatterArguments)
         {
             formatterArguments = patternMatch.Arguments;
@@ -426,7 +433,7 @@ namespace DocxTemplater.Formatter
                 {
                     // try to parse default formatter from metadata
                     var found = PatternMatcher
-                        .FindSyntaxPatterns("{{x}:" + valueWithMetadata.Metadata.DefaultFormatter + "}")
+                        .FindSyntaxPatterns("{{x}:" + valueWithMetadata.Metadata.DefaultFormatter + "}", ProcessSettings)
                         .FirstOrDefault();
                     if (found != null && !string.IsNullOrWhiteSpace(found.Formatter))
                     {

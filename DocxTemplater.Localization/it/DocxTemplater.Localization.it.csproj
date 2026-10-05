@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <!-- all language packages share one namespace, so a single using covers every installed language -->
+    <RootNamespace>DocxTemplater.Localization</RootNamespace>
+    <Description>Italian (it) error messages for DocxTemplater. Loaded automatically when installed.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\DocxTemplater\DocxTemplater.csproj" />
+  </ItemGroup>
+</Project>

@@ -31,7 +31,7 @@ namespace DocxTemplater
         }
 
         public DocxTemplate(Stream docXStream, ProcessSettings settings)
-            : this(docXStream, settings, new ModelLookup())
+            : this(docXStream, settings, new ModelLookup(settings))
         {
         }
 
@@ -142,7 +142,7 @@ namespace DocxTemplater
             {
                 if (root != null)
                 {
-                    errors.AddRange(TemplateSyntaxParser.Parse(GetPartText(root), GetPartName(root)).Errors);
+                    errors.AddRange(TemplateSyntaxParser.Parse(GetPartText(root), GetPartName(root), Settings).Errors);
                 }
             }
         }

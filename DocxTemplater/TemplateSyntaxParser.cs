@@ -35,11 +35,14 @@ namespace DocxTemplater
 
     internal sealed class TemplateSyntaxTree
     {
-        public TemplateSyntaxTree(IReadOnlyList<PatternMatch> matches, IReadOnlyList<TemplateSyntaxNode> blocks, IReadOnlyList<TemplateSyntaxError> errors)
+        private readonly ProcessSettings m_settings;
+
+        public TemplateSyntaxTree(IReadOnlyList<PatternMatch> matches, IReadOnlyList<TemplateSyntaxNode> blocks, IReadOnlyList<TemplateSyntaxError> errors, ProcessSettings settings)
         {
             Matches = matches;
             Blocks = blocks;
             Errors = errors;
+            m_settings = settings;
         }
 
         /// <summary>All valid syntax patterns in document order.</summary>
@@ -56,8 +59,8 @@ namespace DocxTemplater
         {
             if (HasErrors)
             {
-                var errors = Errors.Where(x => x.Severity == TemplateSyntaxErrorSeverity.Error);
-                throw new OpenXmlTemplateException($"Template syntax errors:{Environment.NewLine}{string.Join(Environment.NewLine, errors)}");
+                var errors = Errors.Where(x => x.Severity == TemplateSyntaxErrorSeverity.Error).ToList();
+                throw OpenXmlTemplateException.Create(m_settings, TemplateErrorCode.TemplateSyntaxErrors, errors);
             }
         }
     }
@@ -81,62 +84,72 @@ namespace DocxTemplater
         {
             private readonly string m_text;
             private readonly string m_part;
+            private readonly ProcessSettings m_settings;
             private readonly List<(int Index, TemplateSyntaxError Error)> m_errors = [];
 
-            public ParseContext(string text, string part)
+            public ParseContext(string text, string part, ProcessSettings settings)
             {
                 m_text = text;
                 m_part = part;
+                m_settings = settings;
             }
 
-            public void AddError(int index, int length, string message)
+            public void AddError(int index, int length, TemplateErrorCode code, params object[] args)
             {
-                Add(TemplateSyntaxErrorSeverity.Error, index, length, message);
+                Add(TemplateSyntaxErrorSeverity.Error, index, length, code, args);
             }
 
-            public void AddError(PatternMatch match, string message)
+            public void AddError(PatternMatch match, TemplateErrorCode code, params object[] args)
             {
-                Add(TemplateSyntaxErrorSeverity.Error, match.Index, match.Length, message);
+                Add(TemplateSyntaxErrorSeverity.Error, match.Index, match.Length, code, args);
             }
 
-            public void AddWarning(PatternMatch match, string message)
+            public void AddWarning(PatternMatch match, TemplateErrorCode code, params object[] args)
             {
-                Add(TemplateSyntaxErrorSeverity.Warning, match.Index, match.Length, message);
+                Add(TemplateSyntaxErrorSeverity.Warning, match.Index, match.Length, code, args);
             }
 
-            public void AddWarning(int index, int length, string message)
+            public void AddWarning(int index, int length, TemplateErrorCode code, params object[] args)
             {
-                Add(TemplateSyntaxErrorSeverity.Warning, index, length, message);
+                Add(TemplateSyntaxErrorSeverity.Warning, index, length, code, args);
+            }
+
+            /// <summary>Records an exception thrown while parsing; a free text exception keeps its message.</summary>
+            public void AddError(int index, int length, OpenXmlTemplateException exception)
+            {
+                Add(TemplateSyntaxErrorSeverity.Error, index, length, exception.ErrorCode, exception.Arguments.ToArray(), exception.Message);
             }
 
             public IReadOnlyList<TemplateSyntaxError> SortedErrors => m_errors.OrderBy(x => x.Index).Select(x => x.Error).ToList();
 
-            private void Add(TemplateSyntaxErrorSeverity severity, int index, int length, string message)
+            private void Add(TemplateSyntaxErrorSeverity severity, int index, int length, TemplateErrorCode code, object[] args, string message = null)
             {
                 var start = Math.Max(0, index - ContextLength);
                 var end = Math.Min(m_text.Length, index + length + ContextLength);
-                m_errors.Add((index, new TemplateSyntaxError(severity, m_part, m_text.Substring(index, length), message, m_text[start..end])));
+                m_errors.Add((index, new TemplateSyntaxError(severity, m_part, m_text.Substring(index, length), m_text[start..end],
+                    code, args, m_settings?.ErrorMessages, m_settings?.UiCulture, message)));
             }
         }
 
-        public static TemplateSyntaxTree Parse(string text, string part)
+        /// <param name="settings">Determines the language of the error messages; <c>null</c> for English.</param>
+        public static TemplateSyntaxTree Parse(string text, string part, ProcessSettings settings)
         {
             text ??= string.Empty;
-            var ctx = new ParseContext(text, part);
+            var ctx = new ParseContext(text, part, settings);
 
             // all patterns in document order - valid ones and those the pattern matcher rejected
-            var found = new List<(int Index, int Length, PatternMatch Match, string Error)>();
+            var found = new List<(int Index, int Length, PatternMatch Match, TemplateErrorCode Code, object[] Args)>();
             try
             {
-                foreach (var m in PatternMatcher.FindSyntaxPatterns(text, (m, message) => found.Add((m.Index, m.Length, null, message))))
+                foreach (var m in PatternMatcher.FindSyntaxPatterns(text, (m, code, args) => found.Add((m.Index, m.Length, null, code, args)), settings))
                 {
-                    found.Add((m.Index, m.Length, m, null));
+                    found.Add((m.Index, m.Length, m, TemplateErrorCode.None, null));
                 }
             }
             catch (OpenXmlTemplateException e)
             {
-                ctx.AddError(0, 0, e.Message);
-                return new TemplateSyntaxTree([], [], ctx.SortedErrors);
+                ctx.AddError(0, 0, e);
+                return new TemplateSyntaxTree([], [], ctx.SortedErrors, settings);
             }
             found.Sort((a, b) => a.Index.CompareTo(b.Index));
 
@@ -144,7 +157,7 @@ namespace DocxTemplater
             var matches = new List<PatternMatch>();
             var covered = new List<(int Start, int End)>(); // text ranges consumed by a pattern
             bool inIgnore = false;
-            foreach (var (index, length, match, error) in found)
+            foreach (var (index, length, match, code, args) in found)
             {
                 if (inIgnore && match?.Type != PatternType.IgnoreEnd)
                 {
@@ -153,7 +166,7 @@ namespace DocxTemplater
                 covered.Add((index, index + length));
                 if (match == null)
                 {
-                    ctx.AddError(index, length, error);
+                    ctx.AddError(index, length, code, args);
                     continue;
                 }
                 matches.Add(match);
@@ -162,7 +175,7 @@ namespace DocxTemplater
 
             var root = BuildTree(matches, ctx);
             CheckUnrecognizedTags(text, covered, GetIgnoredRanges(root, text.Length), ctx);
-            return new TemplateSyntaxTree(matches, root.Children, ctx.SortedErrors);
+            return new TemplateSyntaxTree(matches, root.Children, ctx.SortedErrors, settings);
         }
 
         /// <summary>
@@ -197,7 +210,7 @@ namespace DocxTemplater
                     case PatternType.InlineKeyWord:
                         if (!InlineKeyWords.Contains(m.Variable.Trim()))
                         {
-                            ctx.AddError(m, $"Unknown keyword '{m.Match.Value}'. Supported keywords are {string.Join(", ", InlineKeyWords.Select(x => $"{{{{:{x}}}}}"))}");
+                            ctx.AddError(m, TemplateErrorCode.UnknownKeyword, m.Match.Value, string.Join(", ", InlineKeyWords.Select(x => $"{{{{:{x}}}}}")));
                         }
                         new TemplateSyntaxNode(m.Type, m, current).End = m;
                         break;
@@ -228,18 +241,18 @@ namespace DocxTemplater
                         }
                         if (!IsInside(current, PatternType.Switch))
                         {
-                            ctx.AddError(m, $"'{m.Match.Value}' must be inside a '{{{{#switch: ...}}}}' block");
+                            ctx.AddError(m, TemplateErrorCode.CaseOutsideSwitch, m.Match.Value);
                         }
                         Open(m);
                         break;
                     case PatternType.ConditionElse:
                         if (current.Parent?.Type != PatternType.Condition)
                         {
-                            ctx.AddError(m, $"'{m.Match.Value}' (else) is only allowed directly inside a condition '{{?{{...}}}}'");
+                            ctx.AddError(m, TemplateErrorCode.ElseOutsideCondition, m.Match.Value);
                         }
                         else if (current.Type != PatternType.None)
                         {
-                            ctx.AddError(m, $"Condition '{current.Parent.Start.Match.Value}' has more than one else '{m.Match.Value}'");
+                            ctx.AddError(m, TemplateErrorCode.DuplicateElse, current.Parent.Start.Match.Value, m.Match.Value);
                         }
                         else
                         {
@@ -250,11 +263,11 @@ namespace DocxTemplater
                     case PatternType.CollectionSeparator:
                         if (current.Parent?.Type != PatternType.CollectionStart || IsDynamicTable(current.Parent.Start))
                         {
-                            ctx.AddError(m, $"Separator '{m.Match.Value}' is only allowed directly inside a collection loop '{{{{#Items}}}}'");
+                            ctx.AddError(m, TemplateErrorCode.SeparatorOutsideLoop, m.Match.Value);
                         }
                         else if (current.Type != PatternType.None)
                         {
-                            ctx.AddError(m, $"Loop '{current.Parent.Start.Match.Value}' has more than one separator '{m.Match.Value}'");
+                            ctx.AddError(m, TemplateErrorCode.DuplicateSeparator, current.Parent.Start.Match.Value, m.Match.Value);
                         }
                         else
                         {
@@ -267,14 +280,14 @@ namespace DocxTemplater
                     case PatternType.IgnoreEnd:
                         if (current == root)
                         {
-                            ctx.AddError(m, $"'{m.Match.Value}' has no matching opening tag");
+                            ctx.AddError(m, TemplateErrorCode.NoMatchingOpeningTag, m.Match.Value);
                             break;
                         }
                         var closeError = CheckClosingTag(current.Parent.Start, m);
-                        if (closeError != null)
+                        if (closeError is { } warning)
                         {
                             // rendering closes the current block regardless of the name, so this is only a warning
-                            ctx.AddWarning(m, closeError);
+                            ctx.AddWarning(m, warning.Code, warning.Args);
                         }
                         Close(m);
                         break;
@@ -283,7 +296,7 @@ namespace DocxTemplater
 
             for (var node = current; node != root; node = node.Parent.Parent)
             {
-                ctx.AddError(node.Parent.Start, $"'{node.Parent.Start.Match.Value}' is not closed");
+                ctx.AddError(node.Parent.Start, TemplateErrorCode.BlockNotClosed, node.Parent.Start.Match.Value);
             }
             return root;
         }
@@ -310,15 +323,15 @@ namespace DocxTemplater
             var name = m.Variable.Trim();
             if (name.Length == 0)
             {
-                ctx.AddError(m, $"'{m.Match.Value}' requires a collection name, e.g. '{{{{#Items}}}}'");
+                ctx.AddError(m, TemplateErrorCode.CollectionNameRequired, m.Match.Value);
             }
             else if (name.Equals("switch", StringComparison.OrdinalIgnoreCase) || name.Equals("case", StringComparison.OrdinalIgnoreCase))
             {
-                ctx.AddError(m, $"'{m.Match.Value}' requires an expression, e.g. '{{{{#{name}: Value}}}}'");
+                ctx.AddError(m, TemplateErrorCode.SwitchExpressionRequired, m.Match.Value, name);
             }
             else if (name.Equals("s", StringComparison.OrdinalIgnoreCase) || name.Equals("c", StringComparison.OrdinalIgnoreCase))
             {
-                ctx.AddWarning(m, $"'{m.Match.Value}' is a loop over a collection named '{name}'. For a switch / case use '{{{{#{name}: Value}}}}'");
+                ctx.AddWarning(m, TemplateErrorCode.SwitchLooksLikeLoop, m.Match.Value, name);
             }
         }
 
@@ -329,24 +342,24 @@ namespace DocxTemplater
             return colon < 0 ? string.Empty : m.Variable[(colon + 1)..];
         }
 
-        private static string CheckClosingTag(PatternMatch open, PatternMatch close)
+        private static (TemplateErrorCode Code, object[] Args)? CheckClosingTag(PatternMatch open, PatternMatch close)
         {
             var openTag = open.Match.Value;
             var closeTag = close.Match.Value;
             // an ignore block is always closed by its own end tag - everything else inside is skipped by Parse
             if (close.Type == PatternType.IgnoreEnd)
             {
-                return open.Type == PatternType.IgnoreBlock ? null : $"'{closeTag}' does not match '{openTag}'";
+                return open.Type == PatternType.IgnoreBlock ? null : (TemplateErrorCode.ClosingTagMismatch, [closeTag, openTag]);
             }
             if (close.Type == PatternType.CollectionEnd)
             {
                 if (open.Type == PatternType.CollectionStart)
                 {
-                    return IsSameCollection(open.Variable, close.Variable) ? null : $"'{closeTag}' does not match '{openTag}'";
+                    return IsSameCollection(open.Variable, close.Variable) ? null : (TemplateErrorCode.ClosingTagMismatch, [closeTag, openTag]);
                 }
                 if (open.Type != PatternType.RangeStart)
                 {
-                    return $"'{closeTag}' closes '{openTag}', expected '{{{{/}}}}'";
+                    return (TemplateErrorCode.ClosingTagExpectedGeneric, [closeTag, openTag]);
                 }
             }
             return null;
@@ -378,7 +391,7 @@ namespace DocxTemplater
         {
             if (string.IsNullOrWhiteSpace(expression))
             {
-                ctx.AddWarning(m, $"'{m.Match.Value}' has an empty expression");
+                ctx.AddWarning(m, TemplateErrorCode.EmptyExpression, m.Match.Value);
                 return;
             }
             var sanitized = HelperFunctions.SanitizeQuotes(expression);
@@ -413,7 +426,7 @@ namespace DocxTemplater
                         var expected = c == ')' ? '(' : '[';
                         if (brackets.Count == 0 || brackets.Pop() != expected)
                         {
-                            ctx.AddWarning(m, $"Unbalanced '{c}' in expression '{expression}'");
+                            ctx.AddWarning(m, TemplateErrorCode.UnbalancedBracket, c, expression);
                             return;
                         }
                         break;
@@ -421,11 +434,11 @@ namespace DocxTemplater
             }
             if (inString)
             {
-                ctx.AddWarning(m, $"Unterminated string literal in expression '{expression}'");
+                ctx.AddWarning(m, TemplateErrorCode.UnterminatedStringLiteral, expression);
             }
             else if (brackets.Count > 0)
             {
-                ctx.AddWarning(m, $"Unclosed '{brackets.Peek()}' in expression '{expression}'");
+                ctx.AddWarning(m, TemplateErrorCode.UnclosedBracket, brackets.Peek(), expression);
             }
         }
 
@@ -478,21 +491,21 @@ namespace DocxTemplater
                 var index = gapStart + brace.Index;
                 if (brace.Groups["close"].Success)
                 {
-                    ctx.AddWarning(index, brace.Length, $"Unexpected '{brace.Value}' without matching '{{{{'");
+                    ctx.AddWarning(index, brace.Length, TemplateErrorCode.UnexpectedClosingBraces, brace.Value);
                     continue;
                 }
                 var next = i + 1 < braces.Count ? braces[i + 1] : null;
                 if (next != null && next.Groups["close"].Success)
                 {
                     var length = next.Index + next.Length - brace.Index;
-                    ctx.AddWarning(index, length, $"Invalid tag '{text.Substring(index, length)}'");
+                    ctx.AddWarning(index, length, TemplateErrorCode.InvalidTag, text.Substring(index, length));
                     i++;
                 }
                 else
                 {
                     var end = next != null ? gapStart + next.Index : gapEnd;
                     var length = Math.Min(MaxUnterminatedTagLength, end - index);
-                    ctx.AddWarning(index, length, $"Tag '{text.Substring(index, length)}' is not terminated");
+                    ctx.AddWarning(index, length, TemplateErrorCode.TagNotTerminated, text.Substring(index, length));
                 }
             }
         }

@@ -6,44 +6,6 @@ _DocxTemplater is a library to generate docx documents from a docx template. The
 [![MIT](https://img.shields.io/github/license/Amberg/DocxTemplater)](https://github.com/Amberg/DocxTemplater/blob/main/LICENSE)
 [![CI-Build](https://github.com/Amberg/DocxTemplater/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Amberg/DocxTemplater/actions/workflows/ci.yml)
 
-## Table of Contents
-
-- [Features](#features)
-- [Quickstart](#quickstart)
-- [Placeholder Syntax](#placeholder-syntax)
-  - [Quick Reference Examples](#quick-reference-examples)
-  - [Collections](#collections)
-  - [Range Loops](#range-loops)
-  - [Chart Data binding](#chart-data-binding)
-  - [Conditional Blocks](#conditional-blocks)
-  - [Switch / Case Blocks](#switch--case-blocks)
-  - [C# Expressions](#c-expressions)
-- [Formatters](#formatters)
-- [Image Formatter](#image-formatter)
-- [Markdown Formatter](#markdown-formatter)
-- [Sub-Template Formatter - Inserting Documents](#sub-template-formatter---inserting-documents)
-- [Content Controls](#content-controls)
-- [Whitespace Trimming Around Directives](#whitespace-trimming-around-directives)
-- [Error Handling](#error-handling)
-- [Culture](#culture)
-- [Advanced Model Binding](#advanced-model-binding)
-- [Template Schema Inspection](#template-schema-inspection)
-- [Template Syntax Validation](#template-syntax-validation)
-- [Support This Project](#support-this-project)
-
-## Features
-- Variable Replacement
-- Collections - Bind to collections
-- Conditional Blocks
-- Images - Replace placeholder with Image data
-- Chart Data Binding - Bind a chart to a data source
-- Markdown Support - Converts Markdown to OpenXML
-- HTML Snippets - Replace placeholder with HTML Content
-- Dynamic Tables - Columns are defined by the datasource
-- Content Controls - Fill Word content controls from the model, addressed by their tag
-- Template Schema - Statically inspect which variables a template expects, without rendering
-- Syntax Validation - Check a template for syntax errors without rendering it
-
 ## Quickstart
 
 Create a docx template with placeholder syntax:
@@ -82,6 +44,7 @@ Enhance DocxTemplater with these optional extension packages:
 |--------------|-----------------------------------
 | [DocxTemplater.Images ](https://www.nuget.org/packages/DocxTemplater.Images)  |Enables embedding images in generated Word documents|
 | [DocxTemplater.Markdown ](https://www.nuget.org/packages/DocxTemplater.Markdown)  | Allows use of Markdown syntax for generating parts of Word documents|
+| [DocxTemplater.Localization.*&lt;language&gt;*](https://www.nuget.org/packages?q=DocxTemplater.Localization)  | Error messages in the user's language, see [Localized Error Messages](#localized-error-messages). Available: `de`, `de-CH`, `fr`, `it`|
 
 Image metadata (size, format, EXIF rotation) is read by a dependency-free built-in reader that supports PNG, JPEG, GIF, BMP and TIFF.
 If you need another image library for metadata detection, implement `IImageMetadataReader` and pass it to the formatter:
@@ -93,6 +56,47 @@ template.RegisterFormatter(new ImageFormatter(new MyImageMetadataReader()));
 ```
 
 Migration note: the `DocxTemplater.Images.ImageSharp` package is discontinued. `ImageFormatter()` works without it. If you relied on ImageSharp for metadata detection, implement `IImageMetadataReader` with ImageSharp in your own project.
+
+## Table of Contents
+
+- [Quickstart](#quickstart)
+- [Features](#features)
+- [Placeholder Syntax](#placeholder-syntax)
+  - [Quick Reference Examples](#quick-reference-examples)
+  - [Collections](#collections)
+  - [Range Loops](#range-loops)
+  - [Chart Data binding](#chart-data-binding)
+  - [Conditional Blocks](#conditional-blocks)
+  - [Switch / Case Blocks](#switch--case-blocks)
+  - [C# Expressions](#c-expressions)
+- [Formatters](#formatters)
+- [Image Formatter](#image-formatter)
+- [Markdown Formatter](#markdown-formatter)
+- [Sub-Template Formatter - Inserting Documents](#sub-template-formatter---inserting-documents)
+- [Content Controls](#content-controls)
+- [Whitespace Trimming Around Directives](#whitespace-trimming-around-directives)
+- [Error Handling](#error-handling)
+  - [Error Codes](#error-codes)
+  - [Localized Error Messages](#localized-error-messages)
+- [Culture](#culture)
+- [Advanced Model Binding](#advanced-model-binding)
+- [Template Schema Inspection](#template-schema-inspection)
+- [Template Syntax Validation](#template-syntax-validation)
+- [Support This Project](#support-this-project)
+
+## Features
+- Variable Replacement
+- Collections - Bind to collections
+- Conditional Blocks
+- Images - Replace placeholder with Image data
+- Chart Data Binding - Bind a chart to a data source
+- Markdown Support - Converts Markdown to OpenXML
+- HTML Snippets - Replace placeholder with HTML Content
+- Dynamic Tables - Columns are defined by the datasource
+- Content Controls - Fill Word content controls from the model, addressed by their tag
+- Template Schema - Statically inspect which variables a template expects, without rendering
+- Syntax Validation - Check a template for syntax errors without rendering it
+- Localized Error Messages - Every error carries a code; messages are available in English, German, Swiss German, French and Italian and can be extended
 
 ## Placeholder Syntax
 
@@ -530,6 +534,68 @@ var docTemplate = new DocxTemplate(memStream);
 docTemplate.Settings.BindingErrorHandling = BindingErrorHandling.SkipBindingAndRemoveContent;
 var result = docTemplate.Process();
 ```
+
+| `BindingErrorHandling`         | Behavior                                                                                                   |
+|--------------------------------|------------------------------------------------------------------------------------------------------------|
+| `ThrowException` (default)     | `Process()` throws an `OpenXmlTemplateException` for the first binding error.                             |
+| `SkipBindingAndRemoveContent`  | Placeholders that cannot be bound are removed, loops and conditions with errors render nothing.           |
+| `HighlightErrorsInDocument`    | Failed placeholders are highlighted in red and all error messages are listed at the top of the document.  |
+
+### Error Codes
+
+Every error raised by the template engine carries a `TemplateErrorCode` and the arguments of its message, so an application can react to it - or translate it - without parsing the message text:
+
+```csharp
+try
+{
+    template.Process();
+}
+catch (OpenXmlTemplateException e)
+{
+    // e.g. PlaceholderNotReplaced with Arguments[0] == "{{ds.Name}}"
+    Console.WriteLine($"{e.ErrorCode}: {string.Join(", ", e.Arguments)}");
+    // the cause, e.g. PropertyNotFoundOnType with Arguments[0] == "Name"
+    var cause = e.InnerException as OpenXmlTemplateException;
+}
+```
+
+`ErrorCode` is `TemplateErrorCode.None` for internal errors and for errors of third-party formatters that use the plain `OpenXmlTemplateException(string)` constructor. The documentation of each `TemplateErrorCode` value lists the meaning of its arguments.
+
+### Localized Error Messages
+
+Exception messages, `TemplateSyntaxError.Message` and the error list written with `HighlightErrorsInDocument` are formatted in the `ProcessSettings.UiCulture` - the culture of the **user who generates the document**. It defaults to `CultureInfo.CurrentUICulture` and is independent of `ProcessSettings.Culture`, which only formats the values in the document: a user with an English UI can generate a German invoice and still gets English error messages.
+
+English is built in. Other languages are NuGet packages named `DocxTemplater.Localization.<language tag>`, the tag being the IETF language tag .NET uses as `CultureInfo.Name` (`de`, `de-CH`, `fr`, `it`, ...). Installing a package is all it takes: the first time a message is formatted for a culture, DocxTemplater looks for the assembly `DocxTemplater.Localization.<culture>` of that culture and its parents and loads the texts it finds (once per culture, the result is cached).
+
+```csharp
+// packages installed: DocxTemplater.Localization.de, DocxTemplater.Localization.fr
+var template = new DocxTemplate(stream, new ProcessSettings
+{
+    Culture = new CultureInfo("de-CH"),   // number and date formats in the document
+    UiCulture = new CultureInfo("fr-CH")  // language of the error messages: fr-CH -> fr
+});
+```
+
+A culture without texts falls back to its parent culture (`de-CH` → `de`, `fr-CH` → `fr`) and finally to English, so every code always has a message. A specific culture takes precedence over its parent: with `DocxTemplater.Localization.de-CH` and `.de` installed, `de-CH` users get the Swiss spelling and `de-DE` / `de-AT` users the standard one.
+
+Automatic loading uses reflection; in trimmed applications disable it with `TemplateErrorMessages.Default.AutoLoadLanguagePackages = false` and register the packs explicitly: `TemplateErrorMessages.Default.AddLanguage(new GermanErrorMessages())` (namespace `DocxTemplater.Localization`).
+
+Your own language - or your own wording - is a dictionary from `TemplateErrorCode` to a format string. It does not have to be complete; missing codes fall back as described above. Adding a language twice merges the dictionaries, so single texts can be overridden. `TemplateErrorMessages.English` is the reference for the placeholders of each code:
+
+```csharp
+TemplateErrorMessages.Default.AddLanguage(new CultureInfo("es"), new Dictionary<TemplateErrorCode, string>
+{
+    [TemplateErrorCode.ModelNotFound] = "Modelo {0} no encontrado",
+    [TemplateErrorCode.BlockNotClosed] = "'{0}' no está cerrado",
+});
+```
+
+To ship a language as a package of its own, create an assembly named `DocxTemplater.Localization.<language tag>` with a public class implementing `ITemplateLanguagePack` (`Culture` + `Formats`) and a parameterless constructor; it is then loaded automatically like the built-in packages.
+
+`TemplateErrorMessages.Default` is shared by all documents. To keep languages local to one document, assign a separate instance to `ProcessSettings.ErrorMessages`.
+
+An error can be re-rendered in another language at any time, nested messages included: `e.GetMessage(new CultureInfo("de"))`, `syntaxError.GetMessage(culture)` and `syntaxError.ToString(culture)`.
+
 ---
 ## Culture
 
@@ -654,7 +720,7 @@ Warnings:
 
 Everything between `{{:ignore}}` and `{{/:ignore}}` is treated as plain text and not validated.
 
-Each `TemplateSyntaxError` exposes the `Severity`, the `Part` (`Body`, `Header` or `Footer`), the offending `Tag`, a `Message` and the surrounding text as `Context`.
+Each `TemplateSyntaxError` exposes the `Severity`, the `Part` (`Body`, `Header` or `Footer`), the offending `Tag`, a `Message` and the surrounding text as `Context`. The `ErrorCode` and `Arguments` identify the error independent of the message language, see [Error Codes](#error-codes); the `Message` is formatted in the `ProcessSettings.UiCulture` and can be re-rendered in another language with `GetMessage(culture)`.
 Binding errors (unknown variables, wrong types, unknown formatters) are not detected, as they depend on the model.
 
 ## Support This Project

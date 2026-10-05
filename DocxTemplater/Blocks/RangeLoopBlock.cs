@@ -63,13 +63,11 @@ namespace DocxTemplater.Blocks
                     {
                         if (m_context.ProcessSettings.BindingErrorHandling == BindingErrorHandling.ThrowException)
                         {
-                            throw new OpenXmlTemplateException(
-                                $"'{m_countVariable}' is not an integer - its value '{stringValue}' cannot be parsed to an integer");
+                            throw OpenXmlTemplateException.Create(m_context.ProcessSettings, TemplateErrorCode.RangeCountNotNumeric, m_countVariable, stringValue);
                         }
                         else
                         {
-                            m_context.VariableReplacer.AddError(
-                                $"'{m_countVariable}' is not an integer - its value '{stringValue}' cannot be parsed to an integer");
+                            m_context.VariableReplacer.AddError(TemplateErrorCode.RangeCountNotNumeric, m_countVariable, stringValue);
                         }
                     }
                 }
@@ -93,13 +91,11 @@ namespace DocxTemplater.Blocks
                         {
                             if (m_context.ProcessSettings.BindingErrorHandling == BindingErrorHandling.ThrowException)
                             {
-                                throw new OpenXmlTemplateException(
-                                    $"'{m_countVariable}' is not an integer or enumerable - it is of type {model.GetType().FullName}");
+                                throw OpenXmlTemplateException.Create(m_context.ProcessSettings, TemplateErrorCode.RangeCountNotNumericOrEnumerable, m_countVariable, model.GetType().FullName);
                             }
                             else
                             {
-                                m_context.VariableReplacer.AddError(
-                                    $"'{m_countVariable}' is not an integer or enumerable - it is of type {model.GetType().FullName}");
+                                m_context.VariableReplacer.AddError(TemplateErrorCode.RangeCountNotNumericOrEnumerable, m_countVariable, model.GetType().FullName);
                             }
                         }
                     }

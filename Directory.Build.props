@@ -95,11 +95,17 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<None Include="../readme.md" Pack="true" PackagePath="\"/>
+		<None Include="$(MSBuildThisFileDirectory)readme.md" Pack="true" PackagePath="\"/>
 	</ItemGroup>
 
 	<PropertyGroup>
 		<PackageReadmeFile>readme.md</PackageReadmeFile>
+	</PropertyGroup>
+
+	<!-- One result folder per test project, so the trx files of the projects cannot overwrite each other
+	     (the trx logger names files by prefix, framework and timestamp only) -->
+	<PropertyGroup>
+		<VSTestResultsDirectory>$(MSBuildThisFileDirectory)TestResults/$(MSBuildProjectName)</VSTestResultsDirectory>
 	</PropertyGroup>
 
 	<!-- Symbol packages (.snupkg) and SourceLink for debugging into the package -->

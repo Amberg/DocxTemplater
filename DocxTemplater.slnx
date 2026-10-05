@@ -12,6 +12,14 @@
     <File Path=".github/workflows/ci.yml" />
     <File Path=".github/workflows/release.yml" />
   </Folder>
+  <Folder Name="/Localization/">
+    <File Path="DocxTemplater.Localization/ITemplateLanguagePack.cs" />
+    <Project Path="DocxTemplater.Localization/de/DocxTemplater.Localization.de.csproj" />
+    <Project Path="DocxTemplater.Localization/de-CH/DocxTemplater.Localization.de-CH.csproj" />
+    <Project Path="DocxTemplater.Localization/fr/DocxTemplater.Localization.fr.csproj" />
+    <Project Path="DocxTemplater.Localization/it/DocxTemplater.Localization.it.csproj" />
+    <Project Path="DocxTemplater.Localization/Test/DocxTemplater.Localization.Test.csproj" />
+  </Folder>
   <Project Path="DocxTemplater.Images.Test/DocxTemplater.Images.Test.csproj" />
   <Project Path="DocxTemplater.Images/DocxTemplater.Images.csproj" />
   <Project Path="DocxTemplater.Markdown/DocxTemplater.Markdown.csproj" />

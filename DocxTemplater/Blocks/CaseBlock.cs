@@ -28,7 +28,7 @@ namespace DocxTemplater.Blocks
             }
             else
             {
-                throw new OpenXmlTemplateException($"Invalid case block syntax: {startMatch.Variable}");
+                throw OpenXmlTemplateException.Create(context.ProcessSettings, TemplateErrorCode.InvalidCaseBlockSyntax, startMatch.Variable);
             }
         }
 
@@ -42,8 +42,7 @@ namespace DocxTemplater.Blocks
             if (!IsNestedUnderSwitch())
             {
                 var caseDescription = IsDefault ? "default" : MatchExpression;
-                throw new OpenXmlTemplateException(
-                    $"The '{{#case}}'/'{{#default}}' block ('{caseDescription}') must be nested inside a '{{#switch}}' block.");
+                throw OpenXmlTemplateException.Create(m_context.ProcessSettings, TemplateErrorCode.CaseNotNestedInSwitch, caseDescription);
             }
 
             if (IsMatched)
