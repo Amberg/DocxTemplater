@@ -81,20 +81,18 @@ Enhance DocxTemplater with these optional extension packages:
 | Package      | Description                             
 |--------------|-----------------------------------
 | [DocxTemplater.Images ](https://www.nuget.org/packages/DocxTemplater.Images)  |Enables embedding images in generated Word documents|
-| [DocxTemplater.Images.ImageSharp](https://www.nuget.org/packages/DocxTemplater.Images.ImageSharp) |Optional ImageSharp metadata adapter for more robust image decoding|
 | [DocxTemplater.Markdown ](https://www.nuget.org/packages/DocxTemplater.Markdown)  | Allows use of Markdown syntax for generating parts of Word documents|
 
-Image metadata defaults to the dependency-free built-in header reader in `DocxTemplater.Images`.
-If you need ImageSharp's broader format handling, pass it explicitly:
+Image metadata (size, format, EXIF rotation) is read by a dependency-free built-in reader that supports PNG, JPEG, GIF, BMP and TIFF.
+If you need another image library for metadata detection, implement `IImageMetadataReader` and pass it to the formatter:
 
 ```csharp
 using DocxTemplater.Images;
-using DocxTemplater.Images.ImageSharp;
 
-template.RegisterFormatter(new ImageFormatter(new ImageSharpImageMetadataReader()));
+template.RegisterFormatter(new ImageFormatter(new MyImageMetadataReader()));
 ```
 
-Migration note: `ImageFormatter()` now uses a dependency-free default metadata reader out of the box. If your application should continue using ImageSharp metadata detection, install `DocxTemplater.Images.ImageSharp` and register `new ImageFormatter(new ImageSharpImageMetadataReader())`.
+Migration note: the `DocxTemplater.Images.ImageSharp` package is discontinued. `ImageFormatter()` works without it. If you relied on ImageSharp for metadata detection, implement `IImageMetadataReader` with ImageSharp in your own project.
 
 ## Placeholder Syntax
 
