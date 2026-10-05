@@ -128,6 +128,7 @@ Because prefixes are matched case-insensitively, two models whose prefixes diffe
 | `{{SomeHtmlString}:html()}`                              | Inserts HTML string into the word document.                                                     |
 | `{{ds}:template('ds.SubDocument')}`                      | Inserts another docx document (or OpenXML fragment) at the placeholder position.               |
 | `{{@i:ItemCount}}...{{i}}...{{/}}`                       | Range loop that repeats its content `ItemCount` times.                                          |
+| `{{@i:3}}...{{i}}...{{/}}`                               | Range loop with a fixed count; `i` takes the values 0, 1, 2.                                    |
 | `{{#Items}}{?{Items._Idx % 2 == 0}}{{.}}{{/}}{{/Items}}` | Renders every second item in a list.                                                            |
 | `{{#switch: SomeVar}}{{#case: 'A'}}...{{/}}{{#default}}...{{/}}{{/}}` | Evaluates switch cases and renders the matching block. there is a short syntax too                                          |
 | `{{:ignore}} ... {{/:ignore}}`                           | Ignore DocxTemplater syntax, which is helpful around a Table of Contents.                       |
@@ -193,7 +194,7 @@ To access the index of the current item, use the special variable `Items._Idx` I
 To repeat document content a specific number of times based on an integer count or the length of a collection without directly iterating over it, use the range loop syntax:
 **{{@i:count}}** ... content ... **{{/}}**
 
-Here, `count` can be an integer, a string parseable to an integer, or an `IEnumerable` (in which case its count is used). The variable `i` is the index of the current iteration (starting from 0). If you omit the index variable name (e.g. `{{@count}}`), it defaults to `Index`.
+Here, `count` can be an integer literal (e.g. `{{@i:3}}`), a model property holding an integer, a string parseable to an integer, or an `IEnumerable` (in which case its count is used). The variable `i` is the zero-based index of the current iteration: `{{@i:3}}` renders its content three times with `i` set to `0`, `1` and `2`. If you omit the index variable name (e.g. `{{@count}}`), it defaults to `Index`.
 
 ---
 ### Separator
