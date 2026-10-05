@@ -124,24 +124,41 @@ namespace DocxTemplater
             text ??= string.Empty;
             var ctx = new ParseContext(text, part);
 
-            // text ranges consumed by a pattern - valid or invalid
-            var covered = new List<(int Start, int End)>();
-            List<PatternMatch> matches;
+            // all patterns in document order - valid ones and those the pattern matcher rejected
+            var found = new List<(int Index, int Length, PatternMatch Match, string Error)>();
             try
             {
-                matches = PatternMatcher.FindSyntaxPatterns(text, (m, message) =>
+                foreach (var m in PatternMatcher.FindSyntaxPatterns(text, (m, message) => found.Add((m.Index, m.Length, null, message))))
                 {
-                    covered.Add((m.Index, m.Index + m.Length));
-                    ctx.AddError(m.Index, m.Length, message);
-                }).ToList();
+                    found.Add((m.Index, m.Length, m, null));
+                }
             }
             catch (OpenXmlTemplateException e)
             {
                 ctx.AddError(0, 0, e.Message);
                 return new TemplateSyntaxTree([], [], ctx.SortedErrors);
             }
-            covered.AddRange(matches.Select(m => (m.Index, m.Index + m.Length)));
-            covered.Sort((a, b) => a.Start.CompareTo(b.Start));
+            found.Sort((a, b) => a.Index.CompareTo(b.Index));
+
+            // Everything between {{:ignore}} and {{/:ignore}} is opaque text: no match, no error, no marker.
+            var matches = new List<PatternMatch>();
+            var covered = new List<(int Start, int End)>(); // text ranges consumed by a pattern
+            bool inIgnore = false;
+            foreach (var (index, length, match, error) in found)
+            {
+                if (inIgnore && match?.Type != PatternType.IgnoreEnd)
+                {
+                    continue;
+                }
+                covered.Add((index, index + length));
+                if (match == null)
+                {
+                    ctx.AddError(index, length, error);
+                    continue;
+                }
+                matches.Add(match);
+                inIgnore = match.Type == PatternType.IgnoreBlock;
+            }
 
             var root = BuildTree(matches, ctx);
             CheckUnrecognizedTags(text, covered, GetIgnoredRanges(root, text.Length), ctx);
@@ -189,19 +206,20 @@ namespace DocxTemplater
                         Open(m);
                         break;
                     case PatternType.CollectionStart:
-                        var name = m.Variable.Trim();
-                        if (name.Equals("switch", StringComparison.OrdinalIgnoreCase) || name.Equals("case", StringComparison.OrdinalIgnoreCase))
-                        {
-                            ctx.AddError(m, $"'{m.Match.Value}' requires an expression, e.g. '{{{{#{name}: Value}}}}'");
-                        }
+                        CheckCollectionName(m, ctx);
                         Open(m);
                         break;
                     case PatternType.Switch:
+                        CheckExpression(m, GetKeywordArgument(m), ctx);
+                        Open(m);
+                        break;
                     case PatternType.RangeStart:
                     case PatternType.IgnoreBlock:
                         Open(m);
                         break;
                     case PatternType.Case:
+                        CheckExpression(m, GetKeywordArgument(m), ctx);
+                        goto case PatternType.Default;
                     case PatternType.Default:
                         // a case or default implicitly closes the preceding case / default
                         if (current.Parent?.Type is PatternType.Case or PatternType.Default)
@@ -255,7 +273,8 @@ namespace DocxTemplater
                         var closeError = CheckClosingTag(current.Parent.Start, m);
                         if (closeError != null)
                         {
-                            ctx.AddError(m, closeError);
+                            // rendering closes the current block regardless of the name, so this is only a warning
+                            ctx.AddWarning(m, closeError);
                         }
                         Close(m);
                         break;
@@ -281,17 +300,43 @@ namespace DocxTemplater
             return false;
         }
 
+        /// <summary>
+        /// <c>{{#switch}}</c> / <c>{{#case}}</c> without argument are parsed as loops over a collection named "switch" /
+        /// "case" - almost certainly not intended. The short forms <c>{{#s}}</c> / <c>{{#c}}</c> could be real collection
+        /// names, so they only get a warning.
+        /// </summary>
+        private static void CheckCollectionName(PatternMatch m, ParseContext ctx)
+        {
+            var name = m.Variable.Trim();
+            if (name.Length == 0)
+            {
+                ctx.AddError(m, $"'{m.Match.Value}' requires a collection name, e.g. '{{{{#Items}}}}'");
+            }
+            else if (name.Equals("switch", StringComparison.OrdinalIgnoreCase) || name.Equals("case", StringComparison.OrdinalIgnoreCase))
+            {
+                ctx.AddError(m, $"'{m.Match.Value}' requires an expression, e.g. '{{{{#{name}: Value}}}}'");
+            }
+            else if (name.Equals("s", StringComparison.OrdinalIgnoreCase) || name.Equals("c", StringComparison.OrdinalIgnoreCase))
+            {
+                ctx.AddWarning(m, $"'{m.Match.Value}' is a loop over a collection named '{name}'. For a switch / case use '{{{{#{name}: Value}}}}'");
+            }
+        }
+
+        /// <summary>The expression after the keyword of a switch / case tag, e.g. "ds.Val" for <c>{{#switch: ds.Val}}</c>.</summary>
+        private static string GetKeywordArgument(PatternMatch m)
+        {
+            var colon = m.Variable.IndexOf(':');
+            return colon < 0 ? string.Empty : m.Variable[(colon + 1)..];
+        }
+
         private static string CheckClosingTag(PatternMatch open, PatternMatch close)
         {
             var openTag = open.Match.Value;
             var closeTag = close.Match.Value;
-            if (open.Type == PatternType.IgnoreBlock)
-            {
-                return close.Type == PatternType.IgnoreEnd ? null : $"'{closeTag}' closes '{openTag}', expected '{{{{/:ignore}}}}'";
-            }
+            // an ignore block is always closed by its own end tag - everything else inside is skipped by Parse
             if (close.Type == PatternType.IgnoreEnd)
             {
-                return $"'{closeTag}' does not match '{openTag}'";
+                return open.Type == PatternType.IgnoreBlock ? null : $"'{closeTag}' does not match '{openTag}'";
             }
             if (close.Type == PatternType.CollectionEnd)
             {

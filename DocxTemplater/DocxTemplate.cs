@@ -22,7 +22,6 @@ namespace DocxTemplater
         private readonly Dictionary<OpenXmlCompositeElement, IReadOnlyCollection<ContentBlock>> m_prebuiltBlocks = new();
         private TemplateSchema m_schema;
         private bool m_faulted;
-        private List<(string Part, string Text)> m_templateTexts;
 
         private static readonly FileFormatVersions TargetMinimumVersion = FileFormatVersions.Office2010;
 
@@ -119,46 +118,31 @@ namespace DocxTemplater
         /// <remarks>Must be called before <see cref="Process"/>. The document is not modified.</remarks>
         public IReadOnlyList<TemplateSyntaxError> ValidateTemplateSyntax()
         {
-            if (Processed)
+            if (Processed || m_faulted)
             {
                 throw new OpenXmlTemplateException($"{nameof(ValidateTemplateSyntax)} must be called before {nameof(Process)}.");
             }
-            return GetTemplateTexts()
-                .SelectMany(x => TemplateSyntaxParser.Parse(x.Text, x.Part).Errors)
-                .ToList();
-        }
-
-        /// <summary>
-        /// The text of each template part as seen by the pattern matcher. Captured once before the document is
-        /// mutated (by <see cref="GetTemplateSchema"/>), so <see cref="ValidateTemplateSyntax"/> can be called afterwards.
-        /// </summary>
-        private List<(string Part, string Text)> GetTemplateTexts()
-        {
-            if (m_templateTexts != null)
-            {
-                return m_templateTexts;
-            }
-            m_templateTexts = [];
+            var errors = new List<TemplateSyntaxError>();
             var mainPart = m_wpDocument.MainDocumentPart;
             if (mainPart != null)
             {
                 foreach (var header in mainPart.HeaderParts)
                 {
-                    AddTemplateText(header.Header);
+                    Validate(header.Header);
                 }
-                AddTemplateText(mainPart.RootElement);
+                Validate(mainPart.RootElement);
                 foreach (var footer in mainPart.FooterParts)
                 {
-                    AddTemplateText(footer.Footer);
+                    Validate(footer.Footer);
                 }
             }
-            return m_templateTexts;
+            return errors;
 
-            void AddTemplateText(OpenXmlCompositeElement root)
+            void Validate(OpenXmlCompositeElement root)
             {
                 if (root != null)
                 {
-                    m_templateTexts.Add((GetPartName(root), new CharacterMap(root).Text));
+                    errors.AddRange(TemplateSyntaxParser.Parse(GetPartText(root), GetPartName(root)).Errors);
                 }
             }
         }
@@ -243,7 +227,6 @@ namespace DocxTemplater
             {
                 throw new OpenXmlTemplateException($"{nameof(GetTemplateSchema)} must be called before {nameof(Process)}.");
             }
-            GetTemplateTexts(); // capture before the block tree build mutates the document
             var builder = new SchemaBuilder();
             if (m_wpDocument.MainDocumentPart != null)
             {

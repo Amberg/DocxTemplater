@@ -51,6 +51,18 @@ namespace DocxTemplater.Test
         }
 
         [Test]
+        public void IgnoreBlock_IsOnlyClosedByIgnoreEnd()
+        {
+            // everything inside the ignore block is plain text, including a {{/}}
+            var errors = Validate("{{:ignore}}foo{{/}}");
+
+            Assert.That(errors, Has.Count.EqualTo(1));
+            Assert.That(errors[0].Tag, Is.EqualTo("{{:ignore}}"));
+            Assert.That(errors[0].Message, Does.Contain("is not closed"));
+            Assert.That(errors[0].Severity, Is.EqualTo(TemplateSyntaxErrorSeverity.Error));
+        }
+
+        [Test]
         public void ClosingTagWithoutOpening_IsReported()
         {
             var errors = Validate("{{Name}}{{/}}");
@@ -64,15 +76,27 @@ namespace DocxTemplater.Test
 
         [TestCase("{{#Items}}foo{{/Orders}}", "{{/Orders}}", "does not match '{{#Items}}'")]
         [TestCase("{?{a}}foo{{/Items}}", "{{/Items}}", "expected '{{/}}'")]
-        [TestCase("{{:ignore}}foo{{/}}", "{{/}}", "expected '{{/:ignore}}'")]
         [TestCase("{{#Items}}foo{{/:ignore}}", "{{/:ignore}}", "does not match '{{#Items}}'")]
-        public void MismatchedClosingTag_IsReported(string template, string tag, string message)
+        public void MismatchedClosingTag_IsReportedAsWarning(string template, string tag, string message)
         {
             var errors = Validate(template);
 
             Assert.That(errors, Has.Count.EqualTo(1));
             Assert.That(errors[0].Tag, Is.EqualTo(tag));
             Assert.That(errors[0].Message, Does.Contain(message));
+            Assert.That(errors[0].Severity, Is.EqualTo(TemplateSyntaxErrorSeverity.Warning));
+        }
+
+        [Test]
+        public void MismatchedClosingTag_StillRenders()
+        {
+            using var template = BuildTemplate("{{#Items}}{{.}}{{/Orders}}");
+            template.BindModel("Items", new[] { "a", "b" });
+
+            var result = template.Process();
+
+            using var document = WordprocessingDocument.Open(result, false);
+            Assert.That(document.MainDocumentPart.Document.Body.InnerText, Is.EqualTo("ab"));
         }
 
         [TestCase("{{#Items}}foo{{/}}")]
@@ -91,6 +115,8 @@ namespace DocxTemplater.Test
         [TestCase("foo{{:s:}}bar", "{{:s:}}", "only allowed directly inside a collection loop")]
         [TestCase("{{#case: 'A'}}foo{{/}}", "{{#case: 'A'}}", "must be inside a '{{#switch: ...}}' block")]
         [TestCase("{{#switch}}foo{{/}}", "{{#switch}}", "requires an expression")]
+        [TestCase("{{#case}}foo{{/}}", "{{#case}}", "requires an expression")]
+        [TestCase("{{#}}foo{{/}}", "{{#}}", "requires a collection name")]
         [TestCase("{{:Foo}}", "{{:Foo}}", "Unknown keyword")]
         public void MisplacedOrInvalidTag_IsReported(string template, string tag, string message)
         {
@@ -128,12 +154,47 @@ namespace DocxTemplater.Test
         [TestCase("{?{a == 'foo}}foo{{/}}", "Unterminated string literal")]
         [TestCase("{?{ }}foo{{/}}", "empty expression")]
         [TestCase("{{(a + \"x)}}", "Unterminated string literal")]
-        public void InvalidExpression_IsReported(string template, string message)
+        [TestCase("{{#switch: (a}}{{#case: 1}}x{{/}}{{/}}", "Unclosed '('")]
+        [TestCase("{{#s: a}}{{#c: (1}}x{{/}}{{/}}", "Unclosed '('")]
+        [TestCase("{{#s}}x{{/}}", "is a loop over a collection named 's'")]
+        public void InvalidExpression_IsReportedAsWarning(string template, string message)
         {
             var errors = Validate(template);
 
             Assert.That(errors, Has.Count.EqualTo(1));
             Assert.That(errors[0].Message, Does.Contain(message));
+            Assert.That(errors[0].Severity, Is.EqualTo(TemplateSyntaxErrorSeverity.Warning));
+        }
+
+        [Test]
+        public void ContentOfIgnoreBlock_IsNotValidated()
+        {
+            var errors = Validate("{{:ignore}}Use {{:}} for else, {{:s:}} for separators, {{#case: 1}} and {{Name} or {{/switch}}{{/:ignore}}{{Name}}");
+
+            Assert.That(errors, Is.Empty, string.Join(Environment.NewLine, errors));
+        }
+
+        [Test]
+        public void ContentOfIgnoreBlock_IsRenderedVerbatim()
+        {
+            using var template = BuildTemplate("{{:ignore}}{{:}} {{#Items}} {{Name}}{{/:ignore}} {{Name}}");
+            template.BindModel("Name", "foo");
+
+            var result = template.Process();
+
+            using var document = WordprocessingDocument.Open(result, false);
+            Assert.That(document.MainDocumentPart.Document.Body.InnerText, Is.EqualTo("{{:}} {{#Items}} {{Name}} foo"));
+        }
+
+        [Test]
+        public void Validate_AfterFailedProcess_Throws()
+        {
+            using var template = BuildTemplate("{{Name}}", "{{Missing}}");
+            template.Settings.BindingErrorHandling = BindingErrorHandling.ThrowException;
+            template.BindModel("Name", "foo");
+            Assert.Throws<OpenXmlTemplateException>(() => template.Process());
+
+            Assert.Throws<OpenXmlTemplateException>(() => template.ValidateTemplateSyntax());
         }
 
         [TestCase("{{/switch}}")]
@@ -249,14 +310,14 @@ namespace DocxTemplater.Test
         [Test]
         public void Process_ThrowsWithAllSyntaxErrors()
         {
-            using var template = BuildTemplate("{{#Items}}{{.}}{{/Orders}}", "{{:}}", "{{/}}");
+            using var template = BuildTemplate("{{#Items}}{{.}}{{/Items}}", "{{:}}", "{{/}}", "{{:Foo}}");
             template.BindModel("Items", new[] { "a" });
 
             var ex = Assert.Throws<OpenXmlTemplateException>(() => template.Process());
 
-            Assert.That(ex.Message, Does.Contain("'{{/Orders}}' does not match '{{#Items}}'"));
             Assert.That(ex.Message, Does.Contain("'{{:}}' (else) is only allowed"));
             Assert.That(ex.Message, Does.Contain("'{{/}}' has no matching opening tag"));
+            Assert.That(ex.Message, Does.Contain("Unknown keyword '{{:Foo}}'"));
         }
 
         [Test]

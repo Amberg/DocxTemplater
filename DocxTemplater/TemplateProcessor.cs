@@ -16,6 +16,10 @@ namespace DocxTemplater
     {
         internal ITemplateProcessingContextAccess Context { get; }
 
+        // Text of each part as seen by the syntax parser, captured by BuildBlockTree before it mutates the part.
+        // Lets DocxTemplate.ValidateTemplateSyntax run after GetTemplateSchema without rebuilding the text.
+        private readonly Dictionary<OpenXmlCompositeElement, string> m_partTexts = new();
+
         private protected TemplateProcessor(ITemplateProcessingContextAccess context)
         {
             Context = context;
@@ -349,6 +353,7 @@ namespace DocxTemplater
 #endif
             PreProcess(rootElement);
             var charMap = new CharacterMap(rootElement);
+            m_partTexts[rootElement] = charMap.Text;
             var syntaxTree = TemplateSyntaxParser.Parse(charMap.Text, GetPartName(rootElement));
             syntaxTree.ThrowIfErrors();
             var texts = IsolateAndMergeTextTemplateMarkers(charMap, syntaxTree.Matches);
@@ -360,6 +365,15 @@ namespace DocxTemplater
             var rootBlock = new ContentBlock(); // dummy block for root
             CreateBlocks(syntaxTree.Blocks, rootBlock, texts);
             return ExtractBlockContent(rootElement, rootBlock.ChildBlocks);
+        }
+
+        /// <summary>
+        /// The text of a part as seen by the syntax parser: the text captured by <see cref="BuildBlockTree"/> if it
+        /// already ran for this part (the part is mutated afterwards), otherwise the current text.
+        /// </summary>
+        private protected string GetPartText(OpenXmlCompositeElement rootElement)
+        {
+            return m_partTexts.TryGetValue(rootElement, out var text) ? text : new CharacterMap(rootElement).Text;
         }
 
         /// <summary>

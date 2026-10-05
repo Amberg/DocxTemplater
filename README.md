@@ -617,12 +617,15 @@ foreach (var error in template.ValidateTemplateSyntax())
 ```
 
 Errors:
-- Blocks that are not closed, closing tags without an opening tag, and closing tags that do not match (`{{#Items}}...{{/Orders}}`, `{?{...}}...{{/Items}}`, `{{:ignore}}...{{/}}`). The closing tag may omit the implicit model prefix (`{{#ds.Items}}...{{/Items}}`).
-- Else `{{:}}` outside of a condition or more than once, separator `{{:s:}}` outside of a collection loop, `{{#case}}`/`{{#default}}` outside of a switch, unknown inline keywords (`{{:Foo}}`).
+- Blocks that are not closed and closing tags without an opening tag.
+- Else `{{:}}` outside of a condition or more than once, separator `{{:s:}}` outside of a collection loop, `{{#case}}`/`{{#default}}` outside of a switch, `{{#}}` / `{{#switch}}` without a name or expression, unknown inline keywords (`{{:Foo}}`).
 
 Warnings:
+- Closing tags that do not match their opening tag (`{{#Items}}...{{/Orders}}`, `{?{...}}...{{/Items}}`, `{{:ignore}}...{{/}}`) - rendering closes the current block anyway. The closing tag may omit the implicit model prefix (`{{#ds.Items}}...{{/Items}}`).
 - Malformed tags that silently remain as text, e.g. `{{Name}`, `{{first name}}`, a stray `}}`.
-- Unbalanced parentheses and unterminated strings in conditions and expressions.
+- Unbalanced parentheses and unterminated strings in conditions, expressions, switch selectors and case values.
+
+Everything between `{{:ignore}}` and `{{/:ignore}}` is treated as plain text and not validated.
 
 Each `TemplateSyntaxError` exposes the `Severity`, the `Part` (`Body`, `Header` or `Footer`), the offending `Tag`, a `Message` and the surrounding text as `Context`.
 Binding errors (unknown variables, wrong types, unknown formatters) are not detected, as they depend on the model.
