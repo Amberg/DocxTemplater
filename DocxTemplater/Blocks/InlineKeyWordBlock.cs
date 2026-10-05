@@ -59,7 +59,7 @@ namespace DocxTemplater.Blocks
                 "BREAK" => (OpenXmlElement)new Break(),
                 "PAGEBREAK" => new Break() { Type = BreakValues.Page },
                 SectionBreak => null,
-                _ => throw new OpenXmlTemplateException($"Invalid expression {StartTextNode.Text}")
+                _ => throw OpenXmlTemplateException.Create(m_context.ProcessSettings, TemplateErrorCode.InvalidInlineKeyword, StartTextNode.Text)
             };
             res.Add(element);
             m_content = res;

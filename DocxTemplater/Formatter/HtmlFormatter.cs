@@ -67,7 +67,7 @@ namespace DocxTemplater.Formatter
             }
             else
             {
-                throw new OpenXmlTemplateException("HTML import tag is not in a paragraph");
+                throw OpenXmlTemplateException.Create(templateContext.ProcessSettings, TemplateErrorCode.HtmlNotInParagraph);
             }
             target.RemoveWithEmptyParent();
         }

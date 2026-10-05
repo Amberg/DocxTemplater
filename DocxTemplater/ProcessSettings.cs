@@ -10,6 +10,23 @@ namespace DocxTemplater
         /// </summary>
         public CultureInfo Culture { get; set; } = CultureInfo.CurrentUICulture;
 
+        /// <summary>
+        /// Culture of the user who generates the document. Determines the language of the error messages
+        /// (exceptions, <see cref="TemplateSyntaxError.Message"/> and the errors written into the document with
+        /// <see cref="BindingErrorHandling.HighlightErrorsInDocument"/>), independent of the <see cref="Culture"/>
+        /// of the document. A language is only used if it is available in <see cref="ErrorMessages"/>;
+        /// otherwise the messages are English.
+        /// default: <see cref="CultureInfo.CurrentUICulture"/>
+        /// </summary>
+        public CultureInfo UiCulture { get; set; } = CultureInfo.CurrentUICulture;
+
+        /// <summary>
+        /// The texts of the error messages. English is built in; other languages are added with
+        /// <see cref="TemplateErrorMessages.AddLanguage"/>, e.g. from a language package.
+        /// default: <see cref="TemplateErrorMessages.Default"/>, which is shared by all documents.
+        /// </summary>
+        public TemplateErrorMessages ErrorMessages { get; set; } = TemplateErrorMessages.Default;
+
         public BindingErrorHandling BindingErrorHandling { get; set; } = BindingErrorHandling.ThrowException;
 
         /// <summary>

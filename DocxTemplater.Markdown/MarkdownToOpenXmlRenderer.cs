@@ -29,7 +29,8 @@ namespace DocxTemplater.Markdown
             Text target,
             MainDocumentPart mainDocumentPart,
             MarkDownFormatterConfiguration configuration,
-            IImageService imageService)
+            IImageService imageService,
+            ProcessSettings processSettings = null)
         {
             // extract style from target run element
             TargetText = target;
@@ -48,7 +49,7 @@ namespace DocxTemplater.Markdown
             ObjectRenderers.Add(new HtmlBlockRenderer());
             if (imageService != null)
             {
-                ObjectRenderers.Add(new ImageInlineRenderer(imageService));
+                ObjectRenderers.Add(new ImageInlineRenderer(imageService, processSettings));
             }
 
 

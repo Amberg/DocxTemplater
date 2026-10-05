@@ -119,7 +119,7 @@ namespace DocxTemplater
             return true;
         }
 
-        private static object GetIndexedValue(object target, object[] indexes)
+        private object GetIndexedValue(object target, object[] indexes)
         {
             switch (target)
             {
@@ -142,7 +142,7 @@ namespace DocxTemplater
                 return enumerable.Cast<object>().ElementAt(Convert.ToInt32(indexes[0]));
             }
 
-            throw new OpenXmlTemplateException($"Cannot apply indexing to an expression of type '{target.GetType()}'");
+            throw OpenXmlTemplateException.Create(ProcessSettings, TemplateErrorCode.IndexingNotSupported, target.GetType());
         }
 
         public override string ToString()

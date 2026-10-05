@@ -53,15 +53,14 @@ namespace DocxTemplater.Blocks
             }
             else if (model != null)
             {
+                var error = OpenXmlTemplateException.Create(m_context.ProcessSettings, TemplateErrorCode.NotEnumerable, m_collectionName, model.GetType().FullName);
                 if (m_context.VariableReplacer.ProcessSettings.BindingErrorHandling == BindingErrorHandling.ThrowException)
                 {
-                    throw new OpenXmlTemplateException(
-                        $"'{m_collectionName}' is not enumerable - it is of type {model.GetType().FullName}");
+                    throw error;
                 }
                 else
                 {
-                    m_context.VariableReplacer.AddError(
-                        $"'{m_collectionName}' is not enumerable - it is of type {model.GetType().FullName}");
+                    m_context.VariableReplacer.AddError(error.Message);
                 }
             }
         }

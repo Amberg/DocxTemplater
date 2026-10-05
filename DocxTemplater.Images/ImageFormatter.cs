@@ -66,7 +66,12 @@ namespace DocxTemplater.Images
             }
             catch (ImageMetadataReadException e)
             {
-                throw new OpenXmlTemplateException("Could not read image metadata", e);
+                throw OpenXmlTemplateException.Create(templateContext.ProcessSettings, e, TemplateErrorCode.ImageMetadataUnreadable);
+            }
+            catch (OpenXmlTemplateException e) when (e.ErrorCode == TemplateErrorCode.InvalidImageFormatterArgument)
+            {
+                // the argument parser has no access to the settings - translate the message here
+                throw OpenXmlTemplateException.Create(templateContext.ProcessSettings, e, e.ErrorCode, e.Arguments.ToArray());
             }
         }
 
@@ -276,7 +281,7 @@ namespace DocxTemplater.Images
                 }
                 catch (RegexMatchTimeoutException)
                 {
-                    throw new OpenXmlTemplateException($"Invalid image formatter argument '{argument}'");
+                    throw OpenXmlTemplateException.Create(null, TemplateErrorCode.InvalidImageFormatterArgument, argument);
                 }
             }
 

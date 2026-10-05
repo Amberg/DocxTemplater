@@ -61,15 +61,14 @@ namespace DocxTemplater.Blocks
                 {
                     if (!int.TryParse(stringValue, out count))
                     {
+                        var error = OpenXmlTemplateException.Create(m_context.ProcessSettings, TemplateErrorCode.RangeCountNotNumeric, m_countVariable, stringValue);
                         if (m_context.ProcessSettings.BindingErrorHandling == BindingErrorHandling.ThrowException)
                         {
-                            throw new OpenXmlTemplateException(
-                                $"'{m_countVariable}' is not an integer - its value '{stringValue}' cannot be parsed to an integer");
+                            throw error;
                         }
                         else
                         {
-                            m_context.VariableReplacer.AddError(
-                                $"'{m_countVariable}' is not an integer - its value '{stringValue}' cannot be parsed to an integer");
+                            m_context.VariableReplacer.AddError(error.Message);
                         }
                     }
                 }
@@ -91,15 +90,14 @@ namespace DocxTemplater.Blocks
                         }
                         else
                         {
+                            var error = OpenXmlTemplateException.Create(m_context.ProcessSettings, TemplateErrorCode.RangeCountNotNumericOrEnumerable, m_countVariable, model.GetType().FullName);
                             if (m_context.ProcessSettings.BindingErrorHandling == BindingErrorHandling.ThrowException)
                             {
-                                throw new OpenXmlTemplateException(
-                                    $"'{m_countVariable}' is not an integer or enumerable - it is of type {model.GetType().FullName}");
+                                throw error;
                             }
                             else
                             {
-                                m_context.VariableReplacer.AddError(
-                                    $"'{m_countVariable}' is not an integer or enumerable - it is of type {model.GetType().FullName}");
+                                m_context.VariableReplacer.AddError(error.Message);
                             }
                         }
                     }

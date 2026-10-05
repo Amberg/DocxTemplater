@@ -18,9 +18,17 @@ namespace DocxTemplater
 
         private readonly Dictionary<string, object> m_rootScope;
         private readonly Stack<Dictionary<string, object>> m_blockScopes;
+        private readonly ProcessSettings m_settings;
 
         public ModelLookup()
+            : this(null)
         {
+        }
+
+        /// <param name="settings">Determines the language of the error messages; <c>null</c> for English.</param>
+        public ModelLookup(ProcessSettings settings)
+        {
+            m_settings = settings;
             m_rootScope = new Dictionary<string, object>(NameComparer);
             m_blockScopes = new Stack<Dictionary<string, object>>();
             m_blockScopes.Push(m_rootScope);
@@ -32,7 +40,7 @@ namespace DocxTemplater
         {
             if (m_rootScope.ContainsKey(prefix))
             {
-                throw new OpenXmlTemplateException($"A model with the prefix '{prefix}' has already been bound - model prefixes are case-insensitive");
+                throw OpenXmlTemplateException.Create(m_settings, TemplateErrorCode.ModelPrefixAlreadyBound, prefix);
             }
             m_rootScope.Add(prefix, model);
         }
@@ -69,12 +77,12 @@ namespace DocxTemplater
 
                 if (model == null)
                 {
-                    throw new OpenXmlTemplateException($"Model {variableName} not found");
+                    throw OpenXmlTemplateException.Create(m_settings, TemplateErrorCode.ModelNotFound, variableName);
                 }
             }
             else
             {
-                modelRootPath = "parent scope";
+                modelRootPath = null; // parent scope
                 model = m_blockScopes.ElementAt(leadingDotsCount - 1).Values.FirstOrDefault();
                 if (parts.Length == 1 && string.IsNullOrWhiteSpace(parts[0]))
                 {
@@ -83,7 +91,7 @@ namespace DocxTemplater
             }
             if (model == null)
             {
-                throw new OpenXmlTemplateException($"Model {variableName} not found");
+                throw OpenXmlTemplateException.Create(m_settings, TemplateErrorCode.ModelNotFound, variableName);
             }
 
             PropertyInfo lastProperty = null;
@@ -96,7 +104,7 @@ namespace DocxTemplater
                 {
                     if (!templateModel.TryGetPropertyValue(propertyName, out ValueWithMetadata valWithMetadata))
                     {
-                        throw new OpenXmlTemplateException($"Property {propertyName} not found in {modelRootPath}");
+                        throw PropertyNotFound(propertyName, modelRootPath);
                     }
                     model = valWithMetadata.Value;
                     lastValueMetadata = valWithMetadata.Metadata;
@@ -107,7 +115,7 @@ namespace DocxTemplater
                     // search to behave like the other model types
                     if (!dict.TryGetValue(propertyName, out model) && !TryGetValueIgnoreCase(dict, propertyName, out model))
                     {
-                        throw new OpenXmlTemplateException($"Property {propertyName} not found in {modelRootPath}");
+                        throw PropertyNotFound(propertyName, modelRootPath);
                     }
                     if (model is ValueWithMetadata valWithMetadata)
                     {
@@ -130,7 +138,7 @@ namespace DocxTemplater
 
                     if (!found)
                     {
-                        throw new OpenXmlTemplateException($"Property {propertyName} not found in {modelRootPath}");
+                        throw PropertyNotFound(propertyName, modelRootPath);
                     }
                     if (model is ValueWithMetadata valWithMetadata)
                     {
@@ -155,11 +163,11 @@ namespace DocxTemplater
                     }
                     else if (model is ICollection)
                     {
-                        throw new OpenXmlTemplateException($"Property '{variableName}' on collection of type '{model.GetType()}' not found");
+                        throw OpenXmlTemplateException.Create(m_settings, TemplateErrorCode.PropertyNotFoundOnCollection, variableName, model.GetType());
                     }
                     else
                     {
-                        throw new OpenXmlTemplateException($"Property '{propertyName}' not found in '{variableName}' of type '{model.GetType()}'");
+                        throw OpenXmlTemplateException.Create(m_settings, TemplateErrorCode.PropertyNotFoundOnType, propertyName, variableName, model.GetType());
                     }
                 }
             }
@@ -170,6 +178,14 @@ namespace DocxTemplater
                 return new ValueWithMetadata(model, new ValueMetadata(metadata?.DefaultFormatter));
             }
             return new ValueWithMetadata(model, lastValueMetadata ?? new ValueMetadata());
+        }
+
+        /// <param name="modelRootPath"><c>null</c> if the property was looked up in the parent scope (<c>..Name</c>).</param>
+        private OpenXmlTemplateException PropertyNotFound(string propertyName, string modelRootPath)
+        {
+            return modelRootPath == null
+                ? OpenXmlTemplateException.Create(m_settings, TemplateErrorCode.PropertyNotFoundInParentScope, propertyName)
+                : OpenXmlTemplateException.Create(m_settings, TemplateErrorCode.PropertyNotFound, propertyName, modelRootPath);
         }
 
         private static bool TryGetValueIgnoreCase(IDictionary<string, object> dictionary, string propertyName, out object value)

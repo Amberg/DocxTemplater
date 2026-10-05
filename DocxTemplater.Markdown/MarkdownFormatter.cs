@@ -48,13 +48,13 @@ namespace DocxTemplater.Markdown
 
             if (m_nestingDepth > 3)
             {
-                throw new OpenXmlTemplateException("Markdown nesting depth exceeded");
+                throw OpenXmlTemplateException.Create(templateContext.ProcessSettings, TemplateErrorCode.MarkdownNestingDepthExceeded);
             }
 
             var contextSpecificConfiguration = m_configuration.Clone();
             if (formatterContext.Args.Length > 0)
             {
-                var arguments = HelperFunctions.ParseArguments(formatterContext.Args);
+                var arguments = HelperFunctions.ParseArguments(formatterContext.Args, templateContext.ProcessSettings);
                 if (arguments.TryGetValue("ts", out var tableStyleName))
                 {
                     contextSpecificConfiguration.TableStyle = tableStyleName;
@@ -89,7 +89,7 @@ namespace DocxTemplater.Markdown
                     var containerParagraph = new Paragraph();
                     renderedMarkdownContainer.Append(containerParagraph);
 
-                    var renderer = new MarkdownToOpenXmlRenderer(containerParagraph, target, templateContext.MainDocumentPart, contextSpecificConfiguration, templateContext.ImageService);
+                    var renderer = new MarkdownToOpenXmlRenderer(containerParagraph, target, templateContext.MainDocumentPart, contextSpecificConfiguration, templateContext.ImageService, templateContext.ProcessSettings);
                     renderer.Render(markdownDocument);
 
 #if DEBUG

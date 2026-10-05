@@ -41,7 +41,7 @@ namespace DocxTemplater.Blocks
                 var dataCell = dataRow?.Elements<TableCell>().FirstOrDefault(row => row.Descendants<Text>().Any(d => d.HasMarker(PatternType.Variable) && d.Text.Contains($"{{{{{columnsName}")));
                 if (headerCell == null || dataCell == null)
                 {
-                    throw new OpenXmlTemplateException($"Dynamic table block must contain exactly one table with at least a header and a data row");
+                    throw OpenXmlTemplateException.Create(m_context.ProcessSettings, TemplateErrorCode.DynamicTableStructureInvalid);
                 }
 
                 // write headers
@@ -98,7 +98,7 @@ namespace DocxTemplater.Blocks
             }
             else
             {
-                throw new OpenXmlTemplateException($"'{m_tableName}' is not of type {typeof(IDynamicTable)}");
+                throw OpenXmlTemplateException.Create(m_context.ProcessSettings, TemplateErrorCode.NotADynamicTable, m_tableName, typeof(IDynamicTable));
             }
         }
 
@@ -107,7 +107,7 @@ namespace DocxTemplater.Blocks
             base.Validate();
             if (m_childBlocks.Count != 1)
             {
-                throw new OpenXmlTemplateException($"Dynamic table block must contain exactly one child block");
+                throw OpenXmlTemplateException.Create(m_context.ProcessSettings, TemplateErrorCode.DynamicTableSingleChild);
             }
         }
 

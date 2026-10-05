@@ -14,6 +14,10 @@
   </Folder>
   <Project Path="DocxTemplater.Images.Test/DocxTemplater.Images.Test.csproj" />
   <Project Path="DocxTemplater.Images/DocxTemplater.Images.csproj" />
+  <Project Path="DocxTemplater.Localization.French/DocxTemplater.Localization.French.csproj" />
+  <Project Path="DocxTemplater.Localization.German/DocxTemplater.Localization.German.csproj" />
+  <Project Path="DocxTemplater.Localization.Italian/DocxTemplater.Localization.Italian.csproj" />
+  <Project Path="DocxTemplater.Localization.Test/DocxTemplater.Localization.Test.csproj" />
   <Project Path="DocxTemplater.Markdown/DocxTemplater.Markdown.csproj" />
   <Project Path="DocxTemplater.Test/DocxTemplater.Test.csproj" />
   <Project Path="DocxTemplater/DocxTemplater.csproj" />

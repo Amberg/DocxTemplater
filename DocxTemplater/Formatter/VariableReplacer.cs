@@ -154,7 +154,7 @@ namespace DocxTemplater.Formatter
             foreach (var text in variables)
             {
                 var variableMatch = PatternMatcher.FindSyntaxPatterns(text.Text).FirstOrDefault() ??
-                                    throw new OpenXmlTemplateException($"Invalid variable syntax '{text.Text}'");
+                                    throw OpenXmlTemplateException.Create(ProcessSettings, TemplateErrorCode.InvalidVariableSyntax, text.Text);
                 try
                 {
                     if (variableMatch.Type == PatternType.Expression)
@@ -182,7 +182,8 @@ namespace DocxTemplater.Formatter
                     }
                     else
                     {
-                        throw new OpenXmlTemplateException($"'{text.InnerText}' could not be replaced: {text.ElementBeforeInDocument<Text>()?.InnerText} >> {text.InnerText} << {text.ElementAfterInDocument<Text>()?.InnerText}", e);
+                        throw OpenXmlTemplateException.Create(ProcessSettings, e, TemplateErrorCode.PlaceholderNotReplaced,
+                            text.InnerText, text.ElementBeforeInDocument<Text>()?.InnerText, text.ElementAfterInDocument<Text>()?.InnerText);
                     }
                 }
             }
@@ -280,7 +281,7 @@ namespace DocxTemplater.Formatter
                 // The value resolved but there is nowhere to put it (e.g. an empty cell/row content control).
                 // Surface this per the error mode instead of silently dropping the resolved value.
                 ApplyContentControlErrorMode(contentControl, tag,
-                    new OpenXmlTemplateException("the resolved value has no text run to fill (empty cell/row content controls are not supported)"),
+                    OpenXmlTemplateException.Create(ProcessSettings, TemplateErrorCode.ContentControlHasNoText),
                     preparedTarget: null);
                 return;
             }
@@ -336,7 +337,7 @@ namespace DocxTemplater.Formatter
                     AddError(e.Message);
                     break;
                 default:
-                    throw new OpenXmlTemplateException($"Content control tag '{tag}' could not be replaced: {e.Message}", e);
+                    throw OpenXmlTemplateException.Create(ProcessSettings, e, TemplateErrorCode.ContentControlNotReplaced, tag, e);
             }
         }
 

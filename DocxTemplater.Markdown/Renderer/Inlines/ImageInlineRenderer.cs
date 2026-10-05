@@ -12,10 +12,12 @@ namespace DocxTemplater.Markdown.Renderer.Inlines
     internal sealed class ImageInlineRenderer : OpenXmlObjectRenderer<LinkInline>
     {
         private readonly IImageService m_imageService;
+        private readonly ProcessSettings m_processSettings;
 
-        public ImageInlineRenderer(IImageService imageService)
+        public ImageInlineRenderer(IImageService imageService, ProcessSettings processSettings)
         {
             m_imageService = imageService;
+            m_processSettings = processSettings;
         }
 
         protected override void Write(MarkdownToOpenXmlRenderer renderer, LinkInline obj)
@@ -34,7 +36,7 @@ namespace DocxTemplater.Markdown.Renderer.Inlines
             }
             catch (Exception ex)
             {
-                throw new OpenXmlTemplateException($"Invalid image data in Markdown link. {obj.Url}", ex);
+                throw OpenXmlTemplateException.Create(m_processSettings, ex, TemplateErrorCode.MarkdownInvalidImage, obj.Url);
             }
 
             var maxPropertyId = m_imageService.GetImage(root, imageBytes, out ImageInformation imageInfo);

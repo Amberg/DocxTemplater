@@ -354,7 +354,7 @@ namespace DocxTemplater
             PreProcess(rootElement);
             var charMap = new CharacterMap(rootElement);
             m_partTexts[rootElement] = charMap.Text;
-            var syntaxTree = TemplateSyntaxParser.Parse(charMap.Text, GetPartName(rootElement));
+            var syntaxTree = TemplateSyntaxParser.Parse(charMap.Text, GetPartName(rootElement), Context.ProcessSettings);
             syntaxTree.ThrowIfErrors();
             var texts = IsolateAndMergeTextTemplateMarkers(charMap, syntaxTree.Matches);
             RemoveLineBreaksAroundSyntaxPatterns(texts.Values);

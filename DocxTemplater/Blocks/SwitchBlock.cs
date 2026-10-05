@@ -20,7 +20,7 @@ namespace DocxTemplater.Blocks
             }
             else
             {
-                throw new OpenXmlTemplateException($"Invalid switch block syntax: {startMatch.Variable}");
+                throw OpenXmlTemplateException.Create(context.ProcessSettings, TemplateErrorCode.InvalidSwitchBlockSyntax, startMatch.Variable);
             }
         }
 
@@ -57,7 +57,7 @@ namespace DocxTemplater.Blocks
                     }
                     catch (OpenXmlTemplateException e) when (m_context.ProcessSettings.BindingErrorHandling != BindingErrorHandling.ThrowException)
                     {
-                        m_context.VariableReplacer.AddError($"{e.Message} in switch '{m_switchVariable}' case '{childBlock.MatchExpression}'");
+                        m_context.VariableReplacer.AddError(OpenXmlTemplateException.Create(m_context.ProcessSettings, TemplateErrorCode.ErrorInSwitchCase, e, m_switchVariable, childBlock.MatchExpression).Message);
                     }
 
                     if (caseMatch)

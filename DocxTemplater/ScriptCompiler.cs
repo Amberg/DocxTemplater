@@ -53,7 +53,7 @@ namespace DocxTemplater
             }
             catch (DynamicExpresso.Exceptions.ParseException e)
             {
-                throw new OpenXmlTemplateException($"Error parsing script {scriptAsString}", e);
+                throw OpenXmlTemplateException.Create(ProcessSettings, e, TemplateErrorCode.ScriptParseError, scriptAsString);
             }
         }
 
@@ -68,7 +68,7 @@ namespace DocxTemplater
             }
             catch (DynamicExpresso.Exceptions.ParseException e)
             {
-                throw new OpenXmlTemplateException($"Error parsing expression {scriptAsString}", e);
+                throw OpenXmlTemplateException.Create(ProcessSettings, e, TemplateErrorCode.ExpressionParseError, scriptAsString);
             }
         }
 
@@ -103,7 +103,7 @@ namespace DocxTemplater
             }
             catch (RegexMatchTimeoutException)
             {
-                throw new OpenXmlTemplateException($"Invalid expression '{scriptAsString}'");
+                throw OpenXmlTemplateException.Create(ProcessSettings, TemplateErrorCode.InvalidExpression, scriptAsString);
             }
 
             var identifiers = interpreter.DetectIdentifiers(scriptAsString);
