@@ -6,6 +6,31 @@ _DocxTemplater is a library to generate docx documents from a docx template. The
 [![MIT](https://img.shields.io/github/license/Amberg/DocxTemplater)](https://github.com/Amberg/DocxTemplater/blob/main/LICENSE)
 [![CI-Build](https://github.com/Amberg/DocxTemplater/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Amberg/DocxTemplater/actions/workflows/ci.yml)
 
+## Table of Contents
+
+- [Features](#features)
+- [Quickstart](#quickstart)
+- [Placeholder Syntax](#placeholder-syntax)
+  - [Quick Reference Examples](#quick-reference-examples)
+  - [Collections](#collections)
+  - [Range Loops](#range-loops)
+  - [Chart Data binding](#chart-data-binding)
+  - [Conditional Blocks](#conditional-blocks)
+  - [Switch / Case Blocks](#switch--case-blocks)
+  - [C# Expressions](#c-expressions)
+- [Formatters](#formatters)
+- [Image Formatter](#image-formatter)
+- [Markdown Formatter](#markdown-formatter)
+- [Sub-Template Formatter - Inserting Documents](#sub-template-formatter---inserting-documents)
+- [Content Controls](#content-controls)
+- [Whitespace Trimming Around Directives](#whitespace-trimming-around-directives)
+- [Error Handling](#error-handling)
+- [Culture](#culture)
+- [Advanced Model Binding](#advanced-model-binding)
+- [Template Schema Inspection](#template-schema-inspection)
+- [Template Syntax Validation](#template-syntax-validation)
+- [Support This Project](#support-this-project)
+
 ## Features
 - Variable Replacement
 - Collections - Bind to collections
@@ -17,6 +42,7 @@ _DocxTemplater is a library to generate docx documents from a docx template. The
 - Dynamic Tables - Columns are defined by the datasource
 - Content Controls - Fill Word content controls from the model, addressed by their tag
 - Template Schema - Statically inspect which variables a template expects, without rendering
+- Syntax Validation - Check a template for syntax errors without rendering it
 
 ## Quickstart
 
@@ -517,7 +543,9 @@ var docTemplate = new DocxTemplate(memStream, new ProcessSettings()
 var result = docTemplate.Process();
 ```
 
-## Advanced Model Binding: `ITemplateModel` and `TemplateModelWithDisplayNames`
+## Advanced Model Binding
+
+Two ways to control how placeholders are resolved against your model: `ITemplateModel` and `TemplateModelWithDisplayNames`.
 
 ### `ITemplateModel` Interface
 
@@ -601,6 +629,34 @@ template.Save("generated.docx");             // render - reuses the cached analy
 - Sub-template formatters (`:template` / `:T`): the referenced sub-template is itself a runtime template string and not visible to static analysis.
 - Dynamic tables (`:dyntable`): only the collection itself is reported, not its runtime-defined rows/columns.
 - String-key indexing (`props["key"]`): the key is not statically known and is not reflected in the schema.
+
+## Template Syntax Validation
+
+`ValidateTemplateSyntax()` checks the template syntax **without rendering it and without a model** and returns all errors found (an empty list if the syntax is valid). The document is not modified.
+The same parser runs at the start of `Process()`: errors with `Severity == Error` (broken block structure) make `Process()` throw an `OpenXmlTemplateException` listing all of them, while warnings (malformed tags, suspicious expressions) only show up here.
+
+```csharp
+using var template = DocxTemplate.Open("template.docx");
+foreach (var error in template.ValidateTemplateSyntax())
+{
+    // e.g. "Body: '{{/Orders}}' does not match '{{#Items}}' (near '...')"
+    Console.WriteLine(error);
+}
+```
+
+Errors:
+- Blocks that are not closed and closing tags without an opening tag.
+- Else `{{:}}` outside of a condition or more than once, separator `{{:s:}}` outside of a collection loop, `{{#case}}`/`{{#default}}` outside of a switch, `{{#}}` / `{{#switch}}` without a name or expression, unknown inline keywords (`{{:Foo}}`).
+
+Warnings:
+- Closing tags that do not match their opening tag (`{{#Items}}...{{/Orders}}`, `{?{...}}...{{/Items}}`, `{{:ignore}}...{{/}}`) - rendering closes the current block anyway. The closing tag may omit the implicit model prefix (`{{#ds.Items}}...{{/Items}}`).
+- Malformed tags that silently remain as text, e.g. `{{Name}`, `{{first name}}`, a stray `}}`.
+- Unbalanced parentheses and unterminated strings in conditions, expressions, switch selectors and case values.
+
+Everything between `{{:ignore}}` and `{{/:ignore}}` is treated as plain text and not validated.
+
+Each `TemplateSyntaxError` exposes the `Severity`, the `Part` (`Body`, `Header` or `Footer`), the offending `Tag`, a `Message` and the surrounding text as `Context`.
+Binding errors (unknown variables, wrong types, unknown formatters) are not detected, as they depend on the model.
 
 ## Support This Project
 

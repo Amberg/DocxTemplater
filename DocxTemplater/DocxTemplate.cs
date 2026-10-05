@@ -105,6 +105,48 @@ namespace DocxTemplater
             }
         }
 
+        /// <summary>
+        /// Checks the template syntax without rendering it, e.g. that all blocks are closed, closing tags match their
+        /// opening tags, else / separator / case tags are used inside the right block, tags are well-formed and
+        /// expressions have balanced parentheses and terminated strings.
+        /// Binding errors (unknown variables, wrong types) are not detected - they require a model.
+        /// </summary>
+        /// <returns>
+        /// All syntax errors found; an empty list if the template syntax is valid. Entries with
+        /// <see cref="TemplateSyntaxErrorSeverity.Error"/> make <see cref="Process"/> throw; warnings do not.
+        /// </returns>
+        /// <remarks>Must be called before <see cref="Process"/>. The document is not modified.</remarks>
+        public IReadOnlyList<TemplateSyntaxError> ValidateTemplateSyntax()
+        {
+            if (Processed || m_faulted)
+            {
+                throw new OpenXmlTemplateException($"{nameof(ValidateTemplateSyntax)} must be called before {nameof(Process)}.");
+            }
+            var errors = new List<TemplateSyntaxError>();
+            var mainPart = m_wpDocument.MainDocumentPart;
+            if (mainPart != null)
+            {
+                foreach (var header in mainPart.HeaderParts)
+                {
+                    Validate(header.Header);
+                }
+                Validate(mainPart.RootElement);
+                foreach (var footer in mainPart.FooterParts)
+                {
+                    Validate(footer.Footer);
+                }
+            }
+            return errors;
+
+            void Validate(OpenXmlCompositeElement root)
+            {
+                if (root != null)
+                {
+                    errors.AddRange(TemplateSyntaxParser.Parse(GetPartText(root), GetPartName(root)).Errors);
+                }
+            }
+        }
+
         public Stream Process()
         {
             if (m_faulted)
