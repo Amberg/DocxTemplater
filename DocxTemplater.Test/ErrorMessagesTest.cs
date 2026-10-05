@@ -107,7 +107,7 @@ namespace DocxTemplater.Test
         public void SyntaxError_WithoutCode_KeepsFreeTextMessage()
         {
             var error = new TemplateSyntaxError(TemplateSyntaxErrorSeverity.Error, "Body", "{{x}}", "ctx",
-                TemplateErrorCode.None, null, null, null, "free text");
+                TemplateErrorCode.None, null, null, null, message: "free text");
 
             Assert.Multiple(() =>
             {
