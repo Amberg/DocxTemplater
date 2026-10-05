@@ -598,6 +598,7 @@ To ship a language as a package of its own, create an assembly named `DocxTempla
 `TemplateErrorMessages.Default` is shared by all documents. To keep languages local to one document, assign a separate instance to `ProcessSettings.ErrorMessages`.
 
 An error can be re-rendered in another language at any time, nested messages included: `e.GetMessage(new CultureInfo("de"))`, `syntaxError.GetMessage(culture)` and `syntaxError.ToString(culture)`.
+
 ---
 ## Culture
 
