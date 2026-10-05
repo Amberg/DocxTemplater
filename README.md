@@ -6,6 +6,31 @@ _DocxTemplater is a library to generate docx documents from a docx template. The
 [![MIT](https://img.shields.io/github/license/Amberg/DocxTemplater)](https://github.com/Amberg/DocxTemplater/blob/main/LICENSE)
 [![CI-Build](https://github.com/Amberg/DocxTemplater/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Amberg/DocxTemplater/actions/workflows/ci.yml)
 
+## Table of Contents
+
+- [Features](#features)
+- [Quickstart](#quickstart)
+- [Placeholder Syntax](#placeholder-syntax)
+  - [Quick Reference Examples](#quick-reference-examples)
+  - [Collections](#collections)
+  - [Range Loops](#range-loops)
+  - [Chart Data binding](#chart-data-binding)
+  - [Conditional Blocks](#conditional-blocks)
+  - [Switch / Case Blocks](#switch--case-blocks)
+  - [C# Expressions](#c-expressions)
+- [Formatters](#formatters)
+- [Image Formatter](#image-formatter)
+- [Markdown Formatter](#markdown-formatter)
+- [Sub-Template Formatter - Inserting Documents](#sub-template-formatter---inserting-documents)
+- [Content Controls](#content-controls)
+- [Whitespace Trimming Around Directives](#whitespace-trimming-around-directives)
+- [Error Handling](#error-handling)
+- [Culture](#culture)
+- [Advanced Model Binding](#advanced-model-binding)
+- [Template Schema Inspection](#template-schema-inspection)
+- [Template Syntax Validation](#template-syntax-validation)
+- [Support This Project](#support-this-project)
+
 ## Features
 - Variable Replacement
 - Collections - Bind to collections
@@ -17,6 +42,7 @@ _DocxTemplater is a library to generate docx documents from a docx template. The
 - Dynamic Tables - Columns are defined by the datasource
 - Content Controls - Fill Word content controls from the model, addressed by their tag
 - Template Schema - Statically inspect which variables a template expects, without rendering
+- Syntax Validation - Check a template for syntax errors without rendering it
 
 ## Quickstart
 
@@ -517,7 +543,9 @@ var docTemplate = new DocxTemplate(memStream, new ProcessSettings()
 var result = docTemplate.Process();
 ```
 
-## Advanced Model Binding: `ITemplateModel` and `TemplateModelWithDisplayNames`
+## Advanced Model Binding
+
+Two ways to control how placeholders are resolved against your model: `ITemplateModel` and `TemplateModelWithDisplayNames`.
 
 ### `ITemplateModel` Interface
 
