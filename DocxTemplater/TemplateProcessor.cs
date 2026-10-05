@@ -94,7 +94,7 @@ namespace DocxTemplater
             }
         }
 
-        private void RemoveLineBreaksAroundSyntaxPatterns(IReadOnlyCollection<(PatternMatch, Text)> matches)
+        private void RemoveLineBreaksAroundSyntaxPatterns(IEnumerable<Text> markerTexts)
         {
             if (!Context.ProcessSettings.IgnoreLineBreaksAroundTags)
             {
@@ -108,7 +108,7 @@ namespace DocxTemplater
                 }
                 return openXmlElement is Text;
             }
-            foreach (var (_, text) in matches)
+            foreach (var text in markerTexts)
             {
                 foreach (var next in text.ElementsSameLevelAfterInDocument())
                 {
@@ -127,11 +127,14 @@ namespace DocxTemplater
             }
         }
 
-        private static IReadOnlyCollection<(PatternMatch, Text)> IsolateAndMergeTextTemplateMarkers(OpenXmlCompositeElement content)
+        /// <summary>
+        /// Merges the runs of every syntax pattern into a single marked <see cref="Text"/> element and returns the
+        /// element for each match.
+        /// </summary>
+        private static Dictionary<PatternMatch, Text> IsolateAndMergeTextTemplateMarkers(CharacterMap charMap, IEnumerable<PatternMatch> matches)
         {
-            var charMap = new CharacterMap(content);
-            List<(PatternMatch, Text)> patternMatches = [];
-            foreach (var m in PatternMatcher.FindSyntaxPatterns(charMap.Text))
+            var texts = new Dictionary<PatternMatch, Text>();
+            foreach (var m in matches)
             {
                 var firstChar = charMap[m.Index];
                 var lastChar = charMap[m.Index + m.Length - 1];
@@ -139,9 +142,9 @@ namespace DocxTemplater
                 // for this reason it does not matter that the new nodes are not in the charMap
                 var mergedText = charMap.MergeText(firstChar, lastChar);
                 mergedText.Element.Mark(m.Type);
-                patternMatches.Add(new(m, mergedText.Element));
+                texts[m] = mergedText.Element;
             }
-            return patternMatches;
+            return texts;
         }
 
         private static void Cleanup(OpenXmlCompositeElement element, bool removeEmptyElements)
@@ -269,50 +272,23 @@ namespace DocxTemplater
             }
         }
 
-        private IReadOnlyCollection<ContentBlock> ExpandLoops(OpenXmlCompositeElement element, IReadOnlyCollection<(PatternMatch, Text)> matches)
+        /// <summary>
+        /// Creates the <see cref="ContentBlock"/> tree from the syntax tree. The syntax tree already has the block
+        /// shape (content / else / separator nodes), so this is a plain one-to-one mapping.
+        /// </summary>
+        private void CreateBlocks(IEnumerable<TemplateSyntaxNode> nodes, ContentBlock parent, IReadOnlyDictionary<PatternMatch, Text> texts)
         {
-            Stack<ContentBlock> blockStack = new();
-            blockStack.Push(new ContentBlock()); // dummy block for root
-            foreach (var item in matches)
+            foreach (var node in nodes)
             {
-                var match = item.Item1;
-                var text = (Text)item.Item2;
-                var patternType = match.Type;
-                if (patternType is PatternType.InlineKeyWord)
-                {
-                    StartBlock(blockStack, match, patternType, text);
-                    CloseBlock(blockStack, match, text);
-                }
-
-                if (patternType is PatternType.Condition or PatternType.CollectionStart or PatternType.IgnoreBlock or PatternType.Switch or PatternType.Case or PatternType.Default or PatternType.RangeStart)
-                {
-                    if (patternType is PatternType.Case or PatternType.Default)
-                    {
-                        AutoCloseCaseOrDefaultIfNeeded(blockStack, match, text);
-                    }
-                    StartBlock(blockStack, match, patternType, text);
-                    StartBlock(blockStack, match, PatternType.None, text); // open the child content block of the loop or condition
-                }
-                else if (patternType is PatternType.ConditionElse or PatternType.CollectionSeparator)
-                {
-                    CloseBlock(blockStack, match, text);
-                    StartBlock(blockStack, match, patternType, text);
-                }
-                if (patternType is PatternType.ConditionEnd or PatternType.CollectionEnd or PatternType.IgnoreEnd)
-                {
-                    CloseBlock(blockStack, match, text);
-                    CloseBlock(blockStack, match, text);
-                }
+                var block = ContentBlock.Crate(Context, node.Type, texts[node.Start], node.Start);
+                parent.AddChildBlock(block);
+                block.CloseBlock(texts[node.End], node.End);
+                CreateBlocks(node.Children, block, texts);
             }
-            if (blockStack.Count != 1)
-            {
-                var notClosedBlocks = blockStack.Reverse().Skip(1).Select(x => x.StartMatch.Match.Value).Skip(1).ToList();
-                throw new OpenXmlTemplateException($"Not all blocks are closed: {string.Join(", ", notClosedBlocks)}");
-            }
+        }
 
-            var rootBlock = blockStack.Peek();
-            var rootChilds = rootBlock.ChildBlocks;
-
+        private static IReadOnlyCollection<ContentBlock> ExtractBlockContent(OpenXmlCompositeElement element, IReadOnlyCollection<ContentBlock> rootChilds)
+        {
             foreach (var block in rootChilds)
             {
                 block.AddInsertionPointsRecursively();
@@ -335,34 +311,6 @@ namespace DocxTemplater
 #endif
 
             return rootChilds;
-        }
-
-        private void StartBlock(Stack<ContentBlock> blockStack, PatternMatch match, PatternType value, Text text)
-        {
-            var newBlock = ContentBlock.Crate(Context, value, text, match);
-            blockStack.Peek().AddChildBlock(newBlock);
-            blockStack.Push(newBlock);
-        }
-
-        private static void AutoCloseCaseOrDefaultIfNeeded(Stack<ContentBlock> blockStack, PatternMatch match, Text text)
-        {
-            var current = blockStack.Peek();
-            if (current.PatternType == PatternType.None && current.ParentBlock != null &&
-                (current.ParentBlock.PatternType == PatternType.Case || current.ParentBlock.PatternType == PatternType.Default))
-            {
-                CloseBlock(blockStack, match, text); // Close None
-                CloseBlock(blockStack, match, text); // Close Case/Default
-            }
-        }
-
-        private static void CloseBlock(Stack<ContentBlock> blockStack, PatternMatch match, Text text)
-        {
-            if (blockStack.Count == 1)
-            {
-                throw new OpenXmlTemplateException($"Block was not open {text.InnerText}");
-            }
-            var closedBlock = blockStack.Pop();
-            closedBlock.CloseBlock(text, match);
         }
 
         public void BindModel(string prefix, object model)
@@ -400,13 +348,31 @@ namespace DocxTemplater
             Console.WriteLine(rootElement.ToPrettyPrintXml());
 #endif
             PreProcess(rootElement);
-            var matches = IsolateAndMergeTextTemplateMarkers(rootElement);
-            RemoveLineBreaksAroundSyntaxPatterns(matches);
+            var charMap = new CharacterMap(rootElement);
+            var syntaxTree = TemplateSyntaxParser.Parse(charMap.Text, GetPartName(rootElement));
+            syntaxTree.ThrowIfErrors();
+            var texts = IsolateAndMergeTextTemplateMarkers(charMap, syntaxTree.Matches);
+            RemoveLineBreaksAroundSyntaxPatterns(texts.Values);
 #if DEBUG
             Console.WriteLine("----------- Isolate Texts --------");
             Console.WriteLine(rootElement.ToPrettyPrintXml());
 #endif
-            return ExpandLoops(rootElement, matches);
+            var rootBlock = new ContentBlock(); // dummy block for root
+            CreateBlocks(syntaxTree.Blocks, rootBlock, texts);
+            return ExtractBlockContent(rootElement, rootBlock.ChildBlocks);
+        }
+
+        /// <summary>
+        /// Name of the document part a root element belongs to, as reported in <see cref="TemplateSyntaxError.Part"/>.
+        /// </summary>
+        internal static string GetPartName(OpenXmlElement rootElement)
+        {
+            return rootElement switch
+            {
+                Header => "Header",
+                Footer => "Footer",
+                _ => "Body"
+            };
         }
     }
 }

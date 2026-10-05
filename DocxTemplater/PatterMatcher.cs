@@ -88,6 +88,16 @@ namespace DocxTemplater
 
         public static IEnumerable<PatternMatch> FindSyntaxPatterns(string text)
         {
+            return FindSyntaxPatterns(text, null);
+        }
+
+        /// <summary>
+        /// Finds all syntax patterns in <paramref name="text"/>. If <paramref name="onInvalidPattern"/> is null,
+        /// an invalid pattern throws an <see cref="OpenXmlTemplateException"/>; otherwise it is reported to the
+        /// callback and skipped, so all errors of a text can be collected.
+        /// </summary>
+        public static IEnumerable<PatternMatch> FindSyntaxPatterns(string text, Action<Match, string> onInvalidPattern)
+        {
             try
             {
                 if (text == null)
@@ -123,7 +133,8 @@ namespace DocxTemplater
                         {
                             if (varname == null)
                             {
-                                throw new OpenXmlTemplateException($"Invalid syntax '{match.Value}'");
+                                ReportInvalid(onInvalidPattern, match, $"Invalid syntax '{match.Value}'");
+                                continue;
                             }
 
                             if (varname.Equals("ignore", StringComparison.CurrentCultureIgnoreCase))
@@ -140,9 +151,10 @@ namespace DocxTemplater
                         }
                         else if (prefix == "/:")
                         {
-                            if (!varname.Equals("ignore", StringComparison.CurrentCultureIgnoreCase))
+                            if (varname == null || !varname.Equals("ignore", StringComparison.CurrentCultureIgnoreCase))
                             {
-                                throw new OpenXmlTemplateException($"Invalid syntax '{match.Value}'");
+                                ReportInvalid(onInvalidPattern, match, $"Invalid syntax '{match.Value}'");
+                                continue;
                             }
                             result.Add(new PatternMatch(match, PatternType.IgnoreEnd, null, prefix, varname, null, null, match.Index, match.Length));
 
@@ -181,7 +193,8 @@ namespace DocxTemplater
                         {
                             if (string.IsNullOrWhiteSpace(varname))
                             {
-                                throw new OpenXmlTemplateException($"Invalid range loop syntax '{match.Value}' - variable name is required");
+                                ReportInvalid(onInvalidPattern, match, $"Invalid range loop syntax '{match.Value}' - variable name is required");
+                                continue;
                             }
 
                             result.Add(new PatternMatch(match, PatternType.RangeStart, null,
@@ -204,7 +217,8 @@ namespace DocxTemplater
                                 trimmedVarname.Equals("default", StringComparison.OrdinalIgnoreCase) ||
                                 trimmedVarname.Equals("d", StringComparison.OrdinalIgnoreCase))
                             {
-                                throw new OpenXmlTemplateException($"Invalid syntax '{match.Value}'. Use '{{{{/}}}}' instead.");
+                                ReportInvalid(onInvalidPattern, match, $"Invalid syntax '{match.Value}'. Use '{{{{/}}}}' instead.");
+                                continue;
                             }
                             var patternType = PatternType.CollectionEnd;
                             result.Add(new PatternMatch(match, patternType, null,
@@ -239,7 +253,7 @@ namespace DocxTemplater
                     }
                     else
                     {
-                        throw new OpenXmlTemplateException($"Invalid syntax '{match.Value}'");
+                        ReportInvalid(onInvalidPattern, match, $"Invalid syntax '{match.Value}'");
                     }
                 }
 
@@ -249,6 +263,15 @@ namespace DocxTemplater
             {
                 throw new OpenXmlTemplateException($"Invalid syntax '{text}' - match timeout");
             }
+        }
+
+        private static void ReportInvalid(Action<Match, string> onInvalidPattern, Match match, string message)
+        {
+            if (onInvalidPattern == null)
+            {
+                throw new OpenXmlTemplateException(message);
+            }
+            onInvalidPattern(match, message);
         }
     }
 }

@@ -22,6 +22,7 @@ namespace DocxTemplater
         private readonly Dictionary<OpenXmlCompositeElement, IReadOnlyCollection<ContentBlock>> m_prebuiltBlocks = new();
         private TemplateSchema m_schema;
         private bool m_faulted;
+        private List<(string Part, string Text)> m_templateTexts;
 
         private static readonly FileFormatVersions TargetMinimumVersion = FileFormatVersions.Office2010;
 
@@ -105,6 +106,63 @@ namespace DocxTemplater
             }
         }
 
+        /// <summary>
+        /// Checks the template syntax without rendering it, e.g. that all blocks are closed, closing tags match their
+        /// opening tags, else / separator / case tags are used inside the right block, tags are well-formed and
+        /// expressions have balanced parentheses and terminated strings.
+        /// Binding errors (unknown variables, wrong types) are not detected - they require a model.
+        /// </summary>
+        /// <returns>
+        /// All syntax errors found; an empty list if the template syntax is valid. Entries with
+        /// <see cref="TemplateSyntaxErrorSeverity.Error"/> make <see cref="Process"/> throw; warnings do not.
+        /// </returns>
+        /// <remarks>Must be called before <see cref="Process"/>. The document is not modified.</remarks>
+        public IReadOnlyList<TemplateSyntaxError> ValidateTemplateSyntax()
+        {
+            if (Processed)
+            {
+                throw new OpenXmlTemplateException($"{nameof(ValidateTemplateSyntax)} must be called before {nameof(Process)}.");
+            }
+            return GetTemplateTexts()
+                .SelectMany(x => TemplateSyntaxParser.Parse(x.Text, x.Part).Errors)
+                .ToList();
+        }
+
+        /// <summary>
+        /// The text of each template part as seen by the pattern matcher. Captured once before the document is
+        /// mutated (by <see cref="GetTemplateSchema"/>), so <see cref="ValidateTemplateSyntax"/> can be called afterwards.
+        /// </summary>
+        private List<(string Part, string Text)> GetTemplateTexts()
+        {
+            if (m_templateTexts != null)
+            {
+                return m_templateTexts;
+            }
+            m_templateTexts = [];
+            var mainPart = m_wpDocument.MainDocumentPart;
+            if (mainPart != null)
+            {
+                foreach (var header in mainPart.HeaderParts)
+                {
+                    AddTemplateText(header.Header);
+                }
+                AddTemplateText(mainPart.RootElement);
+                foreach (var footer in mainPart.FooterParts)
+                {
+                    AddTemplateText(footer.Footer);
+                }
+            }
+            return m_templateTexts;
+
+            void AddTemplateText(OpenXmlCompositeElement root)
+            {
+                if (root != null)
+                {
+                    m_templateTexts.Add((GetPartName(root), new CharacterMap(root).Text));
+                }
+            }
+        }
+
         public Stream Process()
         {
             if (m_faulted)
@@ -185,6 +243,7 @@ namespace DocxTemplater
             {
                 throw new OpenXmlTemplateException($"{nameof(GetTemplateSchema)} must be called before {nameof(Process)}.");
             }
+            GetTemplateTexts(); // capture before the block tree build mutates the document
             var builder = new SchemaBuilder();
             if (m_wpDocument.MainDocumentPart != null)
             {

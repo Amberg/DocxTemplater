@@ -602,6 +602,31 @@ template.Save("generated.docx");             // render - reuses the cached analy
 - Dynamic tables (`:dyntable`): only the collection itself is reported, not its runtime-defined rows/columns.
 - String-key indexing (`props["key"]`): the key is not statically known and is not reflected in the schema.
 
+## Template Syntax Validation
+
+`ValidateTemplateSyntax()` checks the template syntax **without rendering it and without a model** and returns all errors found (an empty list if the syntax is valid). The document is not modified.
+The same parser runs at the start of `Process()`: errors with `Severity == Error` (broken block structure) make `Process()` throw an `OpenXmlTemplateException` listing all of them, while warnings (malformed tags, suspicious expressions) only show up here.
+
+```csharp
+using var template = DocxTemplate.Open("template.docx");
+foreach (var error in template.ValidateTemplateSyntax())
+{
+    // e.g. "Body: '{{/Orders}}' does not match '{{#Items}}' (near '...')"
+    Console.WriteLine(error);
+}
+```
+
+Errors:
+- Blocks that are not closed, closing tags without an opening tag, and closing tags that do not match (`{{#Items}}...{{/Orders}}`, `{?{...}}...{{/Items}}`, `{{:ignore}}...{{/}}`). The closing tag may omit the implicit model prefix (`{{#ds.Items}}...{{/Items}}`).
+- Else `{{:}}` outside of a condition or more than once, separator `{{:s:}}` outside of a collection loop, `{{#case}}`/`{{#default}}` outside of a switch, unknown inline keywords (`{{:Foo}}`).
+
+Warnings:
+- Malformed tags that silently remain as text, e.g. `{{Name}`, `{{first name}}`, a stray `}}`.
+- Unbalanced parentheses and unterminated strings in conditions and expressions.
+
+Each `TemplateSyntaxError` exposes the `Severity`, the `Part` (`Body`, `Header` or `Footer`), the offending `Tag`, a `Message` and the surrounding text as `Context`.
+Binding errors (unknown variables, wrong types, unknown formatters) are not detected, as they depend on the model.
+
 ## Support This Project
 
 If you find DocxTemplater useful, please consider supporting its development:
