@@ -28,7 +28,8 @@ namespace DocxTemplater.Localization.Test
         {
             get
             {
-                yield return new TestCaseData(new LanguagePack("German", GermanErrorMessages.Culture, new CultureInfo("de-CH"), GermanErrorMessages.Formats, m => m.AddGerman()));
+                yield return new TestCaseData(new LanguagePack("German", GermanErrorMessages.Culture, new CultureInfo("de-AT"), GermanErrorMessages.Formats, m => m.AddGerman()));
+                yield return new TestCaseData(new LanguagePack("SwissGerman", SwissGermanErrorMessages.Culture, new CultureInfo("de-CH"), SwissGermanErrorMessages.Formats, m => m.AddSwissGerman()));
                 yield return new TestCaseData(new LanguagePack("French", FrenchErrorMessages.Culture, new CultureInfo("fr-CH"), FrenchErrorMessages.Formats, m => m.AddFrench()));
                 yield return new TestCaseData(new LanguagePack("Italian", ItalianErrorMessages.Culture, new CultureInfo("it-CH"), ItalianErrorMessages.Formats, m => m.AddItalian()));
             }
@@ -145,13 +146,49 @@ namespace DocxTemplater.Localization.Test
         }
 
         [Test]
-        public void Default_CanRegisterAllLanguages()
+        public void SwissGerman_UsesSsInsteadOfSharpS()
         {
-            var messages = new TemplateErrorMessages().AddGerman().AddFrench().AddItalian();
+            Assert.Multiple(() =>
+            {
+                Assert.That(GermanErrorMessages.Formats[TemplateErrorCode.ModelPrefixAlreadyBound], Does.Contain("Groß-"));
+                Assert.That(SwissGermanErrorMessages.Formats[TemplateErrorCode.ModelPrefixAlreadyBound], Does.Contain("Gross-"));
+                Assert.That(SwissGermanErrorMessages.Formats.Values, Has.None.Contains("ß"));
+                Assert.That(GermanErrorMessages.Formats.Values, Has.Some.Contains("ß"), "the German texts should use standard spelling");
+            });
+        }
+
+        [Test]
+        public void SpecificCulture_FallsBackToNeutralCulture()
+        {
+            var germanOnly = new TemplateErrorMessages().AddGerman();
+            var both = new TemplateErrorMessages().AddGerman().AddSwissGerman();
+            var swissOnly = new TemplateErrorMessages().AddSwissGerman();
 
             Assert.Multiple(() =>
             {
-                string[] languages = ["de", "fr", "it"];
+                // de-CH -> de
+                Assert.That(germanOnly.Format(TemplateErrorCode.ModelPrefixAlreadyBound, new CultureInfo("de-CH"), "x"), Does.Contain("Groß-"));
+                // de-CH texts win over the de fallback, other German cultures still use de
+                Assert.That(both.Format(TemplateErrorCode.ModelPrefixAlreadyBound, new CultureInfo("de-CH"), "x"), Does.Contain("Gross-"));
+                Assert.That(both.Format(TemplateErrorCode.ModelPrefixAlreadyBound, new CultureInfo("de-DE"), "x"), Does.Contain("Groß-"));
+                Assert.That(both.Format(TemplateErrorCode.ModelPrefixAlreadyBound, new CultureInfo("de-AT"), "x"), Does.Contain("Groß-"));
+                Assert.That(both.Format(TemplateErrorCode.ModelPrefixAlreadyBound, new CultureInfo("de"), "x"), Does.Contain("Groß-"));
+                // de-CH texts are not used for other German cultures - they fall back to English
+                Assert.That(swissOnly.Format(TemplateErrorCode.ModelNotFound, new CultureInfo("de-DE"), "X"), Is.EqualTo("Model X not found"));
+                Assert.That(swissOnly.Format(TemplateErrorCode.ModelNotFound, new CultureInfo("de-CH"), "X"), Is.EqualTo("Modell X nicht gefunden"));
+                // fr-CH -> fr
+                Assert.That(new TemplateErrorMessages().AddFrench().Format(TemplateErrorCode.ModelNotFound, new CultureInfo("fr-CH"), "X"), Is.EqualTo("Modèle X introuvable"));
+            });
+        }
+
+        [Test]
+        public void Default_CanRegisterAllLanguages()
+        {
+            var messages = new TemplateErrorMessages().AddGerman().AddSwissGerman().AddFrench().AddItalian();
+
+            Assert.Multiple(() =>
+            {
+                string[] languages = ["de", "de-CH", "fr", "it"];
                 Assert.That(messages.Languages, Is.EquivalentTo(languages));
                 Assert.That(messages.Format(TemplateErrorCode.ModelNotFound, new CultureInfo("de-AT"), "X"), Is.EqualTo("Modell X nicht gefunden"));
                 Assert.That(messages.Format(TemplateErrorCode.ModelNotFound, new CultureInfo("fr-CA"), "X"), Is.EqualTo("Modèle X introuvable"));

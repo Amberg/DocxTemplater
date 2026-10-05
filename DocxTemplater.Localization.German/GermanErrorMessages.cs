@@ -26,7 +26,7 @@ namespace DocxTemplater.Localization
             new Dictionary<TemplateErrorCode, string>
             {
                 // model binding
-                [TemplateErrorCode.ModelPrefixAlreadyBound] = "Ein Modell mit dem Präfix '{0}' wurde bereits gebunden - Modell-Präfixe unterscheiden nicht zwischen Gross- und Kleinschreibung",
+                [TemplateErrorCode.ModelPrefixAlreadyBound] = "Ein Modell mit dem Präfix '{0}' wurde bereits gebunden - Modell-Präfixe unterscheiden nicht zwischen Groß- und Kleinschreibung",
                 [TemplateErrorCode.ModelNotFound] = "Modell {0} nicht gefunden",
                 [TemplateErrorCode.PropertyNotFound] = "Eigenschaft {0} nicht gefunden in {1}",
                 [TemplateErrorCode.PropertyNotFoundInParentScope] = "Eigenschaft {0} nicht gefunden im übergeordneten Bereich",
@@ -88,7 +88,7 @@ namespace DocxTemplater.Localization
                 [TemplateErrorCode.SwitchExpressionRequired] = "'{0}' benötigt einen Ausdruck, z.B. '{{{{#{1}: Value}}}}'",
                 [TemplateErrorCode.SwitchLooksLikeLoop] = "'{0}' ist eine Schleife über eine Auflistung namens '{1}'. Für ein switch / case verwenden Sie '{{{{#{1}: Value}}}}'",
                 [TemplateErrorCode.ClosingTagMismatch] = "'{0}' passt nicht zu '{1}'",
-                [TemplateErrorCode.ClosingTagExpectedGeneric] = "'{0}' beendet '{1}', erwartet wird '{{{{/}}}}'",
+                [TemplateErrorCode.ClosingTagExpectedGeneric] = "'{0}' schließt '{1}', erwartet wird '{{{{/}}}}'",
                 [TemplateErrorCode.EmptyExpression] = "'{0}' hat einen leeren Ausdruck",
                 [TemplateErrorCode.UnbalancedBracket] = "Unausgeglichene Klammer '{0}' im Ausdruck '{1}'",
                 [TemplateErrorCode.UnterminatedStringLiteral] = "Nicht abgeschlossene Zeichenkette im Ausdruck '{0}'",

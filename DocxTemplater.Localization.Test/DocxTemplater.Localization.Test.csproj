@@ -26,5 +26,6 @@
     <ProjectReference Include="..\DocxTemplater.Localization.German\DocxTemplater.Localization.German.csproj" />
     <ProjectReference Include="..\DocxTemplater.Localization.French\DocxTemplater.Localization.French.csproj" />
     <ProjectReference Include="..\DocxTemplater.Localization.Italian\DocxTemplater.Localization.Italian.csproj" />
+    <ProjectReference Include="..\DocxTemplater.Localization.SwissGerman\DocxTemplater.Localization.SwissGerman.csproj" />
   </ItemGroup>
 </Project>

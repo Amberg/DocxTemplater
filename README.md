@@ -45,7 +45,7 @@ _DocxTemplater is a library to generate docx documents from a docx template. The
 - Content Controls - Fill Word content controls from the model, addressed by their tag
 - Template Schema - Statically inspect which variables a template expects, without rendering
 - Syntax Validation - Check a template for syntax errors without rendering it
-- Localized Error Messages - Every error carries a code; messages are available in English, German, French and Italian and can be extended
+- Localized Error Messages - Every error carries a code; messages are available in English, German, Swiss German, French and Italian and can be extended
 
 ## Quickstart
 
@@ -86,6 +86,7 @@ Enhance DocxTemplater with these optional extension packages:
 | [DocxTemplater.Images ](https://www.nuget.org/packages/DocxTemplater.Images)  |Enables embedding images in generated Word documents|
 | [DocxTemplater.Markdown ](https://www.nuget.org/packages/DocxTemplater.Markdown)  | Allows use of Markdown syntax for generating parts of Word documents|
 | [DocxTemplater.Localization.German ](https://www.nuget.org/packages/DocxTemplater.Localization.German)  | German error messages, see [Localized Error Messages](#localized-error-messages)|
+| [DocxTemplater.Localization.SwissGerman ](https://www.nuget.org/packages/DocxTemplater.Localization.SwissGerman)  | Swiss German (de-CH) error messages, Swiss spelling without ß|
 | [DocxTemplater.Localization.French ](https://www.nuget.org/packages/DocxTemplater.Localization.French)  | French error messages|
 | [DocxTemplater.Localization.Italian ](https://www.nuget.org/packages/DocxTemplater.Localization.Italian)  | Italian error messages|
 
@@ -572,8 +573,8 @@ English is built in. Other languages come as NuGet packages that are registered 
 ```csharp
 using DocxTemplater.Localization;
 
-// DocxTemplater.Localization.German / .French / .Italian
-TemplateErrorMessages.Default.AddGerman().AddFrench().AddItalian();
+// DocxTemplater.Localization.German / .SwissGerman / .French / .Italian
+TemplateErrorMessages.Default.AddGerman().AddSwissGerman().AddFrench().AddItalian();
 
 var template = new DocxTemplate(stream, new ProcessSettings
 {
@@ -582,7 +583,7 @@ var template = new DocxTemplate(stream, new ProcessSettings
 });
 ```
 
-A culture without registered texts falls back to its parent culture (`de-CH` → `de`) and finally to English, so every code always has a message.
+A culture without registered texts falls back to its parent culture (`de-CH` → `de`, `fr-CH` → `fr`) and finally to English, so every code always has a message. A specific culture takes precedence over its parent: with both German packages registered, `de-CH` users get the Swiss spelling and `de-DE` / `de-AT` users the standard one.
 
 Your own language - or your own wording - is a dictionary from `TemplateErrorCode` to a format string. It does not have to be complete; missing codes fall back as described above. Adding a language twice merges the dictionaries, so single texts can be overridden. `TemplateErrorMessages.English` is the reference for the placeholders of each code:
 
