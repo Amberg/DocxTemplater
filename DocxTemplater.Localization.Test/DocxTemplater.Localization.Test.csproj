@@ -23,9 +23,9 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DocxTemplater\DocxTemplater.csproj" />
-    <ProjectReference Include="..\DocxTemplater.Localization.German\DocxTemplater.Localization.German.csproj" />
-    <ProjectReference Include="..\DocxTemplater.Localization.French\DocxTemplater.Localization.French.csproj" />
-    <ProjectReference Include="..\DocxTemplater.Localization.Italian\DocxTemplater.Localization.Italian.csproj" />
-    <ProjectReference Include="..\DocxTemplater.Localization.SwissGerman\DocxTemplater.Localization.SwissGerman.csproj" />
+    <ProjectReference Include="..\DocxTemplater.Localization.de\DocxTemplater.Localization.de.csproj" />
+    <ProjectReference Include="..\DocxTemplater.Localization.fr\DocxTemplater.Localization.fr.csproj" />
+    <ProjectReference Include="..\DocxTemplater.Localization.it\DocxTemplater.Localization.it.csproj" />
+    <ProjectReference Include="..\DocxTemplater.Localization.de-CH\DocxTemplater.Localization.de-CH.csproj" />
   </ItemGroup>
 </Project>

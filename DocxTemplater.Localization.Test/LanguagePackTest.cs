@@ -9,18 +9,17 @@ using NUnit.Framework;
 namespace DocxTemplater.Localization.Test
 {
     /// <summary>
-    /// The same checks for every language package: complete, consistent with the English placeholders and
-    /// applied end-to-end through <see cref="ProcessSettings.UiCulture"/>.
+    /// The same checks for every language package: complete, consistent with the English placeholders, loaded
+    /// automatically by convention and applied end-to-end through <see cref="ProcessSettings.UiCulture"/>.
     /// </summary>
     [TestFixture]
     public class LanguagePackTest
     {
-        public sealed record LanguagePack(string Name, CultureInfo Culture, CultureInfo SpecificCulture,
-            IReadOnlyDictionary<TemplateErrorCode, string> Formats, Func<TemplateErrorMessages, TemplateErrorMessages> Add)
+        public sealed record LanguagePack(ITemplateLanguagePack Pack, CultureInfo SpecificCulture)
         {
             public override string ToString()
             {
-                return Name;
+                return Pack.Culture.Name;
             }
         }
 
@@ -28,10 +27,10 @@ namespace DocxTemplater.Localization.Test
         {
             get
             {
-                yield return new TestCaseData(new LanguagePack("German", GermanErrorMessages.Culture, new CultureInfo("de-AT"), GermanErrorMessages.Formats, m => m.AddGerman()));
-                yield return new TestCaseData(new LanguagePack("SwissGerman", SwissGermanErrorMessages.Culture, new CultureInfo("de-CH"), SwissGermanErrorMessages.Formats, m => m.AddSwissGerman()));
-                yield return new TestCaseData(new LanguagePack("French", FrenchErrorMessages.Culture, new CultureInfo("fr-CH"), FrenchErrorMessages.Formats, m => m.AddFrench()));
-                yield return new TestCaseData(new LanguagePack("Italian", ItalianErrorMessages.Culture, new CultureInfo("it-CH"), ItalianErrorMessages.Formats, m => m.AddItalian()));
+                yield return new TestCaseData(new LanguagePack(new GermanErrorMessages(), new CultureInfo("de-AT")));
+                yield return new TestCaseData(new LanguagePack(new SwissGermanErrorMessages(), new CultureInfo("de-CH")));
+                yield return new TestCaseData(new LanguagePack(new FrenchErrorMessages(), new CultureInfo("fr-CH")));
+                yield return new TestCaseData(new LanguagePack(new ItalianErrorMessages(), new CultureInfo("it-CH")));
             }
         }
 
@@ -56,6 +55,11 @@ namespace DocxTemplater.Localization.Test
             return new DocxTemplate(stream, settings);
         }
 
+        private static string Expected(LanguagePack pack, TemplateErrorCode code, params object[] args)
+        {
+            return string.Format(pack.Pack.Culture, pack.Pack.Formats[code].Replace("\n", Environment.NewLine), args);
+        }
+
         [TestCaseSource(nameof(Packs))]
         public void AllCodesAreTranslated(LanguagePack pack)
         {
@@ -65,9 +69,9 @@ namespace DocxTemplater.Localization.Test
             {
                 foreach (var code in codes)
                 {
-                    Assert.That(pack.Formats.ContainsKey(code), $"{code} is not translated");
+                    Assert.That(pack.Pack.Formats.ContainsKey(code), $"{code} is not translated");
                 }
-                Assert.That(pack.Formats.Keys, Is.EquivalentTo(TemplateErrorMessages.English.Keys));
+                Assert.That(pack.Pack.Formats.Keys, Is.EquivalentTo(TemplateErrorMessages.English.Keys));
             });
         }
 
@@ -76,7 +80,7 @@ namespace DocxTemplater.Localization.Test
         {
             Assert.Multiple(() =>
             {
-                foreach (var (code, format) in pack.Formats)
+                foreach (var (code, format) in pack.Pack.Formats)
                 {
                     Assert.That(Placeholders(format), Is.EqualTo(Placeholders(TemplateErrorMessages.English[code])), $"{code}: placeholders differ from English");
                 }
@@ -86,17 +90,31 @@ namespace DocxTemplater.Localization.Test
         [TestCaseSource(nameof(Packs))]
         public void AllFormatsCanBeFormatted(LanguagePack pack)
         {
-            var messages = pack.Add(new TemplateErrorMessages());
+            var messages = new TemplateErrorMessages { AutoLoadLanguagePackages = false }.AddLanguage(pack.Pack);
             object[] args = ["a", "b", "c"];
 
             Assert.Multiple(() =>
             {
-                foreach (var (code, format) in pack.Formats)
+                foreach (var code in pack.Pack.Formats.Keys)
                 {
                     // string.Format throws on a malformed format - and the provider would silently fall back to English
-                    var expected = string.Format(pack.Culture, format.Replace("\n", Environment.NewLine), args);
-                    Assert.That(messages.Format(code, pack.SpecificCulture, args), Is.EqualTo(expected), $"{code} fell back to English");
+                    Assert.That(messages.Format(code, pack.SpecificCulture, args), Is.EqualTo(Expected(pack, code, args)), $"{code} fell back to English");
                 }
+            });
+        }
+
+        [TestCaseSource(nameof(Packs))]
+        public void Package_IsLoadedAutomaticallyByCultureName(LanguagePack pack)
+        {
+            // nothing registered - the package is found by its assembly name DocxTemplater.Localization.<culture>
+            var messages = new TemplateErrorMessages();
+
+            var message = messages.Format(TemplateErrorCode.ModelNotFound, pack.SpecificCulture, "X");
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(message, Is.EqualTo(Expected(pack, TemplateErrorCode.ModelNotFound, "X")));
+                Assert.That(messages.Languages, Does.Contain(pack.Pack.Culture.Name));
             });
         }
 
@@ -106,7 +124,7 @@ namespace DocxTemplater.Localization.Test
             var settings = new ProcessSettings
             {
                 UiCulture = pack.SpecificCulture,
-                ErrorMessages = pack.Add(new TemplateErrorMessages()),
+                ErrorMessages = new TemplateErrorMessages(),
                 BindingErrorHandling = BindingErrorHandling.HighlightErrorsInDocument
             };
             using var template = BuildTemplate(settings, "{{Foo}}");
@@ -114,8 +132,7 @@ namespace DocxTemplater.Localization.Test
             var result = template.Process();
 
             using var document = WordprocessingDocument.Open(result, false);
-            var expected = string.Format(pack.Culture, pack.Formats[TemplateErrorCode.ModelNotFound], "Foo");
-            Assert.That(document.MainDocumentPart.Document.Body.InnerText, Does.Contain(expected));
+            Assert.That(document.MainDocumentPart.Document.Body.InnerText, Does.Contain(Expected(pack, TemplateErrorCode.ModelNotFound, "Foo")));
         }
 
         [TestCaseSource(nameof(Packs))]
@@ -124,14 +141,14 @@ namespace DocxTemplater.Localization.Test
             var settings = new ProcessSettings
             {
                 UiCulture = pack.SpecificCulture,
-                ErrorMessages = pack.Add(new TemplateErrorMessages())
+                ErrorMessages = new TemplateErrorMessages()
             };
             using var template = BuildTemplate(settings, "{{#Items}}", "{{.}}");
 
             var errors = template.ValidateTemplateSyntax();
             var ex = Assert.Throws<OpenXmlTemplateException>(() => template.Process());
 
-            var expectedLine = string.Format(pack.Culture, pack.Formats[TemplateErrorCode.BlockNotClosed], "{{#Items}}");
+            var expectedLine = Expected(pack, TemplateErrorCode.BlockNotClosed, "{{#Items}}");
             Assert.Multiple(() =>
             {
                 Assert.That(errors, Has.Count.EqualTo(1));
@@ -146,23 +163,56 @@ namespace DocxTemplater.Localization.Test
         }
 
         [Test]
-        public void SwissGerman_UsesSsInsteadOfSharpS()
+        public void AutoLoad_CanBeDisabled()
         {
+            var messages = new TemplateErrorMessages { AutoLoadLanguagePackages = false };
+
             Assert.Multiple(() =>
             {
-                Assert.That(GermanErrorMessages.Formats[TemplateErrorCode.ModelPrefixAlreadyBound], Does.Contain("Groß-"));
-                Assert.That(SwissGermanErrorMessages.Formats[TemplateErrorCode.ModelPrefixAlreadyBound], Does.Contain("Gross-"));
-                Assert.That(SwissGermanErrorMessages.Formats.Values, Has.None.Contains("ß"));
-                Assert.That(GermanErrorMessages.Formats.Values, Has.Some.Contains("ß"), "the German texts should use standard spelling");
+                Assert.That(messages.Format(TemplateErrorCode.ModelNotFound, new CultureInfo("de-CH"), "X"), Is.EqualTo("Model X not found"));
+                Assert.That(messages.Languages, Is.Empty);
+                // explicit registration still works
+                messages.AddLanguage(new SwissGermanErrorMessages());
+                Assert.That(messages.Format(TemplateErrorCode.ModelNotFound, new CultureInfo("de-CH"), "X"), Is.EqualTo("Modell X nicht gefunden"));
+            });
+        }
+
+        [Test]
+        public void AutoLoad_UnknownCulture_FallsBackToEnglishWithoutError()
+        {
+            var messages = new TemplateErrorMessages();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(messages.Format(TemplateErrorCode.ModelNotFound, new CultureInfo("es-ES"), "X"), Is.EqualTo("Model X not found"));
+                // probed once, then cached - a second call must not try again (and must still be English)
+                Assert.That(messages.Format(TemplateErrorCode.ModelNotFound, new CultureInfo("es-ES"), "X"), Is.EqualTo("Model X not found"));
+                Assert.That(messages.Languages, Is.Empty);
+            });
+        }
+
+        [Test]
+        public void SwissGerman_UsesSsInsteadOfSharpS()
+        {
+            var german = new GermanErrorMessages().Formats;
+            var swiss = new SwissGermanErrorMessages().Formats;
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(german[TemplateErrorCode.ModelPrefixAlreadyBound], Does.Contain("Groß-"));
+                Assert.That(swiss[TemplateErrorCode.ModelPrefixAlreadyBound], Does.Contain("Gross-"));
+                Assert.That(swiss.Values, Has.None.Contains("ß"));
+                Assert.That(german.Values, Has.Some.Contains("ß"), "the German texts should use standard spelling");
             });
         }
 
         [Test]
         public void SpecificCulture_FallsBackToNeutralCulture()
         {
-            var germanOnly = new TemplateErrorMessages().AddGerman();
-            var both = new TemplateErrorMessages().AddGerman().AddSwissGerman();
-            var swissOnly = new TemplateErrorMessages().AddSwissGerman();
+            var germanOnly = new TemplateErrorMessages { AutoLoadLanguagePackages = false }.AddLanguage(new GermanErrorMessages());
+            var both = new TemplateErrorMessages { AutoLoadLanguagePackages = false }.AddLanguage(new GermanErrorMessages()).AddLanguage(new SwissGermanErrorMessages());
+            var swissOnly = new TemplateErrorMessages { AutoLoadLanguagePackages = false }.AddLanguage(new SwissGermanErrorMessages());
+            var frenchOnly = new TemplateErrorMessages { AutoLoadLanguagePackages = false }.AddLanguage(new FrenchErrorMessages());
 
             Assert.Multiple(() =>
             {
@@ -177,23 +227,24 @@ namespace DocxTemplater.Localization.Test
                 Assert.That(swissOnly.Format(TemplateErrorCode.ModelNotFound, new CultureInfo("de-DE"), "X"), Is.EqualTo("Model X not found"));
                 Assert.That(swissOnly.Format(TemplateErrorCode.ModelNotFound, new CultureInfo("de-CH"), "X"), Is.EqualTo("Modell X nicht gefunden"));
                 // fr-CH -> fr
-                Assert.That(new TemplateErrorMessages().AddFrench().Format(TemplateErrorCode.ModelNotFound, new CultureInfo("fr-CH"), "X"), Is.EqualTo("Modèle X introuvable"));
+                Assert.That(frenchOnly.Format(TemplateErrorCode.ModelNotFound, new CultureInfo("fr-CH"), "X"), Is.EqualTo("Modèle X introuvable"));
             });
         }
 
         [Test]
-        public void Default_CanRegisterAllLanguages()
+        public void AutoLoad_SpecificAndNeutralPackage()
         {
-            var messages = new TemplateErrorMessages().AddGerman().AddSwissGerman().AddFrench().AddItalian();
+            // de-CH and de are both installed: de-CH gets the Swiss texts, de-AT the standard ones
+            var messages = new TemplateErrorMessages();
 
             Assert.Multiple(() =>
             {
-                string[] languages = ["de", "de-CH", "fr", "it"];
-                Assert.That(messages.Languages, Is.EquivalentTo(languages));
-                Assert.That(messages.Format(TemplateErrorCode.ModelNotFound, new CultureInfo("de-AT"), "X"), Is.EqualTo("Modell X nicht gefunden"));
+                Assert.That(messages.Format(TemplateErrorCode.ModelPrefixAlreadyBound, new CultureInfo("de-CH"), "x"), Does.Contain("Gross-"));
+                Assert.That(messages.Format(TemplateErrorCode.ModelPrefixAlreadyBound, new CultureInfo("de-AT"), "x"), Does.Contain("Groß-"));
                 Assert.That(messages.Format(TemplateErrorCode.ModelNotFound, new CultureInfo("fr-CA"), "X"), Is.EqualTo("Modèle X introuvable"));
                 Assert.That(messages.Format(TemplateErrorCode.ModelNotFound, new CultureInfo("it-IT"), "X"), Is.EqualTo("Modello X non trovato"));
-                Assert.That(messages.Format(TemplateErrorCode.ModelNotFound, new CultureInfo("es-ES"), "X"), Is.EqualTo("Model X not found"));
+                string[] languages = ["de", "de-CH", "fr", "it"];
+                Assert.That(messages.Languages, Is.EquivalentTo(languages));
             });
         }
     }

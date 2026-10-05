@@ -5,24 +5,19 @@ using System.Globalization;
 namespace DocxTemplater.Localization
 {
     /// <summary>
-    /// French texts for the error messages of DocxTemplater.
-    /// Register them once at startup: <c>TemplateErrorMessages.Default.AddFrench();</c>
+    /// French texts for the error messages of DocxTemplater, culture <c>fr</c>.
+    /// Loaded automatically by <see cref="TemplateErrorMessages"/> when this package is installed; specific French
+    /// cultures (<c>fr-CH</c>, <c>fr-CA</c>, ...) fall back to it.
     /// </summary>
-    public static class FrenchErrorMessages
+    public sealed class FrenchErrorMessages : ITemplateLanguagePack
     {
-        /// <summary>The neutral culture the texts are registered for; <c>fr-CH</c>, <c>fr-CA</c>, ... fall back to it.</summary>
-        public static CultureInfo Culture { get; } = new("fr");
+        /// <inheritdoc/>
+        public CultureInfo Culture { get; } = new("fr");
 
-        /// <summary>
-        /// Adds the French texts to <paramref name="messages"/>.
-        /// </summary>
-        /// <returns><paramref name="messages"/>, to chain calls.</returns>
-        public static TemplateErrorMessages AddFrench(this TemplateErrorMessages messages)
-        {
-            return messages.AddLanguage(Culture, Formats);
-        }
+        /// <inheritdoc/>
+        public IReadOnlyDictionary<TemplateErrorCode, string> Formats => Texts;
 
-        public static IReadOnlyDictionary<TemplateErrorCode, string> Formats { get; } = new ReadOnlyDictionary<TemplateErrorCode, string>(
+        private static readonly ReadOnlyDictionary<TemplateErrorCode, string> Texts = new(
             new Dictionary<TemplateErrorCode, string>
             {
                 // model binding

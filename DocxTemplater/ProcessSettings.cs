@@ -21,8 +21,9 @@ namespace DocxTemplater
         public CultureInfo UiCulture { get; set; } = CultureInfo.CurrentUICulture;
 
         /// <summary>
-        /// The texts of the error messages. English is built in; other languages are added with
-        /// <see cref="TemplateErrorMessages.AddLanguage"/>, e.g. from a language package.
+        /// The texts of the error messages. English is built in; installed language packages
+        /// (<c>DocxTemplater.Localization.&lt;culture&gt;</c>) are loaded automatically, own texts are added with
+        /// <see cref="TemplateErrorMessages.AddLanguage(CultureInfo, System.Collections.Generic.IReadOnlyDictionary{TemplateErrorCode, string})"/>.
         /// default: <see cref="TemplateErrorMessages.Default"/>, which is shared by all documents.
         /// </summary>
         public TemplateErrorMessages ErrorMessages { get; set; } = TemplateErrorMessages.Default;

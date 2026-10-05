@@ -85,10 +85,10 @@ Enhance DocxTemplater with these optional extension packages:
 |--------------|-----------------------------------
 | [DocxTemplater.Images ](https://www.nuget.org/packages/DocxTemplater.Images)  |Enables embedding images in generated Word documents|
 | [DocxTemplater.Markdown ](https://www.nuget.org/packages/DocxTemplater.Markdown)  | Allows use of Markdown syntax for generating parts of Word documents|
-| [DocxTemplater.Localization.German ](https://www.nuget.org/packages/DocxTemplater.Localization.German)  | German error messages, see [Localized Error Messages](#localized-error-messages)|
-| [DocxTemplater.Localization.SwissGerman ](https://www.nuget.org/packages/DocxTemplater.Localization.SwissGerman)  | Swiss German (de-CH) error messages, Swiss spelling without ß|
-| [DocxTemplater.Localization.French ](https://www.nuget.org/packages/DocxTemplater.Localization.French)  | French error messages|
-| [DocxTemplater.Localization.Italian ](https://www.nuget.org/packages/DocxTemplater.Localization.Italian)  | Italian error messages|
+| [DocxTemplater.Localization.de ](https://www.nuget.org/packages/DocxTemplater.Localization.de)  | German error messages, see [Localized Error Messages](#localized-error-messages)|
+| [DocxTemplater.Localization.de-CH ](https://www.nuget.org/packages/DocxTemplater.Localization.de-CH)  | Swiss German error messages (spelling without ß)|
+| [DocxTemplater.Localization.fr ](https://www.nuget.org/packages/DocxTemplater.Localization.fr)  | French error messages|
+| [DocxTemplater.Localization.it ](https://www.nuget.org/packages/DocxTemplater.Localization.it)  | Italian error messages|
 
 Image metadata (size, format, EXIF rotation) is read by a dependency-free built-in reader that supports PNG, JPEG, GIF, BMP and TIFF.
 If you need another image library for metadata detection, implement `IImageMetadataReader` and pass it to the formatter:
@@ -568,22 +568,20 @@ catch (OpenXmlTemplateException e)
 
 Exception messages, `TemplateSyntaxError.Message` and the error list written with `HighlightErrorsInDocument` are formatted in the `ProcessSettings.UiCulture` - the culture of the **user who generates the document**. It defaults to `CultureInfo.CurrentUICulture` and is independent of `ProcessSettings.Culture`, which only formats the values in the document: a user with an English UI can generate a German invoice and still gets English error messages.
 
-English is built in. Other languages come as NuGet packages that are registered once at startup:
+English is built in. Other languages are NuGet packages named `DocxTemplater.Localization.<language tag>`, the tag being the IETF language tag .NET uses as `CultureInfo.Name` (`de`, `de-CH`, `fr`, `it`, ...). Installing a package is all it takes: the first time a message is formatted for a culture, DocxTemplater looks for the assembly `DocxTemplater.Localization.<culture>` of that culture and its parents and loads the texts it finds (once per culture, the result is cached).
 
 ```csharp
-using DocxTemplater.Localization;
-
-// DocxTemplater.Localization.German / .SwissGerman / .French / .Italian
-TemplateErrorMessages.Default.AddGerman().AddSwissGerman().AddFrench().AddItalian();
-
+// packages installed: DocxTemplater.Localization.de, DocxTemplater.Localization.fr
 var template = new DocxTemplate(stream, new ProcessSettings
 {
     Culture = new CultureInfo("de-CH"),   // number and date formats in the document
-    UiCulture = new CultureInfo("fr-CH")  // language of the error messages (fr-CH falls back to fr)
+    UiCulture = new CultureInfo("fr-CH")  // language of the error messages: fr-CH -> fr
 });
 ```
 
-A culture without registered texts falls back to its parent culture (`de-CH` → `de`, `fr-CH` → `fr`) and finally to English, so every code always has a message. A specific culture takes precedence over its parent: with both German packages registered, `de-CH` users get the Swiss spelling and `de-DE` / `de-AT` users the standard one.
+A culture without texts falls back to its parent culture (`de-CH` → `de`, `fr-CH` → `fr`) and finally to English, so every code always has a message. A specific culture takes precedence over its parent: with `DocxTemplater.Localization.de-CH` and `.de` installed, `de-CH` users get the Swiss spelling and `de-DE` / `de-AT` users the standard one.
+
+Automatic loading uses reflection; in trimmed applications disable it with `TemplateErrorMessages.Default.AutoLoadLanguagePackages = false` and register the packs explicitly: `TemplateErrorMessages.Default.AddLanguage(new GermanErrorMessages())` (namespace `DocxTemplater.Localization`).
 
 Your own language - or your own wording - is a dictionary from `TemplateErrorCode` to a format string. It does not have to be complete; missing codes fall back as described above. Adding a language twice merges the dictionaries, so single texts can be overridden. `TemplateErrorMessages.English` is the reference for the placeholders of each code:
 
@@ -594,6 +592,8 @@ TemplateErrorMessages.Default.AddLanguage(new CultureInfo("es"), new Dictionary<
     [TemplateErrorCode.BlockNotClosed] = "'{0}' no está cerrado",
 });
 ```
+
+To ship a language as a package of its own, create an assembly named `DocxTemplater.Localization.<language tag>` with a public class implementing `ITemplateLanguagePack` (`Culture` + `Formats`) and a parameterless constructor; it is then loaded automatically like the built-in packages.
 
 `TemplateErrorMessages.Default` is shared by all documents. To keep languages local to one document, assign a separate instance to `ProcessSettings.ErrorMessages`.
 

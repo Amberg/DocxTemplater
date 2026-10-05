@@ -3,7 +3,7 @@
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <!-- all language packages share one namespace, so a single using covers every installed language -->
     <RootNamespace>DocxTemplater.Localization</RootNamespace>
-    <Description>German error messages for DocxTemplater. Register with TemplateErrorMessages.Default.AddGerman().</Description>
+    <Description>Italian (it) error messages for DocxTemplater. Loaded automatically when installed.</Description>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\DocxTemplater\DocxTemplater.csproj" />
