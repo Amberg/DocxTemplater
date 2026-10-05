@@ -61,14 +61,13 @@ namespace DocxTemplater.Blocks
                 {
                     if (!int.TryParse(stringValue, out count))
                     {
-                        var error = OpenXmlTemplateException.Create(m_context.ProcessSettings, TemplateErrorCode.RangeCountNotNumeric, m_countVariable, stringValue);
                         if (m_context.ProcessSettings.BindingErrorHandling == BindingErrorHandling.ThrowException)
                         {
-                            throw error;
+                            throw OpenXmlTemplateException.Create(m_context.ProcessSettings, TemplateErrorCode.RangeCountNotNumeric, m_countVariable, stringValue);
                         }
                         else
                         {
-                            m_context.VariableReplacer.AddError(error.Message);
+                            m_context.VariableReplacer.AddError(TemplateErrorCode.RangeCountNotNumeric, m_countVariable, stringValue);
                         }
                     }
                 }
@@ -90,14 +89,13 @@ namespace DocxTemplater.Blocks
                         }
                         else
                         {
-                            var error = OpenXmlTemplateException.Create(m_context.ProcessSettings, TemplateErrorCode.RangeCountNotNumericOrEnumerable, m_countVariable, model.GetType().FullName);
                             if (m_context.ProcessSettings.BindingErrorHandling == BindingErrorHandling.ThrowException)
                             {
-                                throw error;
+                                throw OpenXmlTemplateException.Create(m_context.ProcessSettings, TemplateErrorCode.RangeCountNotNumericOrEnumerable, m_countVariable, model.GetType().FullName);
                             }
                             else
                             {
-                                m_context.VariableReplacer.AddError(error.Message);
+                                m_context.VariableReplacer.AddError(TemplateErrorCode.RangeCountNotNumericOrEnumerable, m_countVariable, model.GetType().FullName);
                             }
                         }
                     }

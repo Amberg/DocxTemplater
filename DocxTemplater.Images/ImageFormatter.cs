@@ -60,7 +60,7 @@ namespace DocxTemplater.Images
                 // Image ist a child element of a <wps:wsp> (TextBox)
                 if (!TryHandleImageInWordprocessingShape(target, imageInfo, formatterContext.Args.FirstOrDefault() ?? string.Empty, maxPropertyId, templateContext.ImageService))
                 {// Image is not a child element of a <wps:wsp> (TextBox) - rotation and scale is determined by the arguments
-                    AddInlineGraphicToRun(target, imageInfo, maxPropertyId, formatterContext.Args, templateContext.ImageService);
+                    AddInlineGraphicToRun(target, imageInfo, maxPropertyId, formatterContext.Args, templateContext.ImageService, templateContext.ProcessSettings);
                 }
 
             }
@@ -68,21 +68,16 @@ namespace DocxTemplater.Images
             {
                 throw OpenXmlTemplateException.Create(templateContext.ProcessSettings, e, TemplateErrorCode.ImageMetadataUnreadable);
             }
-            catch (OpenXmlTemplateException e) when (e.ErrorCode == TemplateErrorCode.InvalidImageFormatterArgument)
-            {
-                // the argument parser has no access to the settings - translate the message here
-                throw OpenXmlTemplateException.Create(templateContext.ProcessSettings, e, e.ErrorCode, e.Arguments.ToArray());
-            }
         }
 
         /// <summary>
         /// If image is not part of a textbox this method is used to add the image to the run.
         /// </summary>
-        private static void AddInlineGraphicToRun(Text target, ImageInformation imageInfo, uint maxDocumentPropertyId, string[] arguments, IImageService imageService)
+        private static void AddInlineGraphicToRun(Text target, ImageInformation imageInfo, uint maxDocumentPropertyId, string[] arguments, IImageService imageService, ProcessSettings settings)
         {
             var propertyId = maxDocumentPropertyId + 1;
 
-            TransformSize(imageInfo.PixelWidth, imageInfo.PixelHeight, arguments, out var cx, out var cy, out var rotation);
+            TransformSize(imageInfo.PixelWidth, imageInfo.PixelHeight, arguments, settings, out var cx, out var cy, out var rotation);
             rotation = rotation.AddUnits(imageInfo.ExifRotation.Units);
 
             // Define the reference of the image.
@@ -235,7 +230,7 @@ namespace DocxTemplater.Images
         /// "w:90cm;h:90cm;r:90"
         /// available units are px, cm, in, pt
         /// </summary>
-        private static void TransformSize(int pixelWidth, int pixelHeight, string[] arguments, out int outCxEmu, out int outCyEmu, out ImageRotation rotationInDegree)
+        private static void TransformSize(int pixelWidth, int pixelHeight, string[] arguments, ProcessSettings settings, out int outCxEmu, out int outCyEmu, out ImageRotation rotationInDegree)
         {
             var cxEmu = -1;
             var cyEmu = -1;
@@ -281,7 +276,7 @@ namespace DocxTemplater.Images
                 }
                 catch (RegexMatchTimeoutException)
                 {
-                    throw OpenXmlTemplateException.Create(null, TemplateErrorCode.InvalidImageFormatterArgument, argument);
+                    throw OpenXmlTemplateException.Create(settings, TemplateErrorCode.InvalidImageFormatterArgument, argument);
                 }
             }
 

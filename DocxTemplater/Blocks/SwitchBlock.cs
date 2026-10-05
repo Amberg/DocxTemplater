@@ -57,7 +57,7 @@ namespace DocxTemplater.Blocks
                     }
                     catch (OpenXmlTemplateException e) when (m_context.ProcessSettings.BindingErrorHandling != BindingErrorHandling.ThrowException)
                     {
-                        m_context.VariableReplacer.AddError(OpenXmlTemplateException.Create(m_context.ProcessSettings, TemplateErrorCode.ErrorInSwitchCase, e, m_switchVariable, childBlock.MatchExpression).Message);
+                        m_context.VariableReplacer.AddError(TemplateErrorCode.ErrorInSwitchCase, e, m_switchVariable, childBlock.MatchExpression);
                     }
 
                     if (caseMatch)

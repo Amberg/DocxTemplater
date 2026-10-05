@@ -81,8 +81,39 @@ namespace DocxTemplater.Test
                 Assert.That(inner.ErrorCode, Is.EqualTo(TemplateErrorCode.ModelNotFound));
                 Assert.That(inner.Message, Is.EqualTo("Modèle Foo introuvable"));
                 Assert.That(inner.GetMessage(English), Is.EqualTo("Model Foo not found"));
+                // GetMessage(culture) uses the TemplateErrorMessages instance the exception was created with, not Default
+                Assert.That(inner.GetMessage(French), Is.EqualTo("Modèle Foo introuvable"));
                 // not translated - falls back to English
                 Assert.That(ex.Message, Does.Contain("could not be replaced"));
+            });
+        }
+
+        [Test]
+        public void InvariantCultureTexts_OverrideBuiltInEnglish()
+        {
+            var messages = new TemplateErrorMessages()
+                .AddLanguage(CultureInfo.InvariantCulture, new Dictionary<TemplateErrorCode, string> { [TemplateErrorCode.ModelNotFound] = "Model '{0}' is missing" });
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(messages.Format(TemplateErrorCode.ModelNotFound, CultureInfo.InvariantCulture, "X"), Is.EqualTo("Model 'X' is missing"));
+                Assert.That(messages.Format(TemplateErrorCode.ModelNotFound, English, "X"), Is.EqualTo("Model 'X' is missing"));
+                Assert.That(messages.Format(TemplateErrorCode.ModelNotFound, SwissFrench, "X"), Is.EqualTo("Model 'X' is missing"), "no French texts - the override is the last fallback before English");
+                Assert.That(messages.Format(TemplateErrorCode.BlockNotClosed, English, "x"), Is.EqualTo("'x' is not closed"));
+            });
+        }
+
+        [Test]
+        public void SyntaxError_WithoutCode_KeepsFreeTextMessage()
+        {
+            var error = new TemplateSyntaxError(TemplateSyntaxErrorSeverity.Error, "Body", "{{x}}", "ctx",
+                TemplateErrorCode.None, null, null, null, "free text");
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(error.Message, Is.EqualTo("free text"));
+                Assert.That(error.GetMessage(French), Is.EqualTo("free text"));
+                Assert.That(error.ToString(), Is.EqualTo("Body: free text (near 'ctx')"));
             });
         }
 

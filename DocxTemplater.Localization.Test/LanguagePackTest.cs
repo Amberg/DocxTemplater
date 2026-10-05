@@ -178,6 +178,20 @@ namespace DocxTemplater.Localization.Test
         }
 
         [Test]
+        public void AutoLoad_IsThreadSafe()
+        {
+            // all threads must see the texts; none may observe "probed, but nothing registered"
+            var messages = new TemplateErrorMessages();
+            var expected = Expected(new LanguagePack(new SwissGermanErrorMessages(), new CultureInfo("de-CH")), TemplateErrorCode.ModelNotFound, "X");
+
+            var results = Enumerable.Range(0, 16).AsParallel().WithDegreeOfParallelism(16)
+                .Select(_ => messages.Format(TemplateErrorCode.ModelNotFound, new CultureInfo("de-CH"), "X"))
+                .ToList();
+
+            Assert.That(results, Has.All.EqualTo(expected));
+        }
+
+        [Test]
         public void AutoLoad_UnknownCulture_FallsBackToEnglishWithoutError()
         {
             var messages = new TemplateErrorMessages();

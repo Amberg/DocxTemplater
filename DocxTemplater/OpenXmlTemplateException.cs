@@ -7,6 +7,9 @@ namespace DocxTemplater
     [Serializable]
     public class OpenXmlTemplateException : Exception
     {
+        // the provider the message was formatted with, so GetMessage(culture) uses the same languages
+        private readonly TemplateErrorMessages m_messages;
+
         /// <summary>
         /// Creates an exception with a free text message (<see cref="ErrorCode"/> is <see cref="TemplateErrorCode.None"/>).
         /// </summary>
@@ -27,10 +30,16 @@ namespace DocxTemplater
         /// language configured in the <see cref="ProcessSettings"/>.
         /// </summary>
         public OpenXmlTemplateException(TemplateErrorCode errorCode, IReadOnlyList<object> arguments, string message, Exception inner = null)
+            : this(errorCode, arguments, message, inner, null)
+        {
+        }
+
+        private OpenXmlTemplateException(TemplateErrorCode errorCode, IReadOnlyList<object> arguments, string message, Exception inner, TemplateErrorMessages messages)
             : base(message, inner)
         {
             ErrorCode = errorCode;
             Arguments = arguments ?? Array.Empty<object>();
+            m_messages = messages;
         }
 
         /// <summary>
@@ -48,7 +57,7 @@ namespace DocxTemplater
             var messages = settings?.ErrorMessages ?? TemplateErrorMessages.Default;
             var culture = settings?.UiCulture ?? CultureInfo.InvariantCulture;
             arguments ??= Array.Empty<object>();
-            return new OpenXmlTemplateException(errorCode, arguments, messages.Format(errorCode, culture, arguments), innerException);
+            return new OpenXmlTemplateException(errorCode, arguments, messages.Format(errorCode, culture, arguments), innerException, messages);
         }
 
         /// <summary>
@@ -63,12 +72,14 @@ namespace DocxTemplater
         public IReadOnlyList<object> Arguments { get; }
 
         /// <summary>
-        /// The message in another language than the one the exception was created with. Falls back to
-        /// <see cref="Exception.Message"/> for free text errors.
+        /// The message in another language than the one the exception was created with, using the
+        /// <see cref="TemplateErrorMessages"/> the exception was created with (<see cref="TemplateErrorMessages.Default"/>
+        /// if it was not created through <see cref="Create(ProcessSettings, TemplateErrorCode, object[])"/>).
+        /// Falls back to <see cref="Exception.Message"/> for free text errors.
         /// </summary>
         public string GetMessage(CultureInfo culture)
         {
-            return GetMessage(TemplateErrorMessages.Default, culture);
+            return GetMessage(m_messages ?? TemplateErrorMessages.Default, culture);
         }
 
         /// <inheritdoc cref="GetMessage(CultureInfo)"/>

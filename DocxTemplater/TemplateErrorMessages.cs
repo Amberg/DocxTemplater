@@ -116,6 +116,11 @@ namespace DocxTemplater
                     return format;
                 }
             }
+            // texts added for the invariant culture override the built-in English
+            if (m_languages.TryGetValue(CultureInfo.InvariantCulture.Name, out var invariant) && invariant.TryGetValue(code, out var overridden))
+            {
+                return overridden;
+            }
             return English.TryGetValue(code, out var english) ? english : null;
         }
 
@@ -164,39 +169,41 @@ namespace DocxTemplater
             {
                 return;
             }
+            // load inside the lock, so a concurrent caller waits for the texts instead of seeing "probed, nothing found"
             lock (m_lock)
             {
                 if (m_probedCultures.Contains(culture.Name))
                 {
                     return;
                 }
+                foreach (var pack in LoadLanguagePacks(culture.Name))
+                {
+                    AddLanguage(pack);
+                }
                 m_probedCultures = new HashSet<string>(m_probedCultures, CultureNameComparer) { culture.Name };
-            }
-
-            foreach (var pack in LoadLanguagePacks(culture.Name))
-            {
-                AddLanguage(pack);
             }
         }
 
-        private static IEnumerable<ITemplateLanguagePack> LoadLanguagePacks(string cultureName)
+        /// <summary>
+        /// A broken or incompatible package must not turn an error message into a crash of the rendering, so
+        /// everything that can go wrong while loading or instantiating a pack is treated as "no package".
+        /// </summary>
+        private static IReadOnlyList<ITemplateLanguagePack> LoadLanguagePacks(string cultureName)
         {
-            Type[] types;
             try
             {
                 var assembly = Assembly.Load(new AssemblyName(LanguagePackageAssemblyPrefix + cultureName));
-                types = assembly.GetExportedTypes();
+                return assembly.GetExportedTypes()
+                    .Where(t => !t.IsAbstract && typeof(ITemplateLanguagePack).IsAssignableFrom(t) && t.GetConstructor(Type.EmptyTypes) != null)
+                    .Select(t => (ITemplateLanguagePack)Activator.CreateInstance(t))
+                    .ToList();
             }
-            catch (Exception e) when (e is FileNotFoundException or FileLoadException or BadImageFormatException or ReflectionTypeLoadException)
+            catch (Exception e) when (e is FileNotFoundException or FileLoadException or BadImageFormatException
+                                          or ReflectionTypeLoadException or TypeLoadException or TypeInitializationException
+                                          or TargetInvocationException or MemberAccessException or NotSupportedException)
             {
-                // no package for this culture is deployed with the application
                 return Array.Empty<ITemplateLanguagePack>();
             }
-
-            return types
-                .Where(t => !t.IsAbstract && typeof(ITemplateLanguagePack).IsAssignableFrom(t) && t.GetConstructor(Type.EmptyTypes) != null)
-                .Select(t => (ITemplateLanguagePack)Activator.CreateInstance(t))
-                .ToList();
         }
 
         private static bool TryFormat(string format, CultureInfo culture, object[] args, out string message)

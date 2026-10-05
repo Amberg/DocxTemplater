@@ -92,7 +92,7 @@ namespace DocxTemplater.Extensions.Charts
                         var title = chartTitle.Descendants<DocumentFormat.OpenXml.Drawing.Text>().FirstOrDefault();
                         if (title != null)
                         {
-                            var found = PatternMatcher.FindSyntaxPatterns(title.Text).FirstOrDefault();
+                            var found = PatternMatcher.FindSyntaxPatterns(title.Text, templateContext.ProcessSettings).FirstOrDefault();
                             if (found != null && found.Type == PatternType.Variable)
                             {
                                 try

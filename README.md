@@ -6,47 +6,6 @@ _DocxTemplater is a library to generate docx documents from a docx template. The
 [![MIT](https://img.shields.io/github/license/Amberg/DocxTemplater)](https://github.com/Amberg/DocxTemplater/blob/main/LICENSE)
 [![CI-Build](https://github.com/Amberg/DocxTemplater/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Amberg/DocxTemplater/actions/workflows/ci.yml)
 
-## Table of Contents
-
-- [Features](#features)
-- [Quickstart](#quickstart)
-- [Placeholder Syntax](#placeholder-syntax)
-  - [Quick Reference Examples](#quick-reference-examples)
-  - [Collections](#collections)
-  - [Range Loops](#range-loops)
-  - [Chart Data binding](#chart-data-binding)
-  - [Conditional Blocks](#conditional-blocks)
-  - [Switch / Case Blocks](#switch--case-blocks)
-  - [C# Expressions](#c-expressions)
-- [Formatters](#formatters)
-- [Image Formatter](#image-formatter)
-- [Markdown Formatter](#markdown-formatter)
-- [Sub-Template Formatter - Inserting Documents](#sub-template-formatter---inserting-documents)
-- [Content Controls](#content-controls)
-- [Whitespace Trimming Around Directives](#whitespace-trimming-around-directives)
-- [Error Handling](#error-handling)
-  - [Error Codes](#error-codes)
-  - [Localized Error Messages](#localized-error-messages)
-- [Culture](#culture)
-- [Advanced Model Binding](#advanced-model-binding)
-- [Template Schema Inspection](#template-schema-inspection)
-- [Template Syntax Validation](#template-syntax-validation)
-- [Support This Project](#support-this-project)
-
-## Features
-- Variable Replacement
-- Collections - Bind to collections
-- Conditional Blocks
-- Images - Replace placeholder with Image data
-- Chart Data Binding - Bind a chart to a data source
-- Markdown Support - Converts Markdown to OpenXML
-- HTML Snippets - Replace placeholder with HTML Content
-- Dynamic Tables - Columns are defined by the datasource
-- Content Controls - Fill Word content controls from the model, addressed by their tag
-- Template Schema - Statically inspect which variables a template expects, without rendering
-- Syntax Validation - Check a template for syntax errors without rendering it
-- Localized Error Messages - Every error carries a code; messages are available in English, German, Swiss German, French and Italian and can be extended
-
 ## Quickstart
 
 Create a docx template with placeholder syntax:
@@ -85,10 +44,7 @@ Enhance DocxTemplater with these optional extension packages:
 |--------------|-----------------------------------
 | [DocxTemplater.Images ](https://www.nuget.org/packages/DocxTemplater.Images)  |Enables embedding images in generated Word documents|
 | [DocxTemplater.Markdown ](https://www.nuget.org/packages/DocxTemplater.Markdown)  | Allows use of Markdown syntax for generating parts of Word documents|
-| [DocxTemplater.Localization.de ](https://www.nuget.org/packages/DocxTemplater.Localization.de)  | German error messages, see [Localized Error Messages](#localized-error-messages)|
-| [DocxTemplater.Localization.de-CH ](https://www.nuget.org/packages/DocxTemplater.Localization.de-CH)  | Swiss German error messages (spelling without ß)|
-| [DocxTemplater.Localization.fr ](https://www.nuget.org/packages/DocxTemplater.Localization.fr)  | French error messages|
-| [DocxTemplater.Localization.it ](https://www.nuget.org/packages/DocxTemplater.Localization.it)  | Italian error messages|
+| [DocxTemplater.Localization.*&lt;language&gt;*](https://www.nuget.org/packages?q=DocxTemplater.Localization)  | Error messages in the user's language, see [Localized Error Messages](#localized-error-messages). Available: `de`, `de-CH`, `fr`, `it`|
 
 Image metadata (size, format, EXIF rotation) is read by a dependency-free built-in reader that supports PNG, JPEG, GIF, BMP and TIFF.
 If you need another image library for metadata detection, implement `IImageMetadataReader` and pass it to the formatter:
@@ -100,6 +56,47 @@ template.RegisterFormatter(new ImageFormatter(new MyImageMetadataReader()));
 ```
 
 Migration note: the `DocxTemplater.Images.ImageSharp` package is discontinued. `ImageFormatter()` works without it. If you relied on ImageSharp for metadata detection, implement `IImageMetadataReader` with ImageSharp in your own project.
+
+## Table of Contents
+
+- [Quickstart](#quickstart)
+- [Features](#features)
+- [Placeholder Syntax](#placeholder-syntax)
+  - [Quick Reference Examples](#quick-reference-examples)
+  - [Collections](#collections)
+  - [Range Loops](#range-loops)
+  - [Chart Data binding](#chart-data-binding)
+  - [Conditional Blocks](#conditional-blocks)
+  - [Switch / Case Blocks](#switch--case-blocks)
+  - [C# Expressions](#c-expressions)
+- [Formatters](#formatters)
+- [Image Formatter](#image-formatter)
+- [Markdown Formatter](#markdown-formatter)
+- [Sub-Template Formatter - Inserting Documents](#sub-template-formatter---inserting-documents)
+- [Content Controls](#content-controls)
+- [Whitespace Trimming Around Directives](#whitespace-trimming-around-directives)
+- [Error Handling](#error-handling)
+  - [Error Codes](#error-codes)
+  - [Localized Error Messages](#localized-error-messages)
+- [Culture](#culture)
+- [Advanced Model Binding](#advanced-model-binding)
+- [Template Schema Inspection](#template-schema-inspection)
+- [Template Syntax Validation](#template-syntax-validation)
+- [Support This Project](#support-this-project)
+
+## Features
+- Variable Replacement
+- Collections - Bind to collections
+- Conditional Blocks
+- Images - Replace placeholder with Image data
+- Chart Data Binding - Bind a chart to a data source
+- Markdown Support - Converts Markdown to OpenXML
+- HTML Snippets - Replace placeholder with HTML Content
+- Dynamic Tables - Columns are defined by the datasource
+- Content Controls - Fill Word content controls from the model, addressed by their tag
+- Template Schema - Statically inspect which variables a template expects, without rendering
+- Syntax Validation - Check a template for syntax errors without rendering it
+- Localized Error Messages - Every error carries a code; messages are available in English, German, Swiss German, French and Italian and can be extended
 
 ## Placeholder Syntax
 

@@ -88,17 +88,25 @@ namespace DocxTemplater
 
         public static IEnumerable<PatternMatch> FindSyntaxPatterns(string text)
         {
-            return FindSyntaxPatterns(text, null);
+            return FindSyntaxPatterns(text, null, null);
+        }
+
+        /// <summary>
+        /// Finds all syntax patterns in <paramref name="text"/>; an invalid pattern throws an
+        /// <see cref="OpenXmlTemplateException"/> in the language of <paramref name="settings"/>.
+        /// </summary>
+        public static IEnumerable<PatternMatch> FindSyntaxPatterns(string text, ProcessSettings settings)
+        {
+            return FindSyntaxPatterns(text, null, settings);
         }
 
         /// <summary>
         /// Finds all syntax patterns in <paramref name="text"/>. If <paramref name="onInvalidPattern"/> is null,
-        /// an invalid pattern throws an <see cref="OpenXmlTemplateException"/> (with an English message - the
-        /// syntax parser reports all errors in the configured language before rendering starts); otherwise the
-        /// error code and its arguments are reported to the callback and the pattern is skipped, so all errors
-        /// of a text can be collected.
+        /// an invalid pattern throws an <see cref="OpenXmlTemplateException"/> in the language of
+        /// <paramref name="settings"/> (<c>null</c> for English); otherwise the error code and its arguments are
+        /// reported to the callback and the pattern is skipped, so all errors of a text can be collected.
         /// </summary>
-        public static IEnumerable<PatternMatch> FindSyntaxPatterns(string text, Action<Match, TemplateErrorCode, object[]> onInvalidPattern)
+        public static IEnumerable<PatternMatch> FindSyntaxPatterns(string text, Action<Match, TemplateErrorCode, object[]> onInvalidPattern, ProcessSettings settings)
         {
             try
             {
@@ -135,7 +143,7 @@ namespace DocxTemplater
                         {
                             if (varname == null)
                             {
-                                ReportInvalid(onInvalidPattern, match, TemplateErrorCode.InvalidSyntax, match.Value);
+                                ReportInvalid(onInvalidPattern, settings, match, TemplateErrorCode.InvalidSyntax, match.Value);
                                 continue;
                             }
 
@@ -155,7 +163,7 @@ namespace DocxTemplater
                         {
                             if (varname == null || !varname.Equals("ignore", StringComparison.CurrentCultureIgnoreCase))
                             {
-                                ReportInvalid(onInvalidPattern, match, TemplateErrorCode.InvalidSyntax, match.Value);
+                                ReportInvalid(onInvalidPattern, settings, match, TemplateErrorCode.InvalidSyntax, match.Value);
                                 continue;
                             }
                             result.Add(new PatternMatch(match, PatternType.IgnoreEnd, null, prefix, varname, null, null, match.Index, match.Length));
@@ -195,7 +203,7 @@ namespace DocxTemplater
                         {
                             if (string.IsNullOrWhiteSpace(varname))
                             {
-                                ReportInvalid(onInvalidPattern, match, TemplateErrorCode.RangeLoopVariableNameRequired, match.Value);
+                                ReportInvalid(onInvalidPattern, settings, match, TemplateErrorCode.RangeLoopVariableNameRequired, match.Value);
                                 continue;
                             }
 
@@ -219,7 +227,7 @@ namespace DocxTemplater
                                 trimmedVarname.Equals("default", StringComparison.OrdinalIgnoreCase) ||
                                 trimmedVarname.Equals("d", StringComparison.OrdinalIgnoreCase))
                             {
-                                ReportInvalid(onInvalidPattern, match, TemplateErrorCode.UseGenericClosingTag, match.Value);
+                                ReportInvalid(onInvalidPattern, settings, match, TemplateErrorCode.UseGenericClosingTag, match.Value);
                                 continue;
                             }
                             var patternType = PatternType.CollectionEnd;
@@ -255,7 +263,7 @@ namespace DocxTemplater
                     }
                     else
                     {
-                        ReportInvalid(onInvalidPattern, match, TemplateErrorCode.InvalidSyntax, match.Value);
+                        ReportInvalid(onInvalidPattern, settings, match, TemplateErrorCode.InvalidSyntax, match.Value);
                     }
                 }
 
@@ -263,15 +271,15 @@ namespace DocxTemplater
             }
             catch (RegexMatchTimeoutException)
             {
-                throw OpenXmlTemplateException.Create(null, TemplateErrorCode.PatternMatchTimeout, text);
+                throw OpenXmlTemplateException.Create(settings, TemplateErrorCode.PatternMatchTimeout, text);
             }
         }
 
-        private static void ReportInvalid(Action<Match, TemplateErrorCode, object[]> onInvalidPattern, Match match, TemplateErrorCode code, params object[] args)
+        private static void ReportInvalid(Action<Match, TemplateErrorCode, object[]> onInvalidPattern, ProcessSettings settings, Match match, TemplateErrorCode code, params object[] args)
         {
             if (onInvalidPattern == null)
             {
-                throw OpenXmlTemplateException.Create(null, code, args);
+                throw OpenXmlTemplateException.Create(settings, code, args);
             }
             onInvalidPattern(match, code, args);
         }

@@ -53,14 +53,13 @@ namespace DocxTemplater.Blocks
             }
             else if (model != null)
             {
-                var error = OpenXmlTemplateException.Create(m_context.ProcessSettings, TemplateErrorCode.NotEnumerable, m_collectionName, model.GetType().FullName);
                 if (m_context.VariableReplacer.ProcessSettings.BindingErrorHandling == BindingErrorHandling.ThrowException)
                 {
-                    throw error;
+                    throw OpenXmlTemplateException.Create(m_context.ProcessSettings, TemplateErrorCode.NotEnumerable, m_collectionName, model.GetType().FullName);
                 }
                 else
                 {
-                    m_context.VariableReplacer.AddError(error.Message);
+                    m_context.VariableReplacer.AddError(TemplateErrorCode.NotEnumerable, m_collectionName, model.GetType().FullName);
                 }
             }
         }

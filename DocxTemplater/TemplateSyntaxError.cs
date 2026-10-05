@@ -26,8 +26,9 @@ namespace DocxTemplater
         private readonly TemplateErrorMessages m_messages;
         private readonly CultureInfo m_culture;
 
+        /// <param name="message">The free text for an error without code (<see cref="TemplateErrorCode.None"/>); otherwise <c>null</c>.</param>
         internal TemplateSyntaxError(TemplateSyntaxErrorSeverity severity, string part, string tag, string context,
-            TemplateErrorCode errorCode, IReadOnlyList<object> arguments, TemplateErrorMessages messages, CultureInfo culture)
+            TemplateErrorCode errorCode, IReadOnlyList<object> arguments, TemplateErrorMessages messages, CultureInfo culture, string message = null)
         {
             Severity = severity;
             Part = part;
@@ -37,7 +38,7 @@ namespace DocxTemplater
             Arguments = arguments ?? Array.Empty<object>();
             m_messages = messages ?? TemplateErrorMessages.Default;
             m_culture = culture ?? CultureInfo.InvariantCulture;
-            Message = m_messages.Format(errorCode, m_culture, Arguments);
+            Message = errorCode == TemplateErrorCode.None ? message ?? string.Empty : m_messages.Format(errorCode, m_culture, Arguments);
         }
 
         public TemplateSyntaxErrorSeverity Severity { get; }
@@ -84,7 +85,7 @@ namespace DocxTemplater
         public string GetMessage(TemplateErrorMessages messages, CultureInfo culture)
         {
             ArgumentNullException.ThrowIfNull(messages);
-            return messages.Format(ErrorCode, culture, Arguments);
+            return ErrorCode == TemplateErrorCode.None ? Message : messages.Format(ErrorCode, culture, Arguments);
         }
 
         /// <summary>

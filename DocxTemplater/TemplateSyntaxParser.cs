@@ -114,14 +114,20 @@ namespace DocxTemplater
                 Add(TemplateSyntaxErrorSeverity.Warning, index, length, code, args);
             }
 
+            /// <summary>Records an exception thrown while parsing; a free text exception keeps its message.</summary>
+            public void AddError(int index, int length, OpenXmlTemplateException exception)
+            {
+                Add(TemplateSyntaxErrorSeverity.Error, index, length, exception.ErrorCode, exception.Arguments.ToArray(), exception.Message);
+            }
+
             public IReadOnlyList<TemplateSyntaxError> SortedErrors => m_errors.OrderBy(x => x.Index).Select(x => x.Error).ToList();
 
-            private void Add(TemplateSyntaxErrorSeverity severity, int index, int length, TemplateErrorCode code, object[] args)
+            private void Add(TemplateSyntaxErrorSeverity severity, int index, int length, TemplateErrorCode code, object[] args, string message = null)
             {
                 var start = Math.Max(0, index - ContextLength);
                 var end = Math.Min(m_text.Length, index + length + ContextLength);
                 m_errors.Add((index, new TemplateSyntaxError(severity, m_part, m_text.Substring(index, length), m_text[start..end],
-                    code, args, m_settings?.ErrorMessages, m_settings?.UiCulture)));
+                    code, args, m_settings?.ErrorMessages, m_settings?.UiCulture, message)));
             }
         }
 
@@ -135,14 +141,14 @@ namespace DocxTemplater
             var found = new List<(int Index, int Length, PatternMatch Match, TemplateErrorCode Code, object[] Args)>();
             try
             {
-                foreach (var m in PatternMatcher.FindSyntaxPatterns(text, (m, code, args) => found.Add((m.Index, m.Length, null, code, args))))
+                foreach (var m in PatternMatcher.FindSyntaxPatterns(text, (m, code, args) => found.Add((m.Index, m.Length, null, code, args)), settings))
                 {
                     found.Add((m.Index, m.Length, m, TemplateErrorCode.None, null));
                 }
             }
             catch (OpenXmlTemplateException e)
             {
-                ctx.AddError(0, 0, e.ErrorCode, e.Arguments.ToArray());
+                ctx.AddError(0, 0, e);
                 return new TemplateSyntaxTree([], [], ctx.SortedErrors, settings);
             }
             found.Sort((a, b) => a.Index.CompareTo(b.Index));

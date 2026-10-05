@@ -138,6 +138,7 @@ namespace DocxTemplater.Blocks
                     .OfType<Text>();
                 foreach (var text in marked)
                 {
+                    // schema collection runs after the parser validated the text, so no error is expected here
                     var match = PatternMatcher.FindSyntaxPatterns(text.Text).FirstOrDefault();
                     if (match == null)
                     {
