@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 
-namespace DocxTemplater
+namespace DocxTemplater.Localization
 {
     /// <summary>
     /// The texts of the error messages in one language, see <see cref="TemplateErrorMessages"/>.

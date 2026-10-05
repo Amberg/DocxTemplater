@@ -95,7 +95,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<None Include="../readme.md" Pack="true" PackagePath="\"/>
+		<None Include="$(MSBuildThisFileDirectory)readme.md" Pack="true" PackagePath="\"/>
 	</ItemGroup>
 
 	<PropertyGroup>

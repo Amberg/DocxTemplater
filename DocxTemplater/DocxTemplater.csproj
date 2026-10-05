@@ -7,6 +7,10 @@
     <PackageReference Include="DynamicExpresso.Core" Version="[2.19.6,3.0.0)" />
   </ItemGroup>
   <ItemGroup>
+    <!-- the language pack contract lives next to the language packages but ships in the core assembly -->
+    <Compile Include="..\DocxTemplater.Localization\ITemplateLanguagePack.cs" Link="Localization\ITemplateLanguagePack.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
       <_Parameter1>DocxTemplater.Test</_Parameter1>
     </AssemblyAttribute>

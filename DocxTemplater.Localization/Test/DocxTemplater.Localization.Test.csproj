@@ -22,10 +22,10 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\DocxTemplater\DocxTemplater.csproj" />
-    <ProjectReference Include="..\DocxTemplater.Localization.de\DocxTemplater.Localization.de.csproj" />
-    <ProjectReference Include="..\DocxTemplater.Localization.fr\DocxTemplater.Localization.fr.csproj" />
-    <ProjectReference Include="..\DocxTemplater.Localization.it\DocxTemplater.Localization.it.csproj" />
-    <ProjectReference Include="..\DocxTemplater.Localization.de-CH\DocxTemplater.Localization.de-CH.csproj" />
+    <ProjectReference Include="..\..\DocxTemplater\DocxTemplater.csproj" />
+    <ProjectReference Include="..\de\DocxTemplater.Localization.de.csproj" />
+    <ProjectReference Include="..\fr\DocxTemplater.Localization.fr.csproj" />
+    <ProjectReference Include="..\it\DocxTemplater.Localization.it.csproj" />
+    <ProjectReference Include="..\de-CH\DocxTemplater.Localization.de-CH.csproj" />
   </ItemGroup>
 </Project>
