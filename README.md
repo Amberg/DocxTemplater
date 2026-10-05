@@ -78,7 +78,8 @@ A placeholder can consist of three parts: `{{property:formatter(arguments)}}`
 - **formatter**: Formatter applied to convert the model value to OpenXML (e.g., `toupper`, `tolower`, `img` format).
 - **arguments**: Formatter arguments - some formatters have arguments.
 
-The syntax is case insensitive.
+The syntax is case insensitive. This includes property paths, the model prefixes passed to `BindModel` and the loop variables - `{{customerDetails.Name}}` resolves a model bound as `BindModel("CustomerDetails", ...)`.
+Because prefixes are matched case-insensitively, two models whose prefixes differ only in casing cannot be bound at the same time.
 
 ### Quick Reference Examples
 

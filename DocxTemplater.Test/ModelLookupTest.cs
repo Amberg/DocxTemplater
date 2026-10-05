@@ -1,4 +1,6 @@
-﻿namespace DocxTemplater.Test
+﻿using System.Collections;
+
+namespace DocxTemplater.Test
 {
     internal class ModelLookupTest
     {
@@ -64,6 +66,66 @@
                 scope.AddVariable("...y", new { a = 55 });
                 Assert.That(modelLookup.GetValue("y.a"), Is.EqualTo(55));
             }
+        }
+
+        [Test]
+        public void ModelPrefixIsCaseInsensitive()
+        {
+            var modelLookup = new ModelLookup();
+            modelLookup.Add("CustomerDetails", new { Name = "John" });
+            Assert.Multiple(() =>
+            {
+                Assert.That(modelLookup.GetValue("customerDetails.Name"), Is.EqualTo("John"));
+                Assert.That(modelLookup.GetValue("CUSTOMERDETAILS.name"), Is.EqualTo("John"));
+                Assert.That(modelLookup.GetValue("CustomerDetails.Name"), Is.EqualTo("John"));
+            });
+        }
+
+        [Test]
+        public void NestedModelPrefixIsCaseInsensitive()
+        {
+            var modelLookup = new ModelLookup();
+            modelLookup.Add("y.a.b", new { c = 6 });
+            Assert.That(modelLookup.GetValue("Y.A.B.C"), Is.EqualTo(6));
+        }
+
+        [Test]
+        public void ScopeVariableIsCaseInsensitive()
+        {
+            var modelLookup = new ModelLookup();
+            modelLookup.Add("ds", new { a = 1 });
+            using var scope = modelLookup.OpenScope();
+            scope.AddVariable("Items", new { Name = "loopItem" });
+            Assert.Multiple(() =>
+            {
+                Assert.That(modelLookup.GetValue("items.Name"), Is.EqualTo("loopItem"));
+                Assert.That(modelLookup.GetValue("ITEMS.name"), Is.EqualTo("loopItem"));
+            });
+        }
+
+        [Test]
+        public void DictionaryModelLookupIsCaseInsensitiveRegardlessOfItsComparer()
+        {
+            var modelLookup = new ModelLookup();
+            // a dictionary with the default (case-sensitive) comparer
+            modelLookup.Add("d", new Dictionary<string, object> { { "Name", "John" } });
+            // a non generic dictionary
+            modelLookup.Add("h", new Hashtable { { "Name", "Alice" } });
+            Assert.Multiple(() =>
+            {
+                Assert.That(modelLookup.GetValue("d.name"), Is.EqualTo("John"));
+                Assert.That(modelLookup.GetValue("D.NAME"), Is.EqualTo("John"));
+                Assert.That(modelLookup.GetValue("h.name"), Is.EqualTo("Alice"));
+            });
+        }
+
+        [Test]
+        public void AddingTwoPrefixesThatDifferOnlyInCaseThrows()
+        {
+            var modelLookup = new ModelLookup();
+            modelLookup.Add("ds", new { a = 1 });
+            var exception = Assert.Throws<OpenXmlTemplateException>(() => modelLookup.Add("DS", new { a = 2 }));
+            Assert.That(exception.Message, Does.Contain("case-insensitive"));
         }
     }
 }
