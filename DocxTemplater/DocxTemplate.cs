@@ -164,14 +164,17 @@ namespace DocxTemplater
             // template and result - remember that instead of marking it processed, otherwise the next
             // call would take the early return above and hand out the unrendered template as a result.
             m_faulted = true;
-            foreach (var header in m_wpDocument.MainDocumentPart.HeaderParts.ToList())
+            if (Settings.BindingErrorHandling != BindingErrorHandling.HighlightErrorsInDocument || !HighlightSyntaxErrors())
             {
-                RenderOrProcessNode(header.Header);
-            }
-            RenderOrProcessNode(m_wpDocument.MainDocumentPart.RootElement);
-            foreach (var footer in m_wpDocument.MainDocumentPart.FooterParts.ToList())
-            {
-                RenderOrProcessNode(footer.Footer);
+                foreach (var header in m_wpDocument.MainDocumentPart.HeaderParts.ToList())
+                {
+                    RenderOrProcessNode(header.Header);
+                }
+                RenderOrProcessNode(m_wpDocument.MainDocumentPart.RootElement);
+                foreach (var footer in m_wpDocument.MainDocumentPart.FooterParts.ToList())
+                {
+                    RenderOrProcessNode(footer.Footer);
+                }
             }
             Context.VariableReplacer.WriteErrorMessages(m_wpDocument.MainDocumentPart.RootElement);
             m_wpDocument.Save();
@@ -179,6 +182,46 @@ namespace DocxTemplater
             Processed = true;
             m_stream.Position = 0;
             return m_stream;
+        }
+
+        /// <summary>
+        /// With <see cref="BindingErrorHandling.HighlightErrorsInDocument"/> a template with syntax errors is not
+        /// rendered at all - a broken block structure cannot be rendered partially, and a half rendered document would
+        /// confuse more than it helps. Instead the offending tags of every part are highlighted in red and all errors
+        /// are listed at the top of the document, like binding errors. The other modes throw.
+        /// </summary>
+        /// <returns><c>true</c> if the template has syntax errors and was not rendered.</returns>
+        private bool HighlightSyntaxErrors()
+        {
+            var mainPart = m_wpDocument.MainDocumentPart;
+            var parts = new List<OpenXmlCompositeElement>();
+            parts.AddRange(mainPart.HeaderParts.Select(x => x.Header));
+            parts.Add(mainPart.RootElement);
+            parts.AddRange(mainPart.FooterParts.Select(x => x.Footer));
+
+            var partsWithErrors = new List<(CharacterMap CharMap, IReadOnlyList<TemplateSyntaxError> Errors)>();
+            // parts whose block tree GetTemplateSchema already built are known to be valid (and are mutated)
+            foreach (var part in parts.Where(x => x != null && !m_prebuiltBlocks.ContainsKey(x)))
+            {
+                var charMap = new CharacterMap(part);
+                var errors = TemplateSyntaxParser.Parse(charMap.Text, GetPartName(part), Settings).Errors
+                    .Where(x => x.Severity == TemplateSyntaxErrorSeverity.Error).ToList();
+                if (errors.Count > 0)
+                {
+                    partsWithErrors.Add((charMap, errors));
+                }
+            }
+            if (partsWithErrors.Count == 0)
+            {
+                return false;
+            }
+
+            foreach (var (charMap, errors) in partsWithErrors)
+            {
+                HighlightSyntaxErrors(charMap, errors);
+            }
+            Context.VariableReplacer.AddError(TemplateErrorCode.TemplateSyntaxErrors, partsWithErrors.SelectMany(x => x.Errors).ToList());
+            return true;
         }
 
         private void RenderOrProcessNode(OpenXmlCompositeElement node)

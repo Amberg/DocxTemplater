@@ -26,14 +26,19 @@ namespace DocxTemplater
         private readonly TemplateErrorMessages m_messages;
         private readonly CultureInfo m_culture;
 
+        /// <param name="index">Position of the <paramref name="tag"/> in the text of the part.</param>
+        /// <param name="length">Length of the <paramref name="tag"/> in the text of the part.</param>
         /// <param name="message">The free text for an error without code (<see cref="TemplateErrorCode.None"/>); otherwise <c>null</c>.</param>
         internal TemplateSyntaxError(TemplateSyntaxErrorSeverity severity, string part, string tag, string context,
-            TemplateErrorCode errorCode, IReadOnlyList<object> arguments, TemplateErrorMessages messages, CultureInfo culture, string message = null)
+            TemplateErrorCode errorCode, IReadOnlyList<object> arguments, TemplateErrorMessages messages, CultureInfo culture,
+            int index = 0, int length = 0, string message = null)
         {
             Severity = severity;
             Part = part;
             Tag = tag;
             Context = context;
+            Index = index;
+            Length = length;
             ErrorCode = errorCode;
             Arguments = arguments ?? Array.Empty<object>();
             m_messages = messages ?? TemplateErrorMessages.Default;
@@ -62,6 +67,16 @@ namespace DocxTemplater
         /// Text surrounding the error, to help locating it in the document.
         /// </summary>
         public string Context { get; }
+
+        /// <summary>
+        /// Position of the <see cref="Tag"/> in the text of the part, as seen by the parser (all text runs concatenated).
+        /// </summary>
+        internal int Index { get; }
+
+        /// <summary>
+        /// Length of the <see cref="Tag"/> in the text of the part; 0 if the error has no location.
+        /// </summary>
+        internal int Length { get; }
 
         /// <summary>
         /// Identifies the error independent of the language of the <see cref="Message"/>.

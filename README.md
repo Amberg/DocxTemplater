@@ -539,7 +539,7 @@ var result = docTemplate.Process();
 |--------------------------------|------------------------------------------------------------------------------------------------------------|
 | `ThrowException` (default)     | `Process()` throws an `OpenXmlTemplateException` for the first binding error.                             |
 | `SkipBindingAndRemoveContent`  | Placeholders that cannot be bound are removed, loops and conditions with errors render nothing.           |
-| `HighlightErrorsInDocument`    | Failed placeholders are highlighted in red and all error messages are listed at the top of the document.  |
+| `HighlightErrorsInDocument`    | Failed placeholders are highlighted in red and all error messages are listed at the top of the document. A template with syntax errors is not rendered at all: the offending tags are highlighted and the errors are listed, see [Template Syntax Validation](#template-syntax-validation). |
 
 ### Error Codes
 
@@ -699,6 +699,7 @@ template.Save("generated.docx");             // render - reuses the cached analy
 
 `ValidateTemplateSyntax()` checks the template syntax **without rendering it and without a model** and returns all errors found (an empty list if the syntax is valid). The document is not modified.
 The same parser runs at the start of `Process()`: errors with `Severity == Error` (broken block structure) make `Process()` throw an `OpenXmlTemplateException` listing all of them, while warnings (malformed tags, suspicious expressions) only show up here.
+With `BindingErrorHandling.HighlightErrorsInDocument`, `Process()` does not throw for syntax errors: nothing is rendered (a broken block structure cannot be rendered partially), the offending tags are highlighted in red in every part and all errors are listed at the top of the document in the `UiCulture`, exactly like binding errors. The other modes keep throwing.
 
 ```csharp
 using var template = DocxTemplate.Open("template.docx");

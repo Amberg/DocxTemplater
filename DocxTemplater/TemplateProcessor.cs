@@ -368,6 +368,46 @@ namespace DocxTemplater
         }
 
         /// <summary>
+        /// Marks the tags of the given syntax errors in red (black bold text on red background, like a placeholder that
+        /// could not be bound) without rendering the part. The part is otherwise left untouched, so the template author
+        /// sees the original template with the offending tags highlighted.
+        /// </summary>
+        /// <param name="charMap">The character map the errors were parsed from; it is updated as texts are merged.</param>
+        private protected static void HighlightSyntaxErrors(CharacterMap charMap, IEnumerable<TemplateSyntaxError> errors)
+        {
+            int highlightedUpTo = 0;
+            foreach (var error in errors.Where(x => x.Length > 0).OrderBy(x => x.Index))
+            {
+                // overlapping ranges (e.g. two errors on the same tag) are highlighted once
+                var first = Math.Max(error.Index, highlightedUpTo);
+                var last = Math.Min(error.Index + error.Length, charMap.Text.Length) - 1;
+                if (last < first)
+                {
+                    continue;
+                }
+                var merged = charMap.MergeText(charMap[first], charMap[last]);
+                IsolateInOwnRun(merged.Element);
+                VariableReplacer.MarkTextAsError(merged.Element);
+                highlightedUpTo = last + 1;
+            }
+        }
+
+        /// <summary>
+        /// Splits the run around <paramref name="text"/>, so only the tag gets the error formatting and not the text
+        /// before or after it in the same run.
+        /// </summary>
+        private static void IsolateInOwnRun(Text text)
+        {
+            var run = text.GetFirstAncestor<Run>();
+            if (run == null)
+            {
+                return;
+            }
+            run = (Run)run.SplitBeforeElement(text).Last();
+            run.SplitAfterElement(text);
+        }
+
+        /// <summary>
         /// The text of a part as seen by the syntax parser: the text captured by <see cref="BuildBlockTree"/> if it
         /// already ran for this part (the part is mutated afterwards), otherwise the current text.
         /// </summary>

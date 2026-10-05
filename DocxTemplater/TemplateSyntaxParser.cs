@@ -127,7 +127,7 @@ namespace DocxTemplater
                 var start = Math.Max(0, index - ContextLength);
                 var end = Math.Min(m_text.Length, index + length + ContextLength);
                 m_errors.Add((index, new TemplateSyntaxError(severity, m_part, m_text.Substring(index, length), m_text[start..end],
-                    code, args, m_settings?.ErrorMessages, m_settings?.UiCulture, message)));
+                    code, args, m_settings?.ErrorMessages, m_settings?.UiCulture, index, length, message)));
             }
         }
 
