@@ -87,7 +87,11 @@ namespace DocxTemplater
                 [TemplateErrorCode.CaseNotNestedInSwitch] = "The '{{#case}}'/'{{#default}}' block ('{0}') must be nested inside a '{{#switch}}' block.",
                 [TemplateErrorCode.InvalidInlineKeyword] = "Invalid expression {0}",
                 [TemplateErrorCode.DynamicTableStructureInvalid] = "Dynamic table block must contain exactly one table with at least a header and a data row",
-                [TemplateErrorCode.DynamicTableSingleChild] = "Dynamic table block must contain exactly one child block"
+                [TemplateErrorCode.DynamicTableSingleChild] = "Dynamic table block must contain exactly one child block",
+
+                // template type
+                [TemplateErrorCode.FormatterNotSupported] = "'{0}': the formatter '{1}' is only available in Word documents",
+                [TemplateErrorCode.KeywordNotSupported] = "'{0}': this keyword is only available in Word documents"
             });
     }
 }

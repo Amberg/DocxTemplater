@@ -96,7 +96,11 @@ namespace DocxTemplater.Localization
                 [TemplateErrorCode.CaseNotNestedInSwitch] = "Der '{{#case}}'/'{{#default}}'-Block ('{0}') muss innerhalb eines '{{#switch}}'-Blocks liegen.",
                 [TemplateErrorCode.InvalidInlineKeyword] = "Ungültiger Ausdruck {0}",
                 [TemplateErrorCode.DynamicTableStructureInvalid] = "Ein dynamischer Tabellenblock muss genau eine Tabelle mit mindestens einer Kopf- und einer Datenzeile enthalten",
-                [TemplateErrorCode.DynamicTableSingleChild] = "Ein dynamischer Tabellenblock muss genau einen untergeordneten Block enthalten"
+                [TemplateErrorCode.DynamicTableSingleChild] = "Ein dynamischer Tabellenblock muss genau einen untergeordneten Block enthalten",
+
+                // Vorlagentyp
+                [TemplateErrorCode.FormatterNotSupported] = "'{0}': Der Formatierer '{1}' ist nur in Word-Dokumenten verfügbar",
+                [TemplateErrorCode.KeywordNotSupported] = "'{0}': Dieses Schlüsselwort ist nur in Word-Dokumenten verfügbar"
             });
     }
 }
