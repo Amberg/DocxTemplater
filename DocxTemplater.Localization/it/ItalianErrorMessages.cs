@@ -96,7 +96,11 @@ namespace DocxTemplater.Localization
                 [TemplateErrorCode.CaseNotNestedInSwitch] = "Il blocco '{{#case}}'/'{{#default}}' ('{0}') deve essere annidato in un blocco '{{#switch}}'.",
                 [TemplateErrorCode.InvalidInlineKeyword] = "Espressione non valida {0}",
                 [TemplateErrorCode.DynamicTableStructureInvalid] = "Un blocco di tabella dinamica deve contenere esattamente una tabella con almeno una riga di intestazione e una riga di dati",
-                [TemplateErrorCode.DynamicTableSingleChild] = "Un blocco di tabella dinamica deve contenere esattamente un blocco figlio"
+                [TemplateErrorCode.DynamicTableSingleChild] = "Un blocco di tabella dinamica deve contenere esattamente un blocco figlio",
+
+                // tipo di modello
+                [TemplateErrorCode.FormatterNotSupported] = "'{0}': il formattatore '{1}' è disponibile solo nei documenti Word",
+                [TemplateErrorCode.KeywordNotSupported] = "'{0}': questa parola chiave è disponibile solo nei documenti Word"
             });
     }
 }

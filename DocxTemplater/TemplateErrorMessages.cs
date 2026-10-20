@@ -127,7 +127,7 @@ namespace DocxTemplater
 
         /// <summary>
         /// Formats the message of <paramref name="code"/> in the language of <paramref name="culture"/>.
-        /// Arguments that are themselves errors (<see cref="OpenXmlTemplateException"/>, <see cref="TemplateSyntaxError"/>
+        /// Arguments that are themselves errors (<see cref="TemplateException"/>, <see cref="TemplateSyntaxError"/>
         /// or a list of them) are rendered in the same language, so nested messages are translated as a whole.
         /// </summary>
         public string Format(TemplateErrorCode code, CultureInfo culture, params object[] arguments)
@@ -226,7 +226,7 @@ namespace DocxTemplater
         {
             return argument switch
             {
-                OpenXmlTemplateException e => e.GetMessage(this, culture),
+                TemplateException e => e.GetMessage(this, culture),
                 TemplateSyntaxError error => error.ToString(this, culture),
                 IEnumerable<TemplateSyntaxError> errors => string.Join(Environment.NewLine, errors.Select(x => x.ToString(this, culture))),
                 Exception e => e.Message,

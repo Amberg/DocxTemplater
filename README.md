@@ -561,6 +561,8 @@ catch (OpenXmlTemplateException e)
 
 `ErrorCode` is `TemplateErrorCode.None` for internal errors and for errors of third-party formatters that use the plain `OpenXmlTemplateException(string)` constructor. The documentation of each `TemplateErrorCode` value lists the meaning of its arguments.
 
+`OpenXmlTemplateException` derives from `TemplateException`, the common base of the errors of all template types, which defines `ErrorCode`, `Arguments` and `GetMessage(culture)`.
+
 ### Localized Error Messages
 
 Exception messages, `TemplateSyntaxError.Message` and the error list written with `HighlightErrorsInDocument` are formatted in the `ProcessSettings.UiCulture` - the culture of the **user who generates the document**. It defaults to `CultureInfo.CurrentUICulture` and is independent of `ProcessSettings.Culture`, which only formats the values in the document: a user with an English UI can generate a German invoice and still gets English error messages.
