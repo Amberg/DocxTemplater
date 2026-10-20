@@ -44,6 +44,7 @@ Enhance DocxTemplater with these optional extension packages:
 |--------------|-----------------------------------
 | [DocxTemplater.Images ](https://www.nuget.org/packages/DocxTemplater.Images)  |Enables embedding images in generated Word documents|
 | [DocxTemplater.Markdown ](https://www.nuget.org/packages/DocxTemplater.Markdown)  | Allows use of Markdown syntax for generating parts of Word documents|
+| [DocxTemplater.Text ](https://www.nuget.org/packages/DocxTemplater.Text)  | Renders plain text and HTML templates (e.g. e-mails) with the same syntax, see [Text and HTML Templates](#text-and-html-templates)|
 | [DocxTemplater.Localization.*&lt;language&gt;*](https://www.nuget.org/packages?q=DocxTemplater.Localization)  | Error messages in the user's language, see [Localized Error Messages](#localized-error-messages). Available: `de`, `de-CH`, `fr`, `it`|
 
 Image metadata (size, format, EXIF rotation) is read by a dependency-free built-in reader that supports PNG, JPEG, GIF, BMP and TIFF.
@@ -82,6 +83,7 @@ Migration note: the `DocxTemplater.Images.ImageSharp` package is discontinued. `
 - [Advanced Model Binding](#advanced-model-binding)
 - [Template Schema Inspection](#template-schema-inspection)
 - [Template Syntax Validation](#template-syntax-validation)
+- [Text and HTML Templates](#text-and-html-templates)
 - [Support This Project](#support-this-project)
 
 ## Features
@@ -97,6 +99,7 @@ Migration note: the `DocxTemplater.Images.ImageSharp` package is discontinued. `
 - Template Schema - Statically inspect which variables a template expects, without rendering
 - Syntax Validation - Check a template for syntax errors without rendering it
 - Localized Error Messages - Every error carries a code; messages are available in English, German, Swiss German, French and Italian and can be extended
+- Text and HTML Templates - Render e-mails and other text with the same template syntax, see [DocxTemplater.Text](#text-and-html-templates)
 
 ## Placeholder Syntax
 
@@ -725,6 +728,42 @@ Everything between `{{:ignore}}` and `{{/:ignore}}` is treated as plain text and
 
 Each `TemplateSyntaxError` exposes the `Severity`, the `Part` (`Body`, `Header` or `Footer`), the offending `Tag`, a `Message` and the surrounding text as `Context`. The `ErrorCode` and `Arguments` identify the error independent of the message language, see [Error Codes](#error-codes); the `Message` is formatted in the `ProcessSettings.UiCulture` and can be re-rendered in another language with `GetMessage(culture)`.
 Binding errors (unknown variables, wrong types, unknown formatters) are not detected, as they depend on the model.
+
+## Text and HTML Templates
+
+The package [DocxTemplater.Text](https://www.nuget.org/packages/DocxTemplater.Text) renders plain text and HTML templates - for example the subject and the body of an e-mail - with the **same syntax and the same semantics** as the Word templates, so an application can use one template language for its documents and its mails. Placeholders with paths and formatters, C# expressions, collections with `_Idx` and separators, range loops, conditions, switch blocks and `{{:ignore}}` work exactly as described above; the conformance tests of the repository run the same templates through both renderers.
+
+```csharp
+using DocxTemplater.Text;
+
+var template = new TextTemplate(
+    "<p>Dear {{ds.Name}}</p><ul>{{#ds.Items}}<li>{{.Name}}: {{.Price}:f(c)}</li>{{/ds.Items}}</ul>",
+    new TextTemplateSettings
+    {
+        Escaping = TextEscaping.Html,          // Html (default) or None for plain text such as a subject
+        Culture = new CultureInfo("de-CH"),    // formats the values
+        UiCulture = new CultureInfo("fr"),     // language of the error messages
+        BindingErrorHandling = BindingErrorHandling.ThrowException,
+        IgnoreLineBreaksAroundTags = true
+    });
+template.BindModel("ds", model);
+string html = template.Process();
+
+IReadOnlyList<TemplateSyntaxError> errors = template.ValidateTemplateSyntax();
+TemplateSchema schema = template.GetTemplateSchema();
+```
+
+A `TextTemplate` is parsed once; `Process()` can be called repeatedly. Errors are `TemplateException`s, the common base class of `OpenXmlTemplateException`, with the same [error codes](#error-codes) and [localized messages](#localized-error-messages).
+
+What is specific to text:
+
+- **Escaping.** With `TextEscaping.Html` (the default) every value is HTML-encoded and line breaks in a value become `<br/>`; a value that is trusted HTML - a rich text field, a rendered sub-template - is inserted unchanged with `{{value}:html()}`. With `TextEscaping.None` values are inserted as they are. The text of the template itself is never encoded. `{{:break}}` is a `<br/>` or a line feed respectively.
+- **Whitespace trimming.** With `IgnoreLineBreaksAroundTags` a line that holds nothing but block tags (`{{#Items}}`, `{{/}}`, `{{:}}`, `{{:s:}}`, `{{#case: ...}}`, ...) and whitespace is removed together with its line break, so a template can be indented and spread over lines without affecting the output. Lines with values are not affected.
+- **Error handling.** The three `BindingErrorHandling` modes behave as in Word documents. With `HighlightErrorsInDocument` the failed tags stay in the output - wrapped in a red `<span>` in HTML - and all errors are listed at the top of the output and in `TextTemplate.Errors`; a template with syntax errors is not rendered but returned with its offending tags highlighted.
+- **Word-only constructs** are reported by `ValidateTemplateSyntax()` with the codes `FormatterNotSupported` and `KeywordNotSupported` and make `Process()` throw: `:img()`, `:template()`, `:md()`, `:dyntable()`, `{{:PageBreak}}` and `{{:SectionBreak}}`. Charts and content controls do not exist in text.
+- **Formatters.** `format` / `f`, `toupper` / `tolower` and `html` are built in. Own formatters implement `ITextFormatter` and return a `TextValue`; `TextValue.Raw(...)` marks output that is already HTML and must not be encoded.
+
+Layouts are left to the application: render the body with one template, then render the layout with the body bound to a value and inserted with `{{body}:html()}`.
 
 ## Support This Project
 
