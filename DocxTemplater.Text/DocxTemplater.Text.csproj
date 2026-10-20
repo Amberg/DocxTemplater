@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <Description>Text and HTML templates (e.g. e-mail subject and body) with the DocxTemplater syntax: the same placeholders, loops, conditions, switch blocks, formatters and expressions as in Word templates, rendered to a string with optional HTML encoding.</Description>
+    <PackageTags>docx;template;templating;text;html;email;placeholder;looping;conditional-blocks;CSharp;data-binding</PackageTags>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DocxTemplater\DocxTemplater.csproj" />
+  </ItemGroup>
+</Project>
