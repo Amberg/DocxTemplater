@@ -12,6 +12,7 @@ namespace DocxTemplater.Test
     {
         private const int RestartNumId = 1;
         private const int ContinueNumId = 2;
+        private const int SubListRestartNumId = 3;
 
         [Test]
         public void RangeLoopRestartsListInEveryIteration()
@@ -75,6 +76,40 @@ namespace DocxTemplater.Test
         }
 
         [Test]
+        public void InlineLoopInListParagraphKeepsSingleList()
+        {
+            var (paragraphs, _) = Render(
+                P("{{#ds.Items}}{{.Name}} {{/ds.Items}}", RestartNumId));
+
+            var numbered = paragraphs.Where(x => NumId(x) != null).ToList();
+            Assert.That(numbered.Select(x => x.InnerText.Trim()), Is.EqualTo(["John Alice"]));
+            Assert.That(NumId(numbered[0]), Is.EqualTo(RestartNumId));
+        }
+
+        [Test]
+        public void LoopWritesListWithRestartedSubListPerItem()
+        {
+            // the loop writes the items of the outer list - every item has a sub list restarting at 1
+            var (paragraphs, _) = Render(
+                P("{{#ds.Groups}}"),
+                P("{{.Title}}", ContinueNumId),
+                P("{{#.Items}}"),
+                P("{{.Name}}", SubListRestartNumId),
+                P("{{/.Items}}"),
+                P("{{/ds.Groups}}"));
+
+            var numbered = paragraphs.Where(x => NumId(x) != null).ToList();
+            Assert.That(numbered.Select(x => x.InnerText), Is.EqualTo(["A", "John", "Alice", "B", "John", "Alice"]));
+            // outer list continues over the groups
+            Assert.That(NumId(numbered[0]), Is.EqualTo(ContinueNumId));
+            Assert.That(NumId(numbered[3]), Is.EqualTo(ContinueNumId));
+            // sub list: one list per group
+            Assert.That(NumId(numbered[1]), Is.EqualTo(NumId(numbered[2])));
+            Assert.That(NumId(numbered[4]), Is.EqualTo(NumId(numbered[5])));
+            Assert.That(NumId(numbered[1]), Is.Not.EqualTo(NumId(numbered[4])));
+        }
+
+        [Test]
         public void ListWithoutRestartContinuesAcrossIterations()
         {
             // no "Restart numbering" in the template - existing behavior (one continued list) is kept
@@ -89,7 +124,7 @@ namespace DocxTemplater.Test
             var numbered = paragraphs.Where(x => NumId(x) != null).ToList();
             Assert.That(numbered, Has.Count.EqualTo(6));
             Assert.That(numbered.Select(NumId).Distinct().Single(), Is.EqualTo(ContinueNumId));
-            Assert.That(numbering.Elements<NumberingInstance>().Count(), Is.EqualTo(2));
+            Assert.That(numbering.Elements<NumberingInstance>().Count(), Is.EqualTo(3));
         }
 
         private static void AssertRestartedPerIteration(List<Paragraph> paragraphs, Numbering numbering, int iterations)
@@ -155,7 +190,12 @@ namespace DocxTemplater.Test
                         new LevelOverride(new StartOverrideNumberingValue { Val = 1 }) { LevelIndex = 0 })
                     { NumberID = RestartNumId },
                     // plain list
-                    new NumberingInstance(new AbstractNumId { Val = 0 }) { NumberID = ContinueNumId });
+                    new NumberingInstance(new AbstractNumId { Val = 0 }) { NumberID = ContinueNumId },
+                    // second list marked as "Restart numbering" - used as sub list
+                    new NumberingInstance(
+                        new AbstractNumId { Val = 0 },
+                        new LevelOverride(new StartOverrideNumberingValue { Val = 1 }) { LevelIndex = 0 })
+                    { NumberID = SubListRestartNumId });
                 wpDocument.Save();
             }
             memStream.Position = 0;
