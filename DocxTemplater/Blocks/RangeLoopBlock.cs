@@ -12,10 +12,12 @@ namespace DocxTemplater.Blocks
     {
         private readonly string m_indexName;
         private readonly string m_countVariable;
+        private readonly ListNumberingRestarter m_listNumberingRestarter;
 
         public RangeLoopBlock(ITemplateProcessingContext context, PatternType patternType, Text startTextNode, PatternMatch startMatch)
             : base(context, patternType, startTextNode, startMatch)
         {
+            m_listNumberingRestarter = new ListNumberingRestarter(this, context);
             var varName = startMatch.Variable ?? string.Empty;
             if (varName.Contains(':'))
             {
@@ -113,7 +115,9 @@ namespace DocxTemplater.Blocks
             {
                 using var loopScope = models.OpenScope();
                 loopScope.AddVariable(m_indexName, j);
+                var iteration = m_listNumberingRestarter.BeginIteration(parentNode, isFirstInDocument: j == 0);
                 base.Expand(models, parentNode);
+                m_listNumberingRestarter.EndIteration(iteration);
             }
         }
 
