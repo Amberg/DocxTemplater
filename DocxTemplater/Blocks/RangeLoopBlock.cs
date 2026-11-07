@@ -12,12 +12,10 @@ namespace DocxTemplater.Blocks
     {
         private readonly string m_indexName;
         private readonly string m_countVariable;
-        private readonly ListNumberingRestarter m_listNumberingRestarter;
 
         public RangeLoopBlock(ITemplateProcessingContext context, PatternType patternType, Text startTextNode, PatternMatch startMatch)
             : base(context, patternType, startTextNode, startMatch)
         {
-            m_listNumberingRestarter = new ListNumberingRestarter(this, context);
             var varName = startMatch.Variable ?? string.Empty;
             if (varName.Contains(':'))
             {
@@ -111,13 +109,17 @@ namespace DocxTemplater.Blocks
         {
             // Iterate backwards because InsertAfterSelf inserts elements immediately after the insertion point,
             // effectively reversing the output order if not iterated backward.
+            var anchor = m_insertionPoint.GetElement(parentNode);
             for (int j = count - 1; j >= 0; j--)
             {
                 using var loopScope = models.OpenScope();
                 loopScope.AddVariable(m_indexName, j);
-                var iteration = m_listNumberingRestarter.BeginIteration(parentNode, isFirstInDocument: j == 0);
+                var next = anchor?.NextSibling();
                 base.Expand(models, parentNode);
-                m_listNumberingRestarter.EndIteration(iteration);
+                if (j > 0)
+                {
+                    ListNumbering.RestartLists(m_context, anchor, next);
+                }
             }
         }
 

@@ -13,13 +13,11 @@ namespace DocxTemplater.Blocks
         public static string LoopLengthVariable = "_Length";
 
         private readonly string m_collectionName;
-        private readonly ListNumberingRestarter m_listNumberingRestarter;
 
         public LoopBlock(ITemplateProcessingContext context, PatternType patternType, Text startTextNode, PatternMatch startMatch)
             : base(context, patternType, startTextNode, startMatch)
         {
             m_collectionName = startMatch.Variable;
-            m_listNumberingRestarter = new ListNumberingRestarter(this, context);
         }
 
         public override void Expand(IModelLookup models, OpenXmlElement parentNode)
@@ -43,15 +41,19 @@ namespace DocxTemplater.Blocks
             {
                 var items = enumerable.Cast<object>().Reverse().ToList();
                 int counter = items.Count;
+                var anchor = m_insertionPoint.GetElement(parentNode);
                 foreach (var item in items)
                 {
                     using var loopScope = models.OpenScope();
                     loopScope.AddVariable(m_collectionName, item);
                     loopScope.AddVariable($"{m_collectionName}.{LoopIndexVariable}", counter);
                     loopScope.AddVariable($"{m_collectionName}.{LoopLengthVariable}", items.Count);
-                    var iteration = m_listNumberingRestarter.BeginIteration(parentNode, isFirstInDocument: counter == 1);
+                    var next = anchor?.NextSibling();
                     base.Expand(models, parentNode);
-                    m_listNumberingRestarter.EndIteration(iteration);
+                    if (counter > 1)
+                    {
+                        ListNumbering.RestartLists(m_context, anchor, next);
+                    }
                     counter--;
                 }
             }

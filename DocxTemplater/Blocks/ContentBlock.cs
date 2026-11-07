@@ -192,16 +192,6 @@ namespace DocxTemplater.Blocks
             element.InsertAfterSelf(paragraphs);
         }
 
-        internal bool IsInsertionPoint(OpenXmlElement element)
-        {
-            return m_insertionPoint != null && m_insertionPoint.IsForElement(element);
-        }
-
-        internal OpenXmlElement GetInsertionPointElement(OpenXmlElement parentNode)
-        {
-            return m_insertionPoint?.GetElement(parentNode);
-        }
-
         public void RemoveAnchor(OpenXmlElement parentNode)
         {
             var element = m_insertionPoint.GetElement(parentNode) ?? throw new OpenXmlTemplateException($"Insertion point {m_insertionPoint.Id} not found");

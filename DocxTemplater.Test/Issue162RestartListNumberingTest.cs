@@ -14,32 +14,19 @@ namespace DocxTemplater.Test
         private const int ContinueNumId = 2;
         private const int SubListRestartNumId = 3;
 
-        [Test]
-        public void RangeLoopRestartsListInEveryIteration()
+        [TestCase("{{@i:3}}", "{{ds.Title}}", "ds.Items", "{{/}}", 3)]
+        [TestCase("{{#ds.Groups}}", "{{.Title}}", ".Items", "{{/ds.Groups}}", 2)]
+        public void LoopRestartsListInEveryIteration(string loopStart, string title, string items, string loopEnd, int iterations)
         {
             var (paragraphs, numbering) = Render(
-                P("{{@i:3}}"),
-                P("This Text: {{ds.Title}} - will be replaced"),
-                P("{{#ds.Items}}"),
+                P(loopStart),
+                P($"This Text: {title} - will be replaced"),
+                P($"{{{{#{items}}}}}"),
                 P("{{.Name}}", RestartNumId),
-                P("{{/ds.Items}}"),
-                P("{{/}}"));
+                P($"{{{{/{items}}}}}"),
+                P(loopEnd));
 
-            AssertRestartedPerIteration(paragraphs, numbering, iterations: 3);
-        }
-
-        [Test]
-        public void CollectionLoopRestartsListInEveryIteration()
-        {
-            var (paragraphs, numbering) = Render(
-                P("{{#ds.Groups}}"),
-                P("This Text: {{.Title}} - will be replaced"),
-                P("{{#.Items}}"),
-                P("{{.Name}}", RestartNumId),
-                P("{{/.Items}}"),
-                P("{{/ds.Groups}}"));
-
-            AssertRestartedPerIteration(paragraphs, numbering, iterations: 2);
+            AssertRestartedPerIteration(paragraphs, numbering, ["John", "Alice"], iterations);
         }
 
         [Test]
@@ -52,12 +39,7 @@ namespace DocxTemplater.Test
                 P("second", RestartNumId),
                 P("{{/}}"));
 
-            var numbered = paragraphs.Where(x => NumId(x) != null).ToList();
-            Assert.That(numbered.Select(x => x.InnerText), Is.EqualTo(["first", "second", "first", "second"]));
-            Assert.That(NumId(numbered[0]), Is.EqualTo(NumId(numbered[1])));
-            Assert.That(NumId(numbered[2]), Is.EqualTo(NumId(numbered[3])));
-            Assert.That(NumId(numbered[0]), Is.Not.EqualTo(NumId(numbered[2])));
-            AssertIsRestartOfOriginal(numbering, NumId(numbered[2]).Value);
+            AssertRestartedPerIteration(paragraphs, numbering, ["first", "second"], 2);
         }
 
         [Test]
@@ -127,13 +109,13 @@ namespace DocxTemplater.Test
             Assert.That(numbering.Elements<NumberingInstance>().Count(), Is.EqualTo(3));
         }
 
-        private static void AssertRestartedPerIteration(List<Paragraph> paragraphs, Numbering numbering, int iterations)
+        private static void AssertRestartedPerIteration(List<Paragraph> paragraphs, Numbering numbering, string[] items, int iterations)
         {
             var numbered = paragraphs.Where(x => NumId(x) != null).ToList();
             Assert.That(numbered.Select(x => x.InnerText),
-                Is.EqualTo(Enumerable.Repeat(new[] { "John", "Alice" }, iterations).SelectMany(x => x)));
+                Is.EqualTo(Enumerable.Repeat(items, iterations).SelectMany(x => x)));
 
-            var numIdsPerIteration = numbered.Chunk(2).Select(chunk => chunk.Select(NumId).Distinct().Single()).ToList();
+            var numIdsPerIteration = numbered.Chunk(items.Length).Select(chunk => chunk.Select(NumId).Distinct().Single()).ToList();
             Assert.That(numIdsPerIteration.Distinct().Count(), Is.EqualTo(iterations), "every iteration needs its own list");
             Assert.That(numIdsPerIteration[0], Is.EqualTo(RestartNumId), "first iteration keeps the list of the template");
             foreach (var numId in numIdsPerIteration)

@@ -194,16 +194,7 @@ To access the index of the current item, use the special variable `Items._Idx` I
 
 #### Restarting Numbered Lists in Loops
 
-A numbered list inside a loop (`{{#Items}}` or `{{@i:count}}`) normally continues its numbering over all iterations, because every iteration repeats the same Word list. If the list is marked with **Restart Numbering** in Word, the numbering restarts in every iteration instead:
-```
-{{#Groups}}
-{{.Title}}
-{{#.Items}}
-1.	{{.Name}}      <- list marked as "Restart Numbering" in Word
-{{/.Items}}
-{{/Groups}}
-```
-The list is restarted by the loop whose content does not start with an item of that list - here `Groups`. The items produced by `{{#.Items}}` still form one list per group.
+A numbered list marked with **Restart Numbering** in Word restarts in every iteration of a loop (`{{#Items}}` / `{{@i:count}}`), unless the loop body itself starts with an item of that list - then the loop writes the items of one list.
 
 ---
 ### Range Loops
