@@ -41,13 +41,19 @@ namespace DocxTemplater.Blocks
             {
                 var items = enumerable.Cast<object>().Reverse().ToList();
                 int counter = items.Count;
+                var anchor = m_insertionPoint.GetElement(parentNode);
                 foreach (var item in items)
                 {
                     using var loopScope = models.OpenScope();
                     loopScope.AddVariable(m_collectionName, item);
                     loopScope.AddVariable($"{m_collectionName}.{LoopIndexVariable}", counter);
                     loopScope.AddVariable($"{m_collectionName}.{LoopLengthVariable}", items.Count);
+                    var next = anchor?.NextSibling();
                     base.Expand(models, parentNode);
+                    if (counter > 1)
+                    {
+                        ListNumbering.RestartLists(m_context, anchor, next);
+                    }
                     counter--;
                 }
             }

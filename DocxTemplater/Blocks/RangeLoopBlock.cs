@@ -109,11 +109,17 @@ namespace DocxTemplater.Blocks
         {
             // Iterate backwards because InsertAfterSelf inserts elements immediately after the insertion point,
             // effectively reversing the output order if not iterated backward.
+            var anchor = m_insertionPoint.GetElement(parentNode);
             for (int j = count - 1; j >= 0; j--)
             {
                 using var loopScope = models.OpenScope();
                 loopScope.AddVariable(m_indexName, j);
+                var next = anchor?.NextSibling();
                 base.Expand(models, parentNode);
+                if (j > 0)
+                {
+                    ListNumbering.RestartLists(m_context, anchor, next);
+                }
             }
         }
 
