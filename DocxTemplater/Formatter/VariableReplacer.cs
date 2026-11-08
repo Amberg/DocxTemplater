@@ -90,6 +90,11 @@ namespace DocxTemplater.Formatter
         private void ApplyFormatter(ITemplateProcessingContext templateContext, PatternMatch patternMatch, ValueWithMetadata valueWithMetadata, Text target)
         {
             var value = valueWithMetadata.Value;
+            if (DefaultValue.TryGetReplacement(ref patternMatch, value, out var replacement))
+            {
+                target.Text = replacement;
+                return;
+            }
             if (value == null)
             {
                 target.Text = string.Empty;
@@ -102,6 +107,11 @@ namespace DocxTemplater.Formatter
 
         internal void ApplyFormatter(PatternMatch patternMatch, object value, Text target, ITemplateProcessingContext templateContext)
         {
+            if (DefaultValue.TryGetReplacement(ref patternMatch, value, out var replacement))
+            {
+                target.Text = replacement;
+                return;
+            }
             if (value == null)
             {
                 target.Text = string.Empty;
