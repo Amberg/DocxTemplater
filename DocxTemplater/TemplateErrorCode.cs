@@ -225,6 +225,22 @@ namespace DocxTemplater
         DynamicTableStructureInvalid,
 
         /// <summary>A dynamic table block does not contain exactly one child block.</summary>
-        DynamicTableSingleChild
+        DynamicTableSingleChild,
+
+        // ----- template type -----
+
+        /// <summary>A formatter that is only available in Word documents was used in another template type. {0}: tag, {1}: formatter</summary>
+        FormatterNotSupported,
+
+        /// <summary>An inline keyword that is only available in Word documents was used in another template type. {0}: tag</summary>
+        KeywordNotSupported,
+
+        // ----- text templates -----
+
+        /// <summary>
+        /// No formatter can format the value of a placeholder: the formatter name is unknown or does not apply to the
+        /// type of the value. {0}: tag, {1}: formatter, {2}: type of the value
+        /// </summary>
+        UnknownFormatter
     }
 }
