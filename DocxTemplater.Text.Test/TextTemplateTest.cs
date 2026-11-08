@@ -213,22 +213,42 @@ namespace DocxTemplater.Text.Test
         }
 
         [Test]
-        public void WordOnlyConstructsAreSyntaxErrors()
+        public void WordOnlyKeywordsAreSyntaxErrors()
         {
-            const string template = "{{ds.Name}:img()}{{:PageBreak}}{{#ds.Items}:dyntable()}{{/}}{{ds.Name}:T()}{{ds.Name}:md()}{{:break}}{{ds.Name}:html()}";
+            const string template = "{{:PageBreak}}{{ds.Name}:md()}{{:break}}{{:SectionBreak}}";
             var errors = Template(template, Plain(BindingErrorHandling.HighlightErrorsInDocument)).ValidateTemplateSyntax();
             Assert.Multiple(() =>
             {
-                Assert.That(errors.Select(x => x.ErrorCode), Is.EqualTo(new List<TemplateErrorCode>
-                {
-                    TemplateErrorCode.FormatterNotSupported, TemplateErrorCode.KeywordNotSupported, TemplateErrorCode.FormatterNotSupported,
-                    TemplateErrorCode.FormatterNotSupported, TemplateErrorCode.FormatterNotSupported
-                }));
+                Assert.That(errors.Select(x => x.ErrorCode), Is.EqualTo([TemplateErrorCode.KeywordNotSupported, TemplateErrorCode.KeywordNotSupported]));
                 Assert.That(errors.All(x => x.Severity == TemplateSyntaxErrorSeverity.Error));
-                Assert.That(errors[0].Arguments, Is.EqualTo(new object[] { "{{ds.Name}:img()}", "img" }));
-                Assert.That(errors[0].Message, Is.EqualTo("'{{ds.Name}:img()}': the formatter 'img' is only available in Word documents"));
-                Assert.That(errors[1].Message, Is.EqualTo("'{{:PageBreak}}': this keyword is only available in Word documents"));
+                Assert.That(errors[0].Message, Is.EqualTo("'{{:PageBreak}}': this keyword is only available in Word documents"));
                 Assert.That(Assert.Throws<TemplateException>(() => Process(template)).ErrorCode, Is.EqualTo(TemplateErrorCode.TemplateSyntaxErrors));
+            });
+        }
+
+        private sealed class MarkdownFormatter : ITextFormatter
+        {
+            public bool CanHandle(Type type, string prefix)
+            {
+                return prefix.Equals("md", StringComparison.OrdinalIgnoreCase);
+            }
+
+            public TextValue ApplyFormat(TextTemplateSettings settings, FormatterContext formatterContext)
+            {
+                return TextValue.Raw($"<p>{formatterContext.Value}</p>");
+            }
+        }
+
+        [Test]
+        public void FormattersOfWordAreUnknownUnlessRegistered()
+        {
+            var e = Assert.Throws<TemplateException>(() => Render("{{ds.Name}:md()}", Html()));
+            var settings = Html();
+            settings.RegisterFormatter(new MarkdownFormatter());
+            Assert.Multiple(() =>
+            {
+                Assert.That(ErrorCodes(e), Is.EqualTo([TemplateErrorCode.PlaceholderNotReplaced, TemplateErrorCode.UnknownFormatter]));
+                Assert.That(Render("{{ds.Name}:md()}", settings), Is.EqualTo("<p>Ada</p>"));
             });
         }
 

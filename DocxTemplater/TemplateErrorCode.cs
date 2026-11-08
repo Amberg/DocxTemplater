@@ -229,9 +229,6 @@ namespace DocxTemplater
 
         // ----- template type -----
 
-        /// <summary>A formatter that is only available in Word documents was used in another template type. {0}: tag, {1}: formatter</summary>
-        FormatterNotSupported,
-
         /// <summary>An inline keyword that is only available in Word documents was used in another template type. {0}: tag</summary>
         KeywordNotSupported,
 

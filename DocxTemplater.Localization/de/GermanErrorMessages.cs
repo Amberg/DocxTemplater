@@ -99,7 +99,6 @@ namespace DocxTemplater.Localization
                 [TemplateErrorCode.DynamicTableSingleChild] = "Ein dynamischer Tabellenblock muss genau einen untergeordneten Block enthalten",
 
                 // Vorlagentyp
-                [TemplateErrorCode.FormatterNotSupported] = "'{0}': Der Formatierer '{1}' ist nur in Word-Dokumenten verfügbar",
                 [TemplateErrorCode.KeywordNotSupported] = "'{0}': Dieses Schlüsselwort ist nur in Word-Dokumenten verfügbar",
                 [TemplateErrorCode.UnknownFormatter] = "'{0}': Es gibt keinen Formatierer '{1}' für einen Wert vom Typ '{2}'"
             });
