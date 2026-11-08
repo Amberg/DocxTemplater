@@ -90,7 +90,6 @@ namespace DocxTemplater
                 [TemplateErrorCode.DynamicTableSingleChild] = "Dynamic table block must contain exactly one child block",
 
                 // template type
-                [TemplateErrorCode.FormatterNotSupported] = "'{0}': the formatter '{1}' is only available in Word documents",
                 [TemplateErrorCode.KeywordNotSupported] = "'{0}': this keyword is only available in Word documents",
 
                 // text templates

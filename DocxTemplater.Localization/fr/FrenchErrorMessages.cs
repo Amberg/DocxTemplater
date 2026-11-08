@@ -99,7 +99,6 @@ namespace DocxTemplater.Localization
                 [TemplateErrorCode.DynamicTableSingleChild] = "Un bloc de tableau dynamique doit contenir exactement un bloc enfant",
 
                 // type de modèle
-                [TemplateErrorCode.FormatterNotSupported] = "'{0}' : le formateur '{1}' n'est disponible que dans les documents Word",
                 [TemplateErrorCode.KeywordNotSupported] = "'{0}' : ce mot-clé n'est disponible que dans les documents Word",
                 [TemplateErrorCode.UnknownFormatter] = "'{0}' : il n'existe pas de formateur '{1}' pour une valeur de type '{2}'"
             });

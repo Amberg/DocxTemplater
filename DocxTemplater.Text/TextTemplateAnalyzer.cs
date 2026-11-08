@@ -14,7 +14,6 @@ namespace DocxTemplater.Text
     {
         private const int ContextLength = 30;
 
-        private static readonly HashSet<string> WordOnlyFormatters = new(StringComparer.OrdinalIgnoreCase) { "img", "image", "template", "t", "md", "dyntable" };
         private static readonly HashSet<string> WordOnlyKeywords = new(StringComparer.OrdinalIgnoreCase) { "PageBreak", "SectionBreak" };
 
         private readonly SyntaxTreeHelper m_helper;
@@ -25,10 +24,7 @@ namespace DocxTemplater.Text
             m_helper = new SyntaxTreeHelper(tree);
         }
 
-        /// <summary>
-        /// Errors for tags a text template cannot render: formatters that insert Word content (images, sub-templates,
-        /// markdown, dynamic tables) and the page / section break keywords.
-        /// </summary>
+        /// <summary>Errors for the page / section break keywords, which a text template cannot render.</summary>
         public static IEnumerable<TemplateSyntaxError> FindWordOnlyConstructs(TemplateSyntaxTree tree, string text, string part, ProcessSettings settings)
         {
             foreach (var match in tree.Matches)
@@ -36,10 +32,6 @@ namespace DocxTemplater.Text
                 if (match.Type == PatternType.InlineKeyWord && WordOnlyKeywords.Contains(match.Variable.Trim()))
                 {
                     yield return CreateError(match, text, part, settings, TemplateErrorCode.KeywordNotSupported, match.Match.Value);
-                }
-                else if (!string.IsNullOrEmpty(match.Formatter) && WordOnlyFormatters.Contains(match.Formatter))
-                {
-                    yield return CreateError(match, text, part, settings, TemplateErrorCode.FormatterNotSupported, match.Match.Value, match.Formatter);
                 }
             }
         }
