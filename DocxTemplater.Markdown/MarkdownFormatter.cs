@@ -11,10 +11,19 @@ using Table = DocumentFormat.OpenXml.Wordprocessing.Table;
 
 namespace DocxTemplater.Markdown
 {
+    /// <summary>
+    /// <c>{{value}:md()}</c>: renders a markdown string into the document and evaluates the template tags in it with
+    /// the models of the document; <c>{{value}:md(raw)}</c> inserts them as text.
+    /// </summary>
     public class MarkdownFormatter : IFormatter
     {
+        /// <summary>The argument of <c>{{value}:md(raw)}</c>: the tags in the value are not evaluated.</summary>
+        public const string RawArgument = "raw";
+
         private readonly MarkDownFormatterConfiguration m_configuration;
-        private int m_nestingDepth;
+        // per thread: a formatter registered in shared settings renders several documents in parallel
+        [ThreadStatic]
+        private static int t_nestingDepth;
         private static readonly MarkdownPipeline MarkdownPipeline;
 
         public MarkdownFormatter(MarkDownFormatterConfiguration configuration = null)
@@ -46,15 +55,18 @@ namespace DocxTemplater.Markdown
                 return;
             }
 
-            if (m_nestingDepth > 3)
+            if (t_nestingDepth > 3)
             {
                 throw OpenXmlTemplateException.Create(templateContext.ProcessSettings, TemplateErrorCode.MarkdownNestingDepthExceeded);
             }
 
             var contextSpecificConfiguration = m_configuration.Clone();
-            if (formatterContext.Args.Length > 0)
+            // {{value}:md(raw)}: the value is user content - its tags are text, never evaluated
+            var formatterArguments = formatterContext.Args.Where(x => !x.Trim().Equals(RawArgument, StringComparison.OrdinalIgnoreCase)).ToArray();
+            var processTemplateTags = formatterArguments.Length == formatterContext.Args.Length;
+            if (formatterArguments.Length > 0)
             {
-                var arguments = HelperFunctions.ParseArguments(formatterContext.Args, templateContext.ProcessSettings);
+                var arguments = HelperFunctions.ParseArguments(formatterArguments, templateContext.ProcessSettings);
                 if (arguments.TryGetValue("ts", out var tableStyleName))
                 {
                     contextSpecificConfiguration.TableStyle = tableStyleName;
@@ -69,7 +81,7 @@ namespace DocxTemplater.Markdown
                 }
             }
 
-            m_nestingDepth++;
+            t_nestingDepth++;
             try
             {
                 var root = target.GetRoot();
@@ -96,13 +108,16 @@ namespace DocxTemplater.Markdown
                     Console.WriteLine(renderer.MarkdownStructureAsString);
 #endif
 
-                    try
+                    if (processTemplateTags)
                     {
-                        DoVariableReplacementInParagraphs(renderedMarkdownContainer, templateContext);
-                    }
-                    catch (Exception e)
-                    {
-                        throw new OpenXmlTemplateException("Variable Replacement in markdown failed", e);
+                        try
+                        {
+                            DoVariableReplacementInParagraphs(renderedMarkdownContainer, templateContext);
+                        }
+                        catch (Exception e)
+                        {
+                            throw new OpenXmlTemplateException("Variable Replacement in markdown failed", e);
+                        }
                     }
                     containerParagraph.RemoveWithEmptyParent();
 
@@ -155,7 +170,7 @@ namespace DocxTemplater.Markdown
             }
             finally
             {
-                m_nestingDepth--;
+                t_nestingDepth--;
             }
         }
 

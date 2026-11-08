@@ -989,7 +989,7 @@ namespace DocxTemplater.Test
 
             using var fileStream = File.OpenRead("Resources/BillTemplate.docx");
             var docTemplate = new DocxTemplate(fileStream);
-            docTemplate.RegisterFormatter(new ImageFormatter());
+            docTemplate.Settings.RegisterFormatter(new ImageFormatter());
             docTemplate.BindModel("ds", new
             {
                 Company = new
@@ -1059,7 +1059,7 @@ namespace DocxTemplater.Test
             var imageBytes = File.ReadAllBytes("Resources/testImage.jpg");
             using var fileStream = File.OpenRead("Resources/BillTemplate2.docx");
             var docTemplate = new DocxTemplate(fileStream);
-            docTemplate.RegisterFormatter(new ImageFormatter());
+            docTemplate.Settings.RegisterFormatter(new ImageFormatter());
 
             var model = CrateBillTemplate2Model();
             docTemplate.BindModel("ds", model);
@@ -1076,7 +1076,7 @@ namespace DocxTemplater.Test
         {
             using var fileStream = File.OpenRead("Resources/MixedMarkdownFormatter.docx");
             var docTemplate = new DocxTemplate(fileStream);
-            docTemplate.RegisterFormatter(new Markdown.MarkdownFormatter());
+            docTemplate.Settings.RegisterFormatter(new Markdown.MarkdownFormatter());
 
             docTemplate.BindModel("ds", new JobDocumentModel()
             {
@@ -1286,7 +1286,7 @@ namespace DocxTemplater.Test
             wpDocument.Save();
             memStream.Position = 0;
             var docTemplate = new DocxTemplate(memStream);
-            docTemplate.RegisterFormatter(new Markdown.MarkdownFormatter());
+            docTemplate.Settings.RegisterFormatter(new Markdown.MarkdownFormatter());
             docTemplate.BindModel("ds", new DummyModelWithDisplayNames());
             var result = docTemplate.Process();
             docTemplate.Validate();

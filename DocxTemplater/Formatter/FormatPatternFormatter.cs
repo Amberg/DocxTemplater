@@ -7,6 +7,18 @@ namespace DocxTemplater.Formatter
     {
         public bool CanHandle(Type type, string prefix)
         {
+            return Handles(type, prefix);
+        }
+
+        public void ApplyFormat(ITemplateProcessingContext templateContext, FormatterContext formatterContext,
+            Text target)
+        {
+            target.Text = Format(templateContext.ProcessSettings, formatterContext);
+        }
+
+        // shared with the text templates
+        internal static bool Handles(Type type, string prefix)
+        {
             if (prefix.Equals("FORMAT", StringComparison.CurrentCultureIgnoreCase) ||
                 prefix.Equals("F", StringComparison.CurrentCultureIgnoreCase))
             {
@@ -16,13 +28,11 @@ namespace DocxTemplater.Formatter
             return false;
         }
 
-        public void ApplyFormat(ITemplateProcessingContext templateContext, FormatterContext formatterContext,
-            Text target)
+        internal static string Format(ProcessSettings settings, FormatterContext formatterContext)
         {
-
             if (formatterContext.Args.Length != 1)
             {
-                throw OpenXmlTemplateException.Create(templateContext.ProcessSettings, TemplateErrorCode.FormatPatternRequiresArgument);
+                throw OpenXmlTemplateException.Create(settings, TemplateErrorCode.FormatPatternRequiresArgument);
             }
 
             if (formatterContext.Value is IFormattable formattable)
@@ -30,19 +40,17 @@ namespace DocxTemplater.Formatter
                 var formatString = formatterContext.Args[0];
                 try
                 {
-                    target.Text = formattable.ToString(formatString, formatterContext.Culture);
+                    return formattable.ToString(formatString, formatterContext.Culture);
                 }
                 catch (FormatException e)
                 {
-                    throw OpenXmlTemplateException.Create(templateContext.ProcessSettings, e, TemplateErrorCode.FormatNotApplicable,
+                    throw OpenXmlTemplateException.Create(settings, e, TemplateErrorCode.FormatNotApplicable,
                         formatString, formatterContext.Placeholder, formatterContext.Value.GetType());
                 }
             }
-            else
-            {
-                throw OpenXmlTemplateException.Create(templateContext.ProcessSettings, TemplateErrorCode.FormatterRequiresFormattable,
-                    formatterContext.Formatter, formatterContext.Placeholder);
-            }
+
+            throw OpenXmlTemplateException.Create(settings, TemplateErrorCode.FormatterRequiresFormattable,
+                formatterContext.Formatter, formatterContext.Placeholder);
         }
     }
 }

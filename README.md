@@ -44,6 +44,7 @@ Enhance DocxTemplater with these optional extension packages:
 |--------------|-----------------------------------
 | [DocxTemplater.Images ](https://www.nuget.org/packages/DocxTemplater.Images)  |Enables embedding images in generated Word documents|
 | [DocxTemplater.Markdown ](https://www.nuget.org/packages/DocxTemplater.Markdown)  | Allows use of Markdown syntax for generating parts of Word documents|
+| [DocxTemplater.Text ](https://www.nuget.org/packages/DocxTemplater.Text)  | Renders plain text and HTML templates (e.g. e-mails) with the same syntax, see [Text and HTML Templates](#text-and-html-templates)|
 | [DocxTemplater.Localization.*&lt;language&gt;*](https://www.nuget.org/packages?q=DocxTemplater.Localization)  | Error messages in the user's language, see [Localized Error Messages](#localized-error-messages). Available: `de`, `de-CH`, `fr`, `it`|
 
 Image metadata (size, format, EXIF rotation) is read by a dependency-free built-in reader that supports PNG, JPEG, GIF, BMP and TIFF.
@@ -52,7 +53,7 @@ If you need another image library for metadata detection, implement `IImageMetad
 ```csharp
 using DocxTemplater.Images;
 
-template.RegisterFormatter(new ImageFormatter(new MyImageMetadataReader()));
+settings.RegisterFormatter(new ImageFormatter(new MyImageMetadataReader()));
 ```
 
 Migration note: the `DocxTemplater.Images.ImageSharp` package is discontinued. `ImageFormatter()` works without it. If you relied on ImageSharp for metadata detection, implement `IImageMetadataReader` with ImageSharp in your own project.
@@ -79,9 +80,13 @@ Migration note: the `DocxTemplater.Images.ImageSharp` package is discontinued. `
   - [Error Codes](#error-codes)
   - [Localized Error Messages](#localized-error-messages)
 - [Culture](#culture)
+- [Process Settings](#process-settings)
 - [Advanced Model Binding](#advanced-model-binding)
 - [Template Schema Inspection](#template-schema-inspection)
 - [Template Syntax Validation](#template-syntax-validation)
+- [Tag Content Preprocessors](#tag-content-preprocessors)
+- [Text and HTML Templates](#text-and-html-templates)
+- [Breaking Changes](#breaking-changes)
 - [Support This Project](#support-this-project)
 
 ## Features
@@ -97,6 +102,7 @@ Migration note: the `DocxTemplater.Images.ImageSharp` package is discontinued. `
 - Template Schema - Statically inspect which variables a template expects, without rendering
 - Syntax Validation - Check a template for syntax errors without rendering it
 - Localized Error Messages - Every error carries a code; messages are available in English, German, Swiss German, French and Italian and can be extended
+- Text and HTML Templates - Render e-mails and other text with the same template syntax, see [DocxTemplater.Text](#text-and-html-templates)
 
 ## Placeholder Syntax
 
@@ -318,6 +324,17 @@ The formatter name is always case insensitive.
 - `ToUpper`
 - `ToLower`
 
+### Default Value
+
+`default` (alias `ifempty`) outputs a fallback text if the value is `null`, empty or whitespace; any other value is formatted as without a formatter (a `DefaultFormatter` of the model still applies). The text is literal - it is not evaluated as a template or expression. Unquoted text is split at its commas like any formatter argument and joined again with `", "` (`default(a,b)` is `a, b`); quote it to keep it as written.
+
+`default` and `ifempty` are built in and handled before the registered formatters: an own formatter with one of these names is no longer called.
+
+```
+{{ds.Salutation}:default('Dear Sir or Madam')}  ----> "Dear Sir or Madam" if Salutation is null or ""
+{{ds.Phone}:ifempty(-)}
+```
+
 ### FormatPatterns
 
 Any type that implements `IFormattable` can be formatted with the standard format strings for this type.
@@ -336,10 +353,11 @@ Examples:
 
 **_NOTE:_** For the Image formatter, the NuGet package `DocxTemplater.Images` is required.
 
-Because the image formatter is not standard, it must be added:
+Because the image formatter is not standard, it must be registered in the [settings](#process-settings):
 ```csharp
-var docTemplate = new DocxTemplate(fileStream);
-docTemplate.RegisterFormatter(new ImageFormatter());
+var settings = new ProcessSettings();
+settings.RegisterFormatter(new ImageFormatter());
+var docTemplate = new DocxTemplate(fileStream, settings);
 ```
 
 The Image Formatter replaces a placeholder with an image stored as a byte array.
@@ -376,10 +394,11 @@ The Markdown Formatter in DocxTemplater allows you to convert Markdown text into
 
 **_NOTE:_** For the Markdown formatter, the NuGet package `DocxTemplater.Markdown` is required.
 
-Because the markdown formatter is not standard, it must be added:
+Because the markdown formatter is not standard, it must be registered in the [settings](#process-settings):
 ```csharp
-var docTemplate = new DocxTemplate(fileStream);
-docTemplate.RegisterFormatter(new MarkDownFormatter());
+var settings = new ProcessSettings();
+settings.RegisterFormatter(new MarkDownFormatter());
+var docTemplate = new DocxTemplate(fileStream, settings);
 ```
 
 
@@ -407,6 +426,22 @@ In your template, you would have a placeholder like this:
 
 ```
 {{ds.MarkdownContent}:MD}
+```
+
+#### Template tags in the markdown value
+
+By default the template tags in the rendered markdown are evaluated with the models of the document, so a markdown value can itself hold placeholders. If the value is user content, this is template injection: `ACME {{ds.Secret}}` typed into a description would print the secret. Insert such values with `raw` - the markdown is rendered as usual (emphasis, lists, line breaks, tables), its tags stay text:
+
+```
+{{ds.Description}:md(raw)}
+{{ds.Description}:md(raw, ts:MyTableStyle)}
+```
+
+The application can set it per field, independent of the template author, with a default formatter on the model:
+
+```csharp
+[ModelProperty(DefaultFormatter = "md(raw)")]
+public string Description { get; set; }
 ```
 ---
 ## Sub-Template Formatter - Inserting Documents
@@ -561,6 +596,10 @@ catch (OpenXmlTemplateException e)
 
 `ErrorCode` is `TemplateErrorCode.None` for internal errors and for errors of third-party formatters that use the plain `OpenXmlTemplateException(string)` constructor. The documentation of each `TemplateErrorCode` value lists the meaning of its arguments.
 
+A condition or expression that cannot be parsed - also an incomplete one such as `{?{ds.Count >}}` - is reported as `ScriptParseError` / `ExpressionParseError`. Earlier versions threw a plain `ArgumentException` for some incomplete scripts.
+
+`OpenXmlTemplateException` derives from `TemplateException`, the common base of the errors of all template types, which defines `ErrorCode`, `Arguments` and `GetMessage(culture)`.
+
 ### Localized Error Messages
 
 Exception messages, `TemplateSyntaxError.Message` and the error list written with `HighlightErrorsInDocument` are formatted in the `ProcessSettings.UiCulture` - the culture of the **user who generates the document**. It defaults to `CultureInfo.CurrentUICulture` and is independent of `ProcessSettings.Culture`, which only formats the values in the document: a user with an English UI can generate a German invoice and still gets English error messages.
@@ -607,6 +646,25 @@ var docTemplate = new DocxTemplate(memStream, new ProcessSettings()
 });
 var result = docTemplate.Process();
 ```
+
+## Process Settings
+
+The `ProcessSettings` hold the options above and the registrations: own formatters (`RegisterFormatter`) and [tag content preprocessors](#tag-content-preprocessors) (`RegisterTagContentPreprocessor`). They also cache the parsed conditions and expressions, so for a batch of documents - letters for many recipients, a print run - create one instance and pass it to every `DocxTemplate` of the batch; each expression is then parsed once instead of once per document. Templates with the same settings can be processed in parallel; registered formatters are shared and must be thread-safe then.
+
+```csharp
+var settings = new ProcessSettings { Culture = new CultureInfo("de-CH") };
+settings.RegisterFormatter(new ImageFormatter());
+foreach (var customer in customers)
+{
+    using var template = DocxTemplate.Open("letter.docx", settings);
+    template.BindModel("ds", customer);
+    template.Save($"{customer.Id}.docx");
+}
+```
+
+- **Copied per template.** A `DocxTemplate` copies the settings when it is created; changing them afterwards only affects templates created later. `template.Settings` is the copy of that template: changes to it (e.g. `template.Settings.RegisterFormatter(...)`) apply to this template if made before `Process` and do not affect any other. All copies share the cache of the original instance.
+- **Per batch, not per application.** The cache has no size limit; it grows with the number of distinct expressions times the types of their values. Create the settings per batch and do not keep one instance for the lifetime of an application that renders templates edited by users.
+- Extensions (`ITemplateProcessorExtension`) are still registered per document with `DocxTemplate.RegisterExtension`.
 
 ## Advanced Model Binding
 
@@ -723,6 +781,116 @@ Everything between `{{:ignore}}` and `{{/:ignore}}` is treated as plain text and
 
 Each `TemplateSyntaxError` exposes the `Severity`, the `Part` (`Body`, `Header` or `Footer`), the offending `Tag`, a `Message` and the surrounding text as `Context`. The `ErrorCode` and `Arguments` identify the error independent of the message language, see [Error Codes](#error-codes); the `Message` is formatted in the `ProcessSettings.UiCulture` and can be re-rendered in another language with `GetMessage(culture)`.
 Binding errors (unknown variables, wrong types, unknown formatters) are not detected, as they depend on the model.
+
+## Tag Content Preprocessors
+
+Editors change what is typed into a tag: Word's autocorrect turns `'` into `‘’`, an HTML editor stores a typed `>` as `&gt;` and `&` as `&amp;`. An `ITagContentPreprocessor` repairs the content of a tag before it is parsed. It receives the expressions - conditions, `{{(...)}}` expressions including their parentheses, switch and case expressions - as `TagContentKind.Expression`, and the arguments of a formatter as written between the parentheses as `TagContentKind.FormatterArguments`; the result is split into arguments afterwards, so the preprocessor can also fix the quotes that delimit an argument (formatter arguments are quoted with `'`):
+
+```csharp
+public sealed class HtmlEditorPreprocessor : ITagContentPreprocessor
+{
+    public string Process(string content, TagContentKind kind)
+    {
+        return WebUtility.HtmlDecode(content).Replace('‘', '\'').Replace('’', '\'').Replace('“', '"').Replace('”', '"');
+    }
+}
+
+processSettings.RegisterTagContentPreprocessor(new HtmlEditorPreprocessor());  // DocxTemplate
+textTemplateSettings.RegisterTagContentPreprocessor(new HtmlEditorPreprocessor());  // TextTemplate
+```
+
+With it `{?{ds.Count &gt; 1}}` is evaluated as `ds.Count > 1` and `{{ds.Date}:f(‘dd.MM.yyyy’)}` as `f('dd.MM.yyyy')`. Several preprocessors run in the order they are registered. They are registered in the settings before the first template uses them, see [Process Settings](#process-settings).
+
+Only tags that are recognized are preprocessed. Text outside of tags and variable names are never passed - a variable name can only hold letters, digits, `.` and `_`, so a tag with markup or a character reference in its name (`{{ds.<b>First</b>Name}}`) is not a tag at all and stays in the output as it is, reported as `InvalidTag`. Error positions and the `Tag` of an error refer to the template as written.
+
+## Text and HTML Templates
+
+The package [DocxTemplater.Text](https://www.nuget.org/packages/DocxTemplater.Text) renders plain text and HTML templates - for example the subject and the body of an e-mail - with the **same syntax and the same semantics** as the Word templates, so an application can use one template language for its documents and its mails. Placeholders with paths and formatters, C# expressions, collections with `_Idx` and separators, range loops, conditions, switch blocks and `{{:ignore}}` work exactly as described above; the conformance tests of the repository run the same templates through both renderers.
+
+A `TextTemplate` renders one text: create it with the template and the settings, bind the models and call `Process()`. The `TextTemplateSettings` hold the options, the formatters and the tag content preprocessors:
+
+```csharp
+using DocxTemplater.Text;
+
+var settings = new TextTemplateSettings
+{
+    Escaping = TextEscaping.Html,          // Html (default) or None for plain text such as a subject
+    Culture = new CultureInfo("de-CH"),    // formats the values
+    UiCulture = new CultureInfo("fr"),     // language of the error messages
+    BindingErrorHandling = BindingErrorHandling.ThrowException,
+    IgnoreLineBreaksAroundTags = true
+};
+settings.RegisterFormatter(new MyFormatter());           // optional
+
+var template = new TextTemplate(
+    "<p>Dear {{ds.Name}}</p><ul>{{#ds.Items}}<li>{{.Name}}: {{.Price}:f(c)}</li>{{/ds.Items}}</ul>", settings);
+template.BindModel("ds", model);
+TextRenderResult result = template.Process();            // the text and the collected errors
+string html = result.Text;
+
+IReadOnlyList<TemplateSyntaxError> warnings = template.ValidateTemplateSyntax();   // never throws
+TemplateSchema schema = template.GetTemplateSchema();
+```
+
+Errors are `TemplateException`s, the common base class of `OpenXmlTemplateException`, with the same [error codes](#error-codes) and [localized messages](#localized-error-messages). A template with syntax errors makes `Process()` and `GetTemplateSchema()` throw `TemplateSyntaxErrors`, whose argument is the list of `TemplateSyntaxError`s - except with `HighlightErrorsInDocument`, see below.
+
+What is specific to text:
+
+- **Escaping.** With `TextEscaping.Html` (the default) every value is HTML-encoded and line breaks in a value become `<br/>`. Only `& < > " '` are encoded, umlauts stay as they are (`Müller &amp; Co`), so the output has to be sent as Unicode (UTF-8); a value that is trusted HTML - a rich text field, a rendered sub-template - is inserted unchanged with `{{value}:html()}`. With `TextEscaping.None` values are inserted as they are. The text of the template itself is never encoded. `{{:break}}` is a `<br/>` or a line feed respectively.
+- **Whitespace trimming.** With `IgnoreLineBreaksAroundTags` a line that holds nothing but block tags (`{{#Items}}`, `{{/}}`, `{{:}}`, `{{:s:}}`, `{{#case: ...}}`, ...) and whitespace is removed together with its line break, so a template can be indented and spread over lines without affecting the output. Lines with values are not affected.
+- **HTML editors.** Register a [tag content preprocessor](#tag-content-preprocessors) that decodes the character references an HTML editor writes into expressions and formatter arguments.
+- **Unrecognized tags.** Text that looks like a tag but is not one - `{{first name}}`, a tag split by markup - stays in the output as it is. It is an error of the template, not of a render: `ValidateTemplateSyntax()` reports it as warning `InvalidTag` with its position.
+- **Error handling.** The three `BindingErrorHandling` modes behave as in Word documents. With `ThrowException` every tag that cannot be rendered - value, condition, loop or switch case - throws `PlaceholderNotReplaced` with the tag and its context and the cause as inner exception. With `HighlightErrorsInDocument` the failed tags stay in the output - wrapped in a red `<span>` in HTML - and all errors are listed at the top of the output; a template with syntax errors is not rendered but returned with its offending tags highlighted. The highlighting is markup: a failed tag inside an HTML attribute (`<a href="{{url}}">`) breaks the attribute, so use this mode for previews, not for output that is sent.
+- **Word-only constructs** are syntax errors with the codes `FormatterNotSupported` and `KeywordNotSupported`: `:img()`, `:template()`, `:md()`, `:dyntable()`, `{{:PageBreak}}` and `{{:SectionBreak}}`. Charts and content controls do not exist in text.
+- **Formatters.** `format` / `f`, `toupper` / `tolower`, `html` and `default` / `ifempty` are built in. Own formatters implement `ITextFormatter` and return a `TextValue`; `TextValue.Raw(...)` marks output that is already HTML and must not be encoded. A formatter that no registered formatter handles is an error (`UnknownFormatter`) - unlike in Word documents, where the value is inserted as text.
+
+Layouts are left to the application: render the body with one template, then render the layout with the body bound to a value and inserted with `{{body}:html()}`.
+
+### Rendering for Many Recipients
+
+For a mailing - one subject and one body for thousands of recipients - create the settings once per mailing and a new template per recipient. The settings cache the parsed conditions and expressions, so a new template only parses its text (about 20 µs for a 15 KB mail); without shared settings every template compiles its expressions anew, which is about 60 times slower.
+
+```csharp
+var subjectSettings = new TextTemplateSettings { Escaping = TextEscaping.None, Culture = culture };
+var bodySettings = new TextTemplateSettings
+{
+    Culture = culture,
+    BindingErrorHandling = BindingErrorHandling.SkipBindingAndRemoveContent // collect the errors instead of throwing
+};
+bodySettings.RegisterTagContentPreprocessor(new HtmlEditorPreprocessor());
+
+Parallel.ForEach(recipients, recipient =>
+{
+    var body = new TextTemplate(bodyHtml, bodySettings);
+    body.BindModel("recipient", recipient);
+    body.BindModel("company", company);
+    body.BindModel("unsubscribe", Unsubscribe(recipient));
+    TextRenderResult html = body.Process();
+    if (html.HasErrors)
+    {
+        // html.Errors: Tag, Index, Length and the TemplateException (ErrorCode, Message, cause) of each failed tag
+        return;
+    }
+    var subject = new TextTemplate("News for {{(recipient.FirstName ?? recipient.LastName)}}", subjectSettings);
+    subject.BindModel("recipient", recipient);
+    Send(recipient, subject.Process().Text, html.Text);
+});
+```
+
+- **Settings per mailing.** A `TextTemplate` copies the settings when it is created, so changing them afterwards only affects templates created later; all copies share the cache. The cache has no size limit - it grows with the number of distinct expressions times the types of their values - so create the settings per mailing (or per template and language) and do not keep one instance for the lifetime of an application that renders templates edited by users. Culture and escaping belong to the settings; use one instance per language.
+- **Thread-safe and isolated.** Templates with the same settings can be processed concurrently; one `TextTemplate` instance is not thread-safe. Each template resolves its own models, so no value of one recipient can appear in the output of another. Registered formatters are shared and must be thread-safe.
+- **Collected errors.** `Process()` returns the text and the errors of this template. With `SkipBindingAndRemoveContent` the failed tags are left out of the text and reported only in `TextRenderResult.Errors` - also exceptions of the model, of an expression (an index out of range, a division by zero) or of a formatter, so one broken recipient does not stop the mailing. A missing value is not an error: a `null` property renders as empty text, and in conditions and expressions a missing property is `null` with `SkipBindingAndRemoveContent`, so `{{(recipient.FirstName ?? "Sir or Madam")}}` falls back.
+
+## Breaking Changes
+
+Compared to 3.0.0-beta.2:
+
+- **Registrations moved to the settings.** `DocxTemplate.RegisterFormatter(...)` is now `ProcessSettings.RegisterFormatter(...)` - on the settings passed to the template or on `template.Settings`, see [Process Settings](#process-settings). `RegisterExtension` stays on the `DocxTemplate`.
+- **Settings are copied.** A `DocxTemplate` works with a copy of the `ProcessSettings` taken in its constructor: changing the instance passed in after creating the template no longer affects it. Change `template.Settings` instead.
+- **`default` / `ifempty` are built in.** A custom formatter of that name is no longer reached. Unquoted text is split at commas and joined with `", "` (`default(a,b)` renders `a, b`); quote it to keep it as written.
+- **Incomplete scripts.** A condition or expression that cannot be parsed (`{?{ds.Count >}}`) is reported as `ScriptParseError` / `ExpressionParseError` (an `OpenXmlTemplateException`) instead of an `ArgumentException`.
+
+Worth knowing when moving e-mails to [DocxTemplater.Text](#text-and-html-templates): `TextEscaping.Html` encodes only `& < > " '` (umlauts stay, send the output as UTF-8), and `HighlightErrorsInDocument` wraps a failed tag in a `<span>`, which breaks the markup of a tag inside an HTML attribute (`<a href="{{url}}">`) - use it for previews only.
 
 ## Support This Project
 

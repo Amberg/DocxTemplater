@@ -98,7 +98,7 @@ namespace DocxTemplater.Test
             memStream.Position = 0;
 
             var docTemplate = new DocxTemplate(memStream);
-            docTemplate.RegisterFormatter(new MarkdownFormatter());
+            docTemplate.Settings.RegisterFormatter(new MarkdownFormatter());
             docTemplate.BindModel("ds", markdown);
 
             var result = docTemplate.Process();

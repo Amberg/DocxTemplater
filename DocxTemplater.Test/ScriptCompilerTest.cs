@@ -316,5 +316,78 @@
             var expr = compiler.CompileExpression("ds.MissingProp");
             Assert.Throws<OpenXmlTemplateException>(() => expr());
         }
+
+        [Test]
+        public void SharedSettings_EvaluatesEachModelWithItsOwnValues()
+        {
+            var settings = new ProcessSettings { BindingErrorHandling = BindingErrorHandling.SkipBindingAndRemoveContent };
+
+            object Evaluate(object model, object scopeItem)
+            {
+                var lookup = new ModelLookup(settings);
+                lookup.Add("ds", model);
+                using var scope = lookup.OpenScope();
+                scope.AddVariable("item", scopeItem);
+                return new ScriptCompiler(lookup, settings).CompileExpression("(ds.Name ?? \"none\") + \"/\" + .")();
+            }
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(Evaluate(new { Name = "A" }, 1), Is.EqualTo("A/1"));
+                // a value of another type and null use their own parsed delegate
+                Assert.That(Evaluate(new { Name = (string)null }, "x"), Is.EqualTo("none/x"));
+                Assert.That(Evaluate(new Dictionary<string, object>(), 2.5m), Is.EqualTo("none/2.5"));
+                Assert.That(Evaluate(new { Name = "B" }, 3), Is.EqualTo("B/3"));
+            });
+        }
+
+        [Test]
+        public void SharedSettings_ParseErrorIsReportedForEveryEvaluation()
+        {
+            var lookup = new ModelLookup();
+            lookup.Add("ds", new { Count = 1 });
+            var compiler = new ScriptCompiler(lookup, new ProcessSettings());
+            var first = Assert.Throws<OpenXmlTemplateException>(() => compiler.CompileScript("ds.Count > )"));
+            var second = Assert.Throws<OpenXmlTemplateException>(() => compiler.CompileScript("ds.Count > )"));
+            Assert.Multiple(() =>
+            {
+                Assert.That(first.ErrorCode, Is.EqualTo(TemplateErrorCode.ScriptParseError));
+                Assert.That(second.ErrorCode, Is.EqualTo(TemplateErrorCode.ScriptParseError));
+                // the cached error is thrown as a new exception, never as the instance thrown on another thread
+                Assert.That(second.InnerException, Is.Not.SameAs(first.InnerException));
+                Assert.That(second.InnerException.Message, Is.EqualTo(first.InnerException.Message));
+                // DynamicExpresso reports an incomplete binary expression with an ArgumentException
+                Assert.That(Assert.Throws<OpenXmlTemplateException>(() => compiler.CompileScript("ds.Count >")).ErrorCode, Is.EqualTo(TemplateErrorCode.ScriptParseError));
+            });
+        }
+
+        [Test]
+        public void SharedSettings_ParseErrorIsInTheUiCultureOfTheThread()
+        {
+            static string ParserMessage(ProcessSettings settings, string uiCulture)
+            {
+                var previous = System.Globalization.CultureInfo.CurrentUICulture;
+                System.Globalization.CultureInfo.CurrentUICulture = new System.Globalization.CultureInfo(uiCulture);
+                try
+                {
+                    var lookup = new ModelLookup();
+                    lookup.Add("ds", new { Count = 1 });
+                    return Assert.Throws<OpenXmlTemplateException>(() => new ScriptCompiler(lookup, settings).CompileScript("ds.Count > )")).InnerException.Message;
+                }
+                finally
+                {
+                    System.Globalization.CultureInfo.CurrentUICulture = previous;
+                }
+            }
+
+            var shared = new ProcessSettings();
+            var german = ParserMessage(shared, "de-DE");
+            var english = ParserMessage(shared, "en-US");
+            Assert.Multiple(() =>
+            {
+                Assert.That(english, Is.EqualTo(ParserMessage(new ProcessSettings(), "en-US")));
+                Assert.That(german, Is.EqualTo(ParserMessage(new ProcessSettings(), "de-DE")).And.Not.EqualTo(english));
+            });
+        }
     }
 }

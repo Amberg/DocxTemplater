@@ -1,10 +1,23 @@
+using System;
+using System.Collections.Generic;
 using System.Globalization;
+using DocxTemplater.Formatter;
 
 namespace DocxTemplater
 {
+    /// <summary>
+    /// The settings of a Word template. A <see cref="DocxTemplate"/> copies them when it is created, so changing
+    /// them afterwards only affects templates created later; <see cref="DocxTemplate.Settings"/> is the copy of the
+    /// template and can still be changed until it is processed.
+    /// </summary>
+    /// <remarks>
+    /// All templates created with the same instance share a cache of the parsed conditions and expressions: create
+    /// one instance per batch (e.g. a mailing or a print run). The cache has no size limit - it grows with the number
+    /// of distinct expressions times the types of their values. Do not keep one instance for the lifetime of an
+    /// application that renders user-edited templates.
+    /// </remarks>
     public class ProcessSettings
     {
-
         /// <summary>
         /// Output culture of the document
         /// </summary>
@@ -53,6 +66,43 @@ namespace DocxTemplater
         /// </summary>
         public bool InlineSubTemplates { get; set; }
 
+        /// <summary>The formatters registered with <see cref="RegisterFormatter"/>, in registration order.</summary>
+        internal IReadOnlyList<IFormatter> Formatters { get; private set; } = [];
+
+        internal TagContentPreprocessors TagContentPreprocessors { get; private set; } = TagContentPreprocessors.None;
+
+        /// <summary>The parsed conditions and expressions of all templates created with these settings.</summary>
+        internal ScriptCache ScriptCache { get; } = new();
+
         public static ProcessSettings Default => new();
+
+        /// <summary>
+        /// Registers a formatter for all templates created with these settings. It is shared by the templates and must
+        /// be thread-safe if they are processed in parallel.
+        /// </summary>
+        public void RegisterFormatter(IFormatter formatter)
+        {
+            ArgumentNullException.ThrowIfNull(formatter);
+            Formatters = [.. Formatters, formatter];
+        }
+
+        /// <summary>
+        /// Registers a preprocessor for the content of the tags (expressions, formatter arguments), applied before they
+        /// are parsed, after the preprocessors registered before it. See <see cref="ITagContentPreprocessor"/>.
+        /// </summary>
+        public void RegisterTagContentPreprocessor(ITagContentPreprocessor preprocessor)
+        {
+            ArgumentNullException.ThrowIfNull(preprocessor);
+            TagContentPreprocessors = TagContentPreprocessors.With(preprocessor);
+        }
+
+        /// <summary>
+        /// The copy a template works with. The formatter and preprocessor lists are immutable and the cache is shared on
+        /// purpose, so a shallow copy is enough.
+        /// </summary>
+        internal ProcessSettings Copy()
+        {
+            return (ProcessSettings)MemberwiseClone();
+        }
     }
 }

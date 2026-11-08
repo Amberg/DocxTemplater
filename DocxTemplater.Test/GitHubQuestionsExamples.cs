@@ -234,7 +234,7 @@ namespace DocxTemplater.Test
                     }
                 }
             };
-            docTemplate.RegisterFormatter(new MarkdownFormatter());
+            docTemplate.Settings.RegisterFormatter(new MarkdownFormatter());
             docTemplate.BindModel("ds", data);
             var result = docTemplate.Process();
             docTemplate.Validate();

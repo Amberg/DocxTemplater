@@ -37,7 +37,7 @@ namespace DocxTemplater.Test.Contracts
             memStream.Position = 0;
 
             var docTemplate = new DocxTemplate(memStream);
-            docTemplate.RegisterFormatter(CreateFormatter());
+            docTemplate.Settings.RegisterFormatter(CreateFormatter());
             docTemplate.BindModel("ds", imageBytes);
             docTemplate.Process();
             docTemplate.Validate();
@@ -61,7 +61,7 @@ namespace DocxTemplater.Test.Contracts
             memStream.Position = 0;
 
             var docTemplate = new DocxTemplate(memStream);
-            docTemplate.RegisterFormatter(CreateFormatter());
+            docTemplate.Settings.RegisterFormatter(CreateFormatter());
             docTemplate.BindModel("ds", imageBytes);
             docTemplate.Process();
             docTemplate.Validate();
@@ -93,7 +93,7 @@ namespace DocxTemplater.Test.Contracts
             memStream.Position = 0;
 
             var docTemplate = new DocxTemplate(memStream);
-            docTemplate.RegisterFormatter(CreateFormatter());
+            docTemplate.Settings.RegisterFormatter(CreateFormatter());
             docTemplate.BindModel("ds", imageBytes);
             docTemplate.Process();
         }
@@ -126,7 +126,7 @@ namespace DocxTemplater.Test.Contracts
 
                 memStream.Position = 0;
                 var docTemplate = new DocxTemplate(memStream);
-                docTemplate.RegisterFormatter(CreateFormatter());
+                docTemplate.Settings.RegisterFormatter(CreateFormatter());
                 docTemplate.BindModel("ds", imageBytes);
                 docTemplate.Process();
             }
@@ -165,7 +165,7 @@ namespace DocxTemplater.Test.Contracts
 
             memStream.Position = 0;
             var docTemplate = new DocxTemplate(memStream);
-            docTemplate.RegisterFormatter(CreateFormatter());
+            docTemplate.Settings.RegisterFormatter(CreateFormatter());
             docTemplate.BindModel("ds", imageBytes);
             docTemplate.Process();
         }
@@ -186,7 +186,7 @@ namespace DocxTemplater.Test.Contracts
 
                 memStream.Position = 0;
                 var docTemplate = new DocxTemplate(memStream);
-                docTemplate.RegisterFormatter(CreateFormatter());
+                docTemplate.Settings.RegisterFormatter(CreateFormatter());
                 docTemplate.BindModel("ds", imageBytes);
                 docTemplate.Process();
             }
@@ -206,7 +206,7 @@ namespace DocxTemplater.Test.Contracts
 
             memStream.Position = 0;
             var docTemplate = new DocxTemplate(memStream);
-            docTemplate.RegisterFormatter(CreateFormatter());
+            docTemplate.Settings.RegisterFormatter(CreateFormatter());
             docTemplate.BindModel("ds", imageBytes);
             docTemplate.Process();
         }
@@ -225,7 +225,7 @@ namespace DocxTemplater.Test.Contracts
 
             memStream.Position = 0;
             var docTemplate = new DocxTemplate(memStream);
-            docTemplate.RegisterFormatter(CreateFormatter());
+            docTemplate.Settings.RegisterFormatter(CreateFormatter());
             docTemplate.BindModel("ds", invalidBytes);
 
             NUnit.Framework.Assert.Throws<OpenXmlTemplateException>(() => docTemplate.Process());
@@ -270,7 +270,7 @@ namespace DocxTemplater.Test.Contracts
 
                 using var fileStream = File.OpenRead("Resources/ImageFormatterTest.docx");
                 var docTemplate = new DocxTemplate(fileStream);
-                docTemplate.RegisterFormatter(CreateFormatter());
+                docTemplate.Settings.RegisterFormatter(CreateFormatter());
                 docTemplate.BindModel("ds", new { MyLogo = imageBytes, EmptyArray = Array.Empty<byte>(), NullValue = (byte[])null });
 
                 docTemplate.Process();

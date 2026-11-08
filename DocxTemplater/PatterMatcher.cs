@@ -74,17 +74,20 @@ namespace DocxTemplater
         (?::
             (?<formatter>[\p{L}\p{N}]+)
             (?:\(
-                (?:
+                (?<argList>(?:
                    (?:
                        (?:'(?<arg>(?:(?:\\['])|[^'}])*?)'|""""(?<arg>(?:(?:\\[""""])|[^""""}])*?)"""") # Allow any character except ' and } in quoted strings
                         |
                         (?<arg>[^,)}]+) # Allow any character except delimiters in unquoted strings
                     )(?:\s*,\s*)?
-                )*
+                )*)
                 \))?
         )?
         \s*\}
         ", RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace, TimeSpan.FromSeconds(1));
+
+        private static readonly Regex ArgumentRegex = new(@"\G(?:'(?<arg>(?:(?:\\['])|[^'])*?)'|""""(?<arg>(?:(?:\\[""""])|[^""""])*?)""""|(?<arg>[^,]+))(?:\s*,\s*)?",
+            RegexOptions.Compiled, TimeSpan.FromSeconds(1));
 
         public static IEnumerable<PatternMatch> FindSyntaxPatterns(string text)
         {
@@ -107,6 +110,13 @@ namespace DocxTemplater
         /// reported to the callback and the pattern is skipped, so all errors of a text can be collected.
         /// </summary>
         public static IEnumerable<PatternMatch> FindSyntaxPatterns(string text, Action<Match, TemplateErrorCode, object[]> onInvalidPattern, ProcessSettings settings)
+        {
+            return FindSyntaxPatterns(text, onInvalidPattern, settings, TagContentPreprocessors.None);
+        }
+
+        /// <summary>The content of each tag is passed through <paramref name="preprocessors"/>, its position is not changed.</summary>
+        /// <inheritdoc cref="FindSyntaxPatterns(string, Action{Match, TemplateErrorCode, object[]}, ProcessSettings)"/>
+        public static IEnumerable<PatternMatch> FindSyntaxPatterns(string text, Action<Match, TemplateErrorCode, object[]> onInvalidPattern, ProcessSettings settings, TagContentPreprocessors preprocessors)
         {
             try
             {
@@ -267,12 +277,64 @@ namespace DocxTemplater
                     }
                 }
 
+                if (preprocessors != null && !preprocessors.IsEmpty)
+                {
+                    for (int i = 0; i < result.Count; i++)
+                    {
+                        result[i] = Preprocess(result[i], preprocessors);
+                    }
+                }
                 return result;
             }
             catch (RegexMatchTimeoutException)
             {
                 throw OpenXmlTemplateException.Create(settings, TemplateErrorCode.PatternMatchTimeout, text);
             }
+        }
+
+        private static PatternMatch Preprocess(PatternMatch match, TagContentPreprocessors preprocessors)
+        {
+            switch (match.Type)
+            {
+                case PatternType.Condition:
+                    match = match with { Condition = preprocessors.Process(match.Condition, TagContentKind.Expression) };
+                    break;
+                case PatternType.Expression:
+                    match = match with { Variable = preprocessors.Process(match.Variable, TagContentKind.Expression) };
+                    break;
+                case PatternType.Switch:
+                case PatternType.Case:
+                    var colon = match.Variable.IndexOf(':');
+                    if (colon >= 0)
+                    {
+                        match = match with { Variable = match.Variable[..(colon + 1)] + preprocessors.Process(match.Variable[(colon + 1)..], TagContentKind.Expression) };
+                    }
+                    break;
+            }
+
+            var argList = match.Match.Groups["argList"];
+            if (match.Type is PatternType.Variable or PatternType.Expression && argList.Success)
+            {
+                var processed = preprocessors.Process(argList.Value, TagContentKind.FormatterArguments);
+                if (processed != argList.Value)
+                {
+                    match = match with { Arguments = SplitArguments(processed) };
+                }
+            }
+            return match;
+        }
+
+        /// <summary>Splits a preprocessed argument list by the rules of the argument part of <see cref="PatternRegex"/>.</summary>
+        private static string[] SplitArguments(string argList)
+        {
+            var arguments = new List<string>();
+            var m = ArgumentRegex.Match(argList);
+            while (m.Success && m.Length > 0)
+            {
+                arguments.Add(m.Groups["arg"].Value.Replace("\\'", "'"));
+                m = m.NextMatch();
+            }
+            return [.. arguments];
         }
 
         private static void ReportInvalid(Action<Match, TemplateErrorCode, object[]> onInvalidPattern, ProcessSettings settings, Match match, TemplateErrorCode code, params object[] args)

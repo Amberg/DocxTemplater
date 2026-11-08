@@ -111,7 +111,7 @@ namespace DocxTemplater.Blocks
         /// </summary>
         public virtual void CollectSchema(SchemaBuilder builder)
         {
-            CollectMarkedVariables(m_content, builder);
+            CollectMarkedVariables(m_content, builder, TagContentPreprocessors.Of(m_context));
             foreach (var child in m_childBlocks)
             {
                 child.CollectSchema(builder);
@@ -125,7 +125,7 @@ namespace DocxTemplater.Blocks
         /// <c>{{...}}</c> pattern after the run-merge pass, so we recover the match without
         /// walking the document tree manually.
         /// </summary>
-        internal static void CollectMarkedVariables(IEnumerable<OpenXmlElement> elements, SchemaBuilder builder)
+        internal static void CollectMarkedVariables(IEnumerable<OpenXmlElement> elements, SchemaBuilder builder, TagContentPreprocessors preprocessors)
         {
             if (elements == null)
             {
@@ -139,7 +139,7 @@ namespace DocxTemplater.Blocks
                 foreach (var text in marked)
                 {
                     // schema collection runs after the parser validated the text, so no error is expected here
-                    var match = PatternMatcher.FindSyntaxPatterns(text.Text).FirstOrDefault();
+                    var match = PatternMatcher.FindSyntaxPatterns(text.Text, null, null, preprocessors).FirstOrDefault();
                     if (match == null)
                     {
                         continue;

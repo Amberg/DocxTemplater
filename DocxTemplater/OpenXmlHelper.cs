@@ -359,9 +359,13 @@ namespace DocxTemplater
             return element;
         }
 
+        /// <summary>
+        /// Inserts <paramref name="elements"/> before <paramref name="element"/>, keeping their order: inserting each one
+        /// directly before the anchor appends it after the ones inserted before it.
+        /// </summary>
         public static OpenXmlElement InsertBeforeSelf(this OpenXmlElement element, IEnumerable<OpenXmlElement> elements)
         {
-            foreach (var e in elements.Reverse())
+            foreach (var e in elements)
             {
                 element.InsertBeforeSelf(e);
             }

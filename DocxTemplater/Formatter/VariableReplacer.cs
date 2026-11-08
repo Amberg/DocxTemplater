@@ -90,24 +90,34 @@ namespace DocxTemplater.Formatter
         private void ApplyFormatter(ITemplateProcessingContext templateContext, PatternMatch patternMatch, ValueWithMetadata valueWithMetadata, Text target)
         {
             var value = valueWithMetadata.Value;
+            if (DefaultValue.TryGetReplacement(ref patternMatch, value, out var replacement))
+            {
+                target.Text = replacement;
+                return;
+            }
             if (value == null)
             {
                 target.Text = string.Empty;
                 return;
             }
 
-            var formatterText = GetFormatterText(patternMatch, valueWithMetadata, out string[] formatterArguments);
+            var formatterText = GetFormatterText(patternMatch, valueWithMetadata, ProcessSettings, out string[] formatterArguments);
             ApplyFormatterInternal(templateContext, patternMatch, value, target, formatterText, formatterArguments);
         }
 
         internal void ApplyFormatter(PatternMatch patternMatch, object value, Text target, ITemplateProcessingContext templateContext)
         {
+            if (DefaultValue.TryGetReplacement(ref patternMatch, value, out var replacement))
+            {
+                target.Text = replacement;
+                return;
+            }
             if (value == null)
             {
                 target.Text = string.Empty;
                 return;
             }
-            var formatterText = GetFormatterText(patternMatch, new ValueWithMetadata(value, new ValueMetadata()), out string[] formatterArguments);
+            var formatterText = GetFormatterText(patternMatch, new ValueWithMetadata(value, new ValueMetadata()), ProcessSettings, out string[] formatterArguments);
             ApplyFormatterInternal(templateContext, patternMatch, value, target, formatterText, formatterArguments);
         }
 
@@ -159,7 +169,7 @@ namespace DocxTemplater.Formatter
                 .OfType<Text>().ToList();
             foreach (var text in variables)
             {
-                var variableMatch = PatternMatcher.FindSyntaxPatterns(text.Text, ProcessSettings).FirstOrDefault() ??
+                var variableMatch = PatternMatcher.FindSyntaxPatterns(text.Text, null, ProcessSettings, ProcessSettings.TagContentPreprocessors).FirstOrDefault() ??
                                     throw OpenXmlTemplateException.Create(ProcessSettings, TemplateErrorCode.InvalidVariableSyntax, text.Text);
                 try
                 {
@@ -234,7 +244,7 @@ namespace DocxTemplater.Formatter
                 PatternMatch match;
                 try
                 {
-                    match = PatternMatcher.FindSyntaxPatterns(tag, ProcessSettings).FirstOrDefault();
+                    match = PatternMatcher.FindSyntaxPatterns(tag, null, ProcessSettings, ProcessSettings.TagContentPreprocessors).FirstOrDefault();
                 }
                 catch (OpenXmlTemplateException)
                 {
@@ -420,10 +430,10 @@ namespace DocxTemplater.Formatter
 
         /// <summary>
         /// Use the formatter from the template, if not available use the default formatter from the metadata
-        /// set through <see cref="ModelPropertyAttribute"/>
+        /// set through <see cref="ModelPropertyAttribute"/>. Shared with the text templates.
         /// </summary>
-        private string GetFormatterText(PatternMatch patternMatch, ValueWithMetadata valueWithMetadata,
-            out string[] formatterArguments)
+        internal static string GetFormatterText(PatternMatch patternMatch, ValueWithMetadata valueWithMetadata,
+            ProcessSettings processSettings, out string[] formatterArguments)
         {
             formatterArguments = patternMatch.Arguments;
             var formatterText = patternMatch.Formatter;
@@ -433,7 +443,7 @@ namespace DocxTemplater.Formatter
                 {
                     // try to parse default formatter from metadata
                     var found = PatternMatcher
-                        .FindSyntaxPatterns("{{x}:" + valueWithMetadata.Metadata.DefaultFormatter + "}", ProcessSettings)
+                        .FindSyntaxPatterns("{{x}:" + valueWithMetadata.Metadata.DefaultFormatter + "}", processSettings)
                         .FirstOrDefault();
                     if (found != null && !string.IsNullOrWhiteSpace(found.Formatter))
                     {
