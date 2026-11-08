@@ -192,10 +192,6 @@ To access the outer item in a nested collection, use the dot notation `{{..}}` T
 
 To access the index of the current item, use the special variable `Items._Idx` In this example, the collection is called "Items".
 
-#### Restarting Numbered Lists in Loops
-
-A numbered list marked with **Restart Numbering** in Word restarts in every iteration of a loop (`{{#Items}}` / `{{@i:count}}`), unless the loop body itself starts with an item of that list - then the loop writes the items of one list.
-
 ---
 ### Range Loops
 
