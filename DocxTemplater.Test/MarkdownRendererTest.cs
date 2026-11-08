@@ -56,7 +56,7 @@ namespace DocxTemplater.Test
                               """;
             using var fileStream = File.OpenRead("Resources/ListTest.docx");
             var docTemplate = new DocxTemplate(fileStream);
-            docTemplate.RegisterFormatter(new MarkdownFormatter());
+            docTemplate.Settings.RegisterFormatter(new MarkdownFormatter());
             docTemplate.BindModel("ds", new Dictionary<string, object>() { { "MyMarkdown", new ValueWithMetadata(markdown, new ValueMetadata("md")) } });
 
             var result = docTemplate.Process();
@@ -101,7 +101,7 @@ namespace DocxTemplater.Test
 
             using var fileStream = File.OpenRead("Resources/MarkdownTableCopiesStyleFromExistingTable.docx");
             var docTemplate = new DocxTemplate(fileStream);
-            docTemplate.RegisterFormatter(new MarkdownFormatter());
+            docTemplate.Settings.RegisterFormatter(new MarkdownFormatter());
             docTemplate.BindModel("ds", new Dictionary<string, object>() { { "MyMarkdown", new ValueWithMetadata(markdown, new ValueMetadata("md")) } });
 
             var result = docTemplate.Process();
@@ -147,7 +147,7 @@ namespace DocxTemplater.Test
 
             using var fileStream = File.OpenRead("Resources/MarkdownTableCopiesStyleFromExistingTable.docx");
             var docTemplate = new DocxTemplate(fileStream);
-            docTemplate.RegisterFormatter(new MarkdownFormatter());
+            docTemplate.Settings.RegisterFormatter(new MarkdownFormatter());
             docTemplate.BindModel("ds", new Dictionary<string, object>() { { "MyMarkdown", new ValueWithMetadata(markdown, new ValueMetadata("md")) } });
 
             var result = docTemplate.Process();
@@ -244,7 +244,7 @@ namespace DocxTemplater.Test
 
             using var fileStream = File.OpenRead("Resources/MarkdownTablesDifferentStyle.docx");
             var docTemplate = new DocxTemplate(fileStream);
-            docTemplate.RegisterFormatter(new DocxTemplater.Markdown.MarkdownFormatter());
+            docTemplate.Settings.RegisterFormatter(new DocxTemplater.Markdown.MarkdownFormatter());
             docTemplate.BindModel("ds", markdown);
 
             var result = docTemplate.Process();
@@ -271,7 +271,7 @@ namespace DocxTemplater.Test
 
             using var fileStream = File.OpenRead("Resources/MarkdownBase64Image.docx");
             var docTemplate = new DocxTemplate(fileStream);
-            docTemplate.RegisterFormatter(new MarkdownFormatter());
+            docTemplate.Settings.RegisterFormatter(new MarkdownFormatter());
             docTemplate.BindModel("ds", new Dictionary<string, object>()
             {
                 { "MyMarkdown", new ValueWithMetadata(markdownTextAndPic, new ValueMetadata("md")) },
@@ -313,8 +313,8 @@ namespace DocxTemplater.Test
             var markdownPicOnly = $"![](data:image/png;base64,{base64})";
             using var fileStream = File.OpenRead("Resources/MarkdownBase64Image.docx");
             var docTemplate = new DocxTemplate(fileStream);
-            docTemplate.RegisterFormatter(new MarkdownFormatter());
-            docTemplate.RegisterFormatter(new ImageFormatter());
+            docTemplate.Settings.RegisterFormatter(new MarkdownFormatter());
+            docTemplate.Settings.RegisterFormatter(new ImageFormatter());
             docTemplate.BindModel("ds", new Dictionary<string, object>()
             {
                 { "MyMarkdown", new ValueWithMetadata(markdownTextAndPic, new ValueMetadata("md")) },
@@ -367,7 +367,7 @@ namespace DocxTemplater.Test
             memStream.Position = 0;
 
             var docTemplate = new DocxTemplate(memStream);
-            docTemplate.RegisterFormatter(new MarkdownFormatter());
+            docTemplate.Settings.RegisterFormatter(new MarkdownFormatter());
             docTemplate.BindModel("ds", new
             {
                 Name = "John",
@@ -397,7 +397,7 @@ namespace DocxTemplater.Test
             }
             memStream.Position = 0;
             var docTemplate = new DocxTemplate(memStream);
-            docTemplate.RegisterFormatter(new MarkdownFormatter());
+            docTemplate.Settings.RegisterFormatter(new MarkdownFormatter());
             docTemplate.BindModel("ds", model);
             var result = docTemplate.Process();
             docTemplate.Validate();
@@ -727,7 +727,7 @@ namespace DocxTemplater.Test
                 header = "**Header**",
                 bold = "**Bold**",
             };
-            docTemplate.RegisterFormatter(new DocxTemplater.Markdown.MarkdownFormatter(new MarkDownFormatterConfiguration()
+            docTemplate.Settings.RegisterFormatter(new DocxTemplater.Markdown.MarkdownFormatter(new MarkDownFormatterConfiguration()
             {
                 TableStyle = "MarkDownTestTableStyle"
             }));
@@ -752,7 +752,7 @@ namespace DocxTemplater.Test
             sb.AppendLine("    * First Second Second");
             sb.AppendLine("  * First Third");
             sb.AppendLine("* Third");
-            docTemplate.RegisterFormatter(new MarkdownFormatter());
+            docTemplate.Settings.RegisterFormatter(new MarkdownFormatter());
             docTemplate.BindModel("ds", sb.ToString());
             var result = docTemplate.Process();
             docTemplate.Validate();
@@ -771,7 +771,7 @@ namespace DocxTemplater.Test
             memStream.Position = 0;
 
             var docTemplate = new DocxTemplate(memStream);
-            docTemplate.RegisterFormatter(new DocxTemplater.Markdown.MarkdownFormatter());
+            docTemplate.Settings.RegisterFormatter(new DocxTemplater.Markdown.MarkdownFormatter());
             docTemplate.BindModel("ds", markdown);
 
             var result = docTemplate.Process();

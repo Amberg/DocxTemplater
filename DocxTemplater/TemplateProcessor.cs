@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using DocxTemplater.Extensions;
-using DocxTemplater.ImageBase;
 
 namespace DocxTemplater
 {
@@ -26,6 +25,8 @@ namespace DocxTemplater
         }
 
         public IReadOnlyDictionary<string, object> Models => Context.ModelLookup.Models;
+
+        private protected TagContentPreprocessors TagContentPreprocessors => Context.ProcessSettings.TagContentPreprocessors;
 
 
         protected void ProcessNode(OpenXmlCompositeElement rootElement)
@@ -322,16 +323,6 @@ namespace DocxTemplater
             Context.ModelLookup.Add(prefix, model);
         }
 
-        public void RegisterFormatter(IFormatter formatter)
-        {
-            if (formatter is IImageServiceProvider imageService)
-            {
-                Context.SetImageService(imageService.CreateImageService());
-            }
-
-            Context.VariableReplacer.RegisterFormatter(formatter);
-        }
-
         public void RegisterExtension(ITemplateProcessorExtension extension)
         {
             Context.RegisterExtension(extension);
@@ -354,7 +345,7 @@ namespace DocxTemplater
             PreProcess(rootElement);
             var charMap = new CharacterMap(rootElement);
             m_partTexts[rootElement] = charMap.Text;
-            var syntaxTree = TemplateSyntaxParser.Parse(charMap.Text, GetPartName(rootElement), Context.ProcessSettings);
+            var syntaxTree = TemplateSyntaxParser.Parse(charMap.Text, GetPartName(rootElement), Context.ProcessSettings, TagContentPreprocessors);
             syntaxTree.ThrowIfErrors();
             var texts = IsolateAndMergeTextTemplateMarkers(charMap, syntaxTree.Matches);
             RemoveLineBreaksAroundSyntaxPatterns(texts.Values);

@@ -132,7 +132,8 @@ namespace DocxTemplater
         }
 
         /// <param name="settings">Determines the language of the error messages; <c>null</c> for English.</param>
-        public static TemplateSyntaxTree Parse(string text, string part, ProcessSettings settings)
+        /// <param name="preprocessors">Applied to the content of each tag; the positions refer to <paramref name="text"/>.</param>
+        public static TemplateSyntaxTree Parse(string text, string part, ProcessSettings settings, TagContentPreprocessors preprocessors = null)
         {
             text ??= string.Empty;
             var ctx = new ParseContext(text, part, settings);
@@ -141,7 +142,7 @@ namespace DocxTemplater
             var found = new List<(int Index, int Length, PatternMatch Match, TemplateErrorCode Code, object[] Args)>();
             try
             {
-                foreach (var m in PatternMatcher.FindSyntaxPatterns(text, (m, code, args) => found.Add((m.Index, m.Length, null, code, args)), settings))
+                foreach (var m in PatternMatcher.FindSyntaxPatterns(text, (m, code, args) => found.Add((m.Index, m.Length, null, code, args)), settings, preprocessors))
                 {
                     found.Add((m.Index, m.Length, m, TemplateErrorCode.None, null));
                 }

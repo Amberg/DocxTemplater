@@ -1,75 +1,101 @@
-﻿using DynamicExpresso;
-using System;
+﻿using System;
 using System.Text.RegularExpressions;
-using DocxTemplater.Blocks;
 
 namespace DocxTemplater
 {
+    /// <summary>
+    /// Compiles the conditions and expressions of a template. The parsed scripts are kept in a <see cref="ScriptCache"/>:
+    /// the model values are passed as parameters, so a script is parsed once per combination of value types and
+    /// only evaluated after that.
+    /// </summary>
     internal class ScriptCompiler : IScriptCompiler
     {
         private readonly IModelLookup m_modelDictionary;
+        private readonly ScriptCache m_cache;
 
-        private static readonly Regex RegexWordStartingWithDot = new(@"
-                                                                    (?x)                         # Enable verbose mode - allows comments and whitespace in pattern
-                                                                    (?:                          # Non-capturing group for all possible prefixes:
-                                                                        ^                        # Either start of string
-                                                                        |                        
-                                                                        (?<unary>[+\-!])         # Capture unary operators (+, -, !) in 'unary' group
-                                                                        |                       
-                                                                        (?<=[^.\p{L}\p{N}_?\]])  # Position after any char that's not a dot, letter, number, underscore, question mark (for null-conditional)
-                                                                                                 # or closing bracket (a dot after ']' is member access on an index result, not an implicit scope)
-                                                                                                 # (lookbehind - ensures we don't break existing identifiers or ?.)
-
-                                                                        (?<!\(.*\))              # Also try to start after any function call with zero to many arguments.
-                                                                                                 # NOTE: While this isn't industrial grade combinatorial parsing, the results seem fine.
-                                                                    )
-                                                                    (?<dots>\.+)                 # Capture one or more dots in 'dots' group
-                                                                    (?<prop>                     # Start 'prop' group for the property name
-                                                                        [\p{L}\p{N}_]*           # Any number of letters, numbers, or underscores
-                                                                    )                            
-                                                                    ",
-            RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace, TimeSpan.FromMilliseconds(500)
-        );
-
-        private static readonly Regex RegexListKeywords = new(@"(?<dots>\.*)(?<variable>\p{L}[\p{L}\p{N}_]*(?:\.\p{L}[\p{L}\p{N}_]*)*)?\.(?<keyword>_Idx|_Length)"
-            , RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace, TimeSpan.FromMilliseconds(500));
-
+        /// <param name="processSettings">Holds the <see cref="ScriptCache"/> shared by all templates created with them.</param>
         public ScriptCompiler(IModelLookup modelDictionary, ProcessSettings processSettings)
         {
-            this.m_modelDictionary = modelDictionary;
+            m_modelDictionary = modelDictionary;
             ProcessSettings = processSettings;
+            m_cache = processSettings.ScriptCache;
         }
 
         public ProcessSettings ProcessSettings { get; }
 
         public Func<bool> CompileScript(string scriptAsString)
         {
-            var interpreter = CreateInterpreter(ref scriptAsString);
-
-            try
-            {
-                var func = interpreter.ParseAsDelegate<Func<bool>>(scriptAsString);
-                return WrapExecution(func);
-            }
-            catch (DynamicExpresso.Exceptions.ParseException e)
-            {
-                throw OpenXmlTemplateException.Create(ProcessSettings, e, TemplateErrorCode.ScriptParseError, scriptAsString);
-            }
+            var compiled = Compile(scriptAsString, typeof(bool), TemplateErrorCode.ScriptParseError);
+            return () => (bool)compiled();
         }
 
         public Func<object> CompileExpression(string scriptAsString)
         {
-            var interpreter = CreateInterpreter(ref scriptAsString);
+            return Compile(scriptAsString, typeof(object), TemplateErrorCode.ExpressionParseError);
+        }
 
+        private Func<object> Compile(string scriptAsString, Type returnType, TemplateErrorCode parseError)
+        {
+            ScriptCache.PreparedScript prepared;
             try
             {
-                var func = interpreter.ParseAsDelegate<Func<object>>(scriptAsString);
-                return WrapExecution(func);
+                prepared = m_cache.Prepare(scriptAsString);
             }
-            catch (DynamicExpresso.Exceptions.ParseException e)
+            catch (RegexMatchTimeoutException)
             {
-                throw OpenXmlTemplateException.Create(ProcessSettings, e, TemplateErrorCode.ExpressionParseError, scriptAsString);
+                throw OpenXmlTemplateException.Create(ProcessSettings, TemplateErrorCode.InvalidExpression, HelperFunctions.SanitizeQuotes(scriptAsString));
             }
+
+            var bindings = prepared.Bindings;
+            var values = new object[bindings.Count];
+            var types = new Type[bindings.Count];
+            for (int i = 0; i < bindings.Count; i++)
+            {
+                values[i] = ResolveBinding(bindings[i], out types[i]);
+            }
+
+            if (!prepared.TryGetFunction(returnType, types, out var func, out var parserMessage))
+            {
+                throw OpenXmlTemplateException.Create(ProcessSettings, new TemplateException(parserMessage), parseError, prepared.Text);
+            }
+            return WrapExecution(() => func(values));
+        }
+
+        /// <param name="type">The type the script is parsed with: the type of the value, a fixed type for <c>null</c>.</param>
+        private object ResolveBinding(ScriptCache.Binding binding, out Type type)
+        {
+            object value;
+            switch (binding.Kind)
+            {
+                case ScriptCache.BindingKind.Identifier:
+                    try
+                    {
+                        value = m_modelDictionary.GetValue(binding.Path);
+                    }
+                    catch (OpenXmlTemplateException) when (ProcessSettings?.BindingErrorHandling is BindingErrorHandling.SkipBindingAndRemoveContent)
+                    {
+                        value = null;
+                    }
+                    if (value == null || IsSimpleType(value.GetType()))
+                    {
+                        type = value?.GetType() ?? typeof(string);
+                        return value;
+                    }
+                    value = new ScriptCompilerModelVariable(m_modelDictionary, binding.Path, ProcessSettings);
+                    break;
+                case ScriptCache.BindingKind.Scope:
+                    value = m_modelDictionary.GetScopeParentLevel(binding.DotCount - 1);
+                    if (value != null && !IsSimpleType(value.GetType()))
+                    {
+                        value = new ScriptCompilerModelVariable(m_modelDictionary, new string('.', binding.DotCount - 1), ProcessSettings);
+                    }
+                    break;
+                default:
+                    value = m_modelDictionary.GetValue(binding.Path);
+                    break;
+            }
+            type = value?.GetType() ?? typeof(object);
+            return value;
         }
 
         private static Func<T> WrapExecution<T>(Func<T> func)
@@ -88,98 +114,11 @@ namespace DocxTemplater
             };
         }
 
-        private Interpreter CreateInterpreter(ref string scriptAsString)
-        {
-            scriptAsString = HelperFunctions.SanitizeQuotes(scriptAsString);
-            // replace leading dots (implicit scope) with variables
-            var interpreter = new Interpreter().EnableAssignment(AssignmentOperators.None);
-            try
-            {
-                // replace ..foo / .foo etc
-                scriptAsString = RegexWordStartingWithDot.Replace(scriptAsString, (m) => OnVariableReplace(m, interpreter));
-
-                scriptAsString = RegexListKeywords.Replace(scriptAsString, (m) => OnSpecialKeyWordsReplace(m, interpreter));
-
-            }
-            catch (RegexMatchTimeoutException)
-            {
-                throw OpenXmlTemplateException.Create(ProcessSettings, TemplateErrorCode.InvalidExpression, scriptAsString);
-            }
-
-            var identifiers = interpreter.DetectIdentifiers(scriptAsString);
-            foreach (var identifier in identifiers.UnknownIdentifiers)
-            {
-                object val;
-                try
-                {
-                    val = m_modelDictionary.GetValue(identifier);
-                }
-                catch (OpenXmlTemplateException) when (ProcessSettings?.BindingErrorHandling is BindingErrorHandling.SkipBindingAndRemoveContent)
-                {
-                    val = null;
-                }
-                if (val == null || IsSimpleType(val.GetType()))
-                {
-                    interpreter.SetVariable(identifier, val, val?.GetType() ?? typeof(string));
-                }
-                else
-                {
-                    interpreter.SetVariable(identifier, new ScriptCompilerModelVariable(m_modelDictionary, identifier, ProcessSettings));
-                }
-            }
-
-            return interpreter;
-        }
-
-        private string OnVariableReplace(Match match, Interpreter interpreter)
-        {
-            string unary = match.Groups["unary"].Value; // Preserve unary operators if present
-            string prop = match.Groups["prop"].Value; // Preserve the word after dots
-            var dots = match.Groups["dots"].Value;
-            var dotCount = dots.Length;
-
-            if (prop == LoopBlock.LoopIndexVariable || prop == LoopBlock.LoopLengthVariable)
-            {
-                var varName = $"__s{dotCount}_{prop}";
-                var value = m_modelDictionary.GetValue(match.Value);
-                interpreter.SetVariable(varName, value);
-                return varName;
-            }
-            else
-            {
-                // ".Foo" or "..Foo" etc
-                var scope = m_modelDictionary.GetScopeParentLevel(dotCount - 1);
-                if (scope != null && !IsSimpleType(scope.GetType()))
-                {
-                    scope = new ScriptCompilerModelVariable(m_modelDictionary, new string('.', dotCount - 1), ProcessSettings);
-                }
-
-                var varName = $"__s{dotCount}_"; // choose a variable name that is unlikely to be used by the user
-                interpreter.SetVariable(varName, scope);
-                if (!string.IsNullOrWhiteSpace(prop))
-                {
-                    varName += $".{prop}";
-                }
-
-                return $"{unary}{varName}";
-            }
-        }
-
-        private string OnSpecialKeyWordsReplace(Match match, Interpreter interpreter)
-        {
-            var dots = match.Groups["dots"].Value.Length;
-            var keyWord = match.Groups["keyword"];
-            var varName = $"__s{dots}_{keyWord}";
-            var value = m_modelDictionary.GetValue(match.Value);
-            interpreter.SetVariable(varName, value);
-            return varName;
-        }
-
         /// <summary>
         /// Determines whether the specified type is a simple type.
         /// Simple types include primitive types, enums, strings, decimals, DateTime, and GUIDs.
         /// </summary>
-        private static bool IsSimpleType(Type type)
+        internal static bool IsSimpleType(Type type)
         {
             var typeCode = Type.GetTypeCode(type);
             return typeCode != TypeCode.Object || type == typeof(Guid);

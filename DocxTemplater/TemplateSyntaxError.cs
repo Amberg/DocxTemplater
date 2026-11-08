@@ -69,14 +69,15 @@ namespace DocxTemplater
         public string Context { get; }
 
         /// <summary>
-        /// Position of the <see cref="Tag"/> in the text of the part, as seen by the parser (all text runs concatenated).
+        /// Position of the <see cref="Tag"/> in the text of the part as seen by the parser: the text of all runs of
+        /// a Word document part concatenated, or the template string of a text template.
         /// </summary>
-        internal int Index { get; }
+        public int Index { get; }
 
         /// <summary>
         /// Length of the <see cref="Tag"/> in the text of the part; 0 if the error has no location.
         /// </summary>
-        internal int Length { get; }
+        public int Length { get; }
 
         /// <summary>
         /// Identifies the error independent of the language of the <see cref="Message"/>.

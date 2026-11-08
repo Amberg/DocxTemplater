@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using DocxTemplater.Extensions.Charts;
+using DocxTemplater.ImageBase;
 
 namespace DocxTemplater
 {
@@ -30,13 +31,10 @@ namespace DocxTemplater
         {
         }
 
+        /// <param name="docXStream">The template.</param>
+        /// <param name="settings">Copied, see <see cref="Settings"/>.</param>
         public DocxTemplate(Stream docXStream, ProcessSettings settings)
-            : this(docXStream, settings, new ModelLookup(settings))
-        {
-        }
-
-        private DocxTemplate(Stream docXStream, ProcessSettings settings, ModelLookup modelLookup)
-        : base(CreateContext(settings, modelLookup))
+        : base(CreateContext(settings))
         {
             ArgumentNullException.ThrowIfNull(docXStream);
             m_stream = new MemoryStream();
@@ -54,12 +52,14 @@ namespace DocxTemplater
             Context.Initialize(m_wpDocument.MainDocumentPart);
             Processed = false;
 
-            RegisterFormatter(new SubTemplateFormatter(settings.InlineSubTemplates));
             RegisterExtension(new ChartProcessor());
         }
 
-        private static TemplateProcessingContext CreateContext(ProcessSettings settings, ModelLookup modelLookup)
+        private static TemplateProcessingContext CreateContext(ProcessSettings settings)
         {
+            ArgumentNullException.ThrowIfNull(settings);
+            settings = settings.Copy();
+            var modelLookup = new ModelLookup(settings);
             return new TemplateProcessingContext(settings, modelLookup, new VariableReplacer(modelLookup, settings), new ScriptCompiler(modelLookup, settings));
         }
 
@@ -72,6 +72,10 @@ namespace DocxTemplater
 
         public bool Processed { get; private set; }
 
+        /// <summary>
+        /// The copy of the settings this template was created with. Changes take effect if they are made before
+        /// <see cref="Process"/> and do not affect other templates; the cache of parsed expressions stays shared.
+        /// </summary>
         public ProcessSettings Settings => Context.ProcessSettings;
 
         public void Save(string targetPath)
@@ -142,7 +146,7 @@ namespace DocxTemplater
             {
                 if (root != null)
                 {
-                    errors.AddRange(TemplateSyntaxParser.Parse(GetPartText(root), GetPartName(root), Settings).Errors);
+                    errors.AddRange(TemplateSyntaxParser.Parse(GetPartText(root), GetPartName(root), Settings, TagContentPreprocessors).Errors);
                 }
             }
         }
@@ -164,6 +168,7 @@ namespace DocxTemplater
             // template and result - remember that instead of marking it processed, otherwise the next
             // call would take the early return above and hand out the unrendered template as a result.
             m_faulted = true;
+            RegisterFormatters();
             if (Settings.BindingErrorHandling != BindingErrorHandling.HighlightErrorsInDocument || !HighlightSyntaxErrors())
             {
                 foreach (var header in m_wpDocument.MainDocumentPart.HeaderParts.ToList())
@@ -182,6 +187,19 @@ namespace DocxTemplater
             Processed = true;
             m_stream.Position = 0;
             return m_stream;
+        }
+
+        private void RegisterFormatters()
+        {
+            Context.VariableReplacer.RegisterFormatter(new SubTemplateFormatter(Settings.InlineSubTemplates));
+            foreach (var formatter in Settings.Formatters)
+            {
+                if (formatter is IImageServiceProvider imageServiceProvider)
+                {
+                    Context.SetImageService(imageServiceProvider.CreateImageService());
+                }
+                Context.VariableReplacer.RegisterFormatter(formatter);
+            }
         }
 
         /// <summary>
@@ -204,7 +222,7 @@ namespace DocxTemplater
             foreach (var part in parts.Where(x => x != null && !m_prebuiltBlocks.ContainsKey(x)))
             {
                 var charMap = new CharacterMap(part);
-                var errors = TemplateSyntaxParser.Parse(charMap.Text, GetPartName(part), Settings).Errors
+                var errors = TemplateSyntaxParser.Parse(charMap.Text, GetPartName(part), Settings, TagContentPreprocessors).Errors
                     .Where(x => x.Severity == TemplateSyntaxErrorSeverity.Error).ToList();
                 if (errors.Count > 0)
                 {
@@ -298,7 +316,7 @@ namespace DocxTemplater
             m_prebuiltBlocks[rootElement] = rootBlocks;
             // Root-level variables outside any block remain as marked Text nodes in the rootElement
             // after the block-tree pipeline extracts each block's content. Pick those up directly.
-            ContentBlock.CollectMarkedVariables([rootElement], builder);
+            ContentBlock.CollectMarkedVariables([rootElement], builder, TagContentPreprocessors);
             foreach (var block in rootBlocks)
             {
                 block.CollectSchema(builder);

@@ -21,7 +21,9 @@ namespace DocxTemplater.Markdown
         public const string RawArgument = "raw";
 
         private readonly MarkDownFormatterConfiguration m_configuration;
-        private int m_nestingDepth;
+        // per thread: a formatter registered in shared settings renders several documents in parallel
+        [ThreadStatic]
+        private static int t_nestingDepth;
         private static readonly MarkdownPipeline MarkdownPipeline;
 
         public MarkdownFormatter(MarkDownFormatterConfiguration configuration = null)
@@ -53,7 +55,7 @@ namespace DocxTemplater.Markdown
                 return;
             }
 
-            if (m_nestingDepth > 3)
+            if (t_nestingDepth > 3)
             {
                 throw OpenXmlTemplateException.Create(templateContext.ProcessSettings, TemplateErrorCode.MarkdownNestingDepthExceeded);
             }
@@ -79,7 +81,7 @@ namespace DocxTemplater.Markdown
                 }
             }
 
-            m_nestingDepth++;
+            t_nestingDepth++;
             try
             {
                 var root = target.GetRoot();
@@ -168,7 +170,7 @@ namespace DocxTemplater.Markdown
             }
             finally
             {
-                m_nestingDepth--;
+                t_nestingDepth--;
             }
         }
 
