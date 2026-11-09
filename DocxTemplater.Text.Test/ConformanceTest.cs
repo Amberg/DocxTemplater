@@ -118,6 +118,8 @@ namespace DocxTemplater.Text.Test
             new("highlight lists each error once", "{{#ds.Items}}{{.Missing}}{{/ds.Items}}", $"Property 'Missing' not found in 'Missing' of type '{typeof(Item)}'\n{{{{.Missing}}}}{{{{.Missing}}}}{{{{.Missing}}}}") { ErrorHandling = BindingErrorHandling.HighlightErrorsInDocument },
             new("skip error in condition on a null value", "A{?{ds.Nothing.Length > 4}}long{{:}}short{{/}}B", "AshortB") { ErrorHandling = BindingErrorHandling.SkipBindingAndRemoveContent },
             new("throw error in condition on a null value", "{?{ds.Nothing.Length > 4}}long{{/}}", null) { ExpectedError = TemplateErrorCode.ErrorInCondition },
+            new("skip error in switch on a null value", "A{{#s: ds.Nothing.Length}}{{#c: 4}}four{{#d}}none{{/}}{{/}}B", "AnoneB") { ErrorHandling = BindingErrorHandling.SkipBindingAndRemoveContent },
+            new("throw error in switch on a null value", "{{#s: ds.Nothing.Length}}{{#c: 4}}four{{/}}{{/}}", null) { ExpectedError = TemplateErrorCode.ErrorInSwitchCase },
             new("throw binding error", "Hello {{ds.Missing}}", null) { ExpectedError = TemplateErrorCode.PlaceholderNotReplaced },
             new("throw not enumerable", "{{#ds.Count}}x{{/}}", null) { ExpectedError = TemplateErrorCode.NotEnumerable },
             new("throw range count", "{{@i:ds.Name}}x{{/}}", null) { ExpectedError = TemplateErrorCode.RangeCountNotNumeric },
