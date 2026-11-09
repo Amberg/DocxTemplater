@@ -98,6 +98,12 @@ namespace DocxTemplater
             ValueMetadata? lastValueMetadata = null;
             for (int i = partIndex; i < parts.Length; i++)
             {
+                if (model == null)
+                {
+                    // a path through null is null - like A?.B?.C in C#, whatever kind of model returned the null
+                    return new ValueWithMetadata(null, new ValueMetadata());
+                }
+                lastProperty = null;
                 lastValueMetadata = null;
                 var propertyName = parts[i];
                 if (model is ITemplateModel templateModel)
@@ -153,13 +159,6 @@ namespace DocxTemplater
                     if (property != null)
                     {
                         model = property.GetValue(model);
-                        if (model == null)
-                        {
-                            // if a property is null, we can't continue searching
-                            //same behavior as null propagation in C#
-                            // ae A.B.C.D --> A?.B?.C?.D
-                            return new ValueWithMetadata(null, new ValueMetadata());
-                        }
                     }
                     else if (model is ICollection)
                     {

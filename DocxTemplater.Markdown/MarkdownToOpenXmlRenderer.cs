@@ -39,6 +39,8 @@ namespace DocxTemplater.Markdown
             m_containingParagraphFromTemplate = parentElement;
             CurrentParagraph = parentElement;
             ObjectRenderers.Add(new LiteralInlineRenderer());
+            ObjectRenderers.Add(new HtmlInlineRenderer());
+            ObjectRenderers.Add(new HtmlEntityInlineRenderer());
             ObjectRenderers.Add(new ParagraphRenderer());
             ObjectRenderers.Add(new LineBreakLineRenderer());
             ObjectRenderers.Add(new EmphasisInlineRenderer());

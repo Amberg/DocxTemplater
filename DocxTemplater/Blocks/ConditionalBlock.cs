@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Wordprocessing;
@@ -23,8 +24,12 @@ namespace DocxTemplater.Blocks
             {
                 conditionResult = m_context.ScriptCompiler.CompileScript(m_condition)();
             }
-            catch (OpenXmlTemplateException e) when (m_context.ProcessSettings.BindingErrorHandling != BindingErrorHandling.ThrowException)
+            catch (Exception e)
             {
+                if (m_context.ProcessSettings.BindingErrorHandling == BindingErrorHandling.ThrowException)
+                {
+                    throw OpenXmlTemplateException.Create(m_context.ProcessSettings, e, TemplateErrorCode.ErrorInCondition, e, m_condition);
+                }
                 m_context.VariableReplacer.AddError(TemplateErrorCode.ErrorInCondition, e, m_condition);
             }
             var cloned = m_content.Select(x => x.CloneNode(true)).ToList();

@@ -28,6 +28,15 @@ namespace DocxTemplater.Test
                                                   "<w:p xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:r><w:t>Line after 4 newlines --&gt; only one paragraph</w:t></w:r><w:r><w:br /></w:r><w:r><w:br /></w:r><w:r><w:br /></w:r><w:r><w:t>Line after 2 Line breaks without paragraph</w:t></w:r><w:r><w:br /></w:r><w:r><w:br /></w:r><w:r><w:t>Line after 2 Line breaks Linux style without paragraph</w:t></w:r></w:p>"));
         }
 
+        [TestCase("1 < 2 and \\< 3", "1 < 2 and < 3")]
+        [TestCase("1 &lt; 2 &gt; 0 &amp; &copy; &#65;", "1 < 2 > 0 & \u00a9 A")]
+        [TestCase("a <b>bold</b> <!-- c --> d", "a <b>bold</b> <!-- c --> d")]
+        public void HtmlEntitiesAndInlineHtmlAreRenderedAsText(string markdown, string expected)
+        {
+            var body = CreateTemplateWithMarkdownAndReturnBody(markdown);
+            Assert.That(body.InnerText, Is.EqualTo(expected));
+        }
+
         [Explicit]
         [Test]
         public void TestRandomString()

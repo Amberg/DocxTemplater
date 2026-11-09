@@ -38,12 +38,25 @@ namespace DocxTemplater.Text.Test
             public DateTime Date { get; set; } = new(2026, 10, 20);
             public decimal Price { get; set; } = 1234.5m;
             public int Count { get; set; } = 3;
+            public int Zero { get; set; }
             public string Kind { get; set; } = "B";
             public List<Item> Items { get; set; } = [new Item { Name = "a", Price = 1 }, new Item { Name = "b", Price = 2 }, new Item { Name = "c", Price = 3 }];
             public List<Order> Orders { get; set; } = [new Order { Id = 7, Lines = [new Item { Name = "x" }, new Item { Name = "y" }] }, new Order { Id = 8, Lines = [new Item { Name = "z" }] }];
 
             [Model.ModelProperty(DefaultFormatter = "toupper")]
             public string Shout { get; set; } = "quiet";
+
+            public IDictionary<string, object> Custom { get; set; } = new Dictionary<string, object> { ["Loud"] = new ValueWithMetadata("quiet", new ValueMetadata("toupper")) };
+        }
+
+        public sealed class Lead : Model.TemplateModelWithDisplayNames
+        {
+            public string Title { get; set; } = "Offer";
+        }
+
+        public sealed class Contact : Model.TemplateModelWithDisplayNames
+        {
+            public Lead Lead { get; set; }
         }
 
         public sealed record Case(string Name, string Template, string Expected)
@@ -97,9 +110,21 @@ namespace DocxTemplater.Text.Test
             // unquoted text is split at the commas like any formatter argument; the parts are joined with ", "
             new("default text with unquoted commas", "{{ds.Nothing}:default(a,b)}|{{ds.Nothing}:default(Smith ,  Jones)}", "a, b|Smith , Jones"),
             new("dictionary model", "{{ds.name}}:{{#ds.Tags}}{{.}}{{:s:}},{{/ds.Tags}}", "Bob:x,y") { Model = () => new Dictionary<string, object> { ["Name"] = "Bob", ["Tags"] = new[] { "x", "y" } } },
+            new("path through a null object", "[{{ds.Lead.Title}}]|[{{ds.Lead.Title}:default('none')}]", "[]|[none]") { Model = () => new Contact() },
+            new("path through a null dictionary value", "[{{ds.Lead.Title}}]", "[]") { Model = () => new Dictionary<string, object> { ["Lead"] = null } },
+            new("path through a null property", "[{{ds.Address.City}}]", "[]") { Model = () => new Person { Address = null } },
+            new("dictionary value in a property keeps its default formatter", "{{ds.Custom.Loud}}", "QUIET"),
             new("skip binding errors", "A{{ds.Missing}}B{{#ds.Missing}}x{{/}}C{?{ds.Missing > 1}}yes{{:}}no{{/}}D{{@i:ds.Missing}}x{{/}}E", "ABCnoDE") { ErrorHandling = BindingErrorHandling.SkipBindingAndRemoveContent },
             new("highlight binding errors", "Hello {{ds.Missing}} and {{ds.Name}}", $"Property 'Missing' not found in 'ds.Missing' of type '{typeof(Person)}'\nHello {{{{ds.Missing}}}} and Ada") { ErrorHandling = BindingErrorHandling.HighlightErrorsInDocument },
             new("highlight lists each error once", "{{#ds.Items}}{{.Missing}}{{/ds.Items}}", $"Property 'Missing' not found in 'Missing' of type '{typeof(Item)}'\n{{{{.Missing}}}}{{{{.Missing}}}}{{{{.Missing}}}}") { ErrorHandling = BindingErrorHandling.HighlightErrorsInDocument },
+            new("skip error in condition on a null value", "A{?{ds.Nothing.Length > 4}}long{{:}}short{{/}}B", "AshortB") { ErrorHandling = BindingErrorHandling.SkipBindingAndRemoveContent },
+            new("throw error in condition on a null value", "{?{ds.Nothing.Length > 4}}long{{/}}", null) { ExpectedError = TemplateErrorCode.ErrorInCondition },
+            new("skip error in switch on a null value", "A{{#s: ds.Nothing.Length}}{{#c: 4}}four{{#d}}none{{/}}{{/}}B", "AnoneB") { ErrorHandling = BindingErrorHandling.SkipBindingAndRemoveContent },
+            new("throw error in switch on a null value", "{{#s: ds.Nothing.Length}}{{#c: 4}}four{{/}}{{/}}", null) { ExpectedError = TemplateErrorCode.ErrorInSwitchCase },
+            new("skip exception of an expression", "A{?{10 / ds.Zero > 1}}yes{{:}}no{{/}}B{?{ds.Name[10] == 'x'}}yes{{:}}no{{/}}C{{#s: ds.Name.Substring(10)}}{{#c: 'x'}}x{{#d}}none{{/}}{{/}}D", "AnoBnoCnoneD") { ErrorHandling = BindingErrorHandling.SkipBindingAndRemoveContent },
+            new("highlight exception in condition", "A{?{10 / ds.Zero > 1}}yes{{:}}no{{/}}B", "Attempted to divide by zero. in condition '10 / ds.Zero > 1'\nAnoB") { ErrorHandling = BindingErrorHandling.HighlightErrorsInDocument },
+            new("throw exception in condition", "{?{10 / ds.Zero > 1}}yes{{/}}", null) { ExpectedError = TemplateErrorCode.ErrorInCondition },
+            new("throw exception in switch", "{{#s: ds.Name.Substring(10)}}{{#c: 'x'}}x{{/}}{{/}}", null) { ExpectedError = TemplateErrorCode.ErrorInSwitchCase },
             new("throw binding error", "Hello {{ds.Missing}}", null) { ExpectedError = TemplateErrorCode.PlaceholderNotReplaced },
             new("throw not enumerable", "{{#ds.Count}}x{{/}}", null) { ExpectedError = TemplateErrorCode.NotEnumerable },
             new("throw range count", "{{@i:ds.Name}}x{{/}}", null) { ExpectedError = TemplateErrorCode.RangeCountNotNumeric },

@@ -278,6 +278,24 @@ namespace DocxTemplater.Text.Test
         }
 
         [Test]
+        public void ClosingBracesWithoutTagAreText()
+        {
+            // the end of a CSS media query: "}" and "}" on the next line
+            const string css = "<style>@media (max-width: 620px) {\n  .btn {\n    padding: 0;\n  }\n}\n</style>";
+            var template = new TextTemplate(css + "Hello {{recipient.LastName}} }}", Settings(TextEscaping.Html, BindingErrorHandling.ThrowException));
+            template.BindModel("recipient", Person);
+            var result = template.Process();
+            var warnings = template.ValidateTemplateSyntax();
+            Assert.Multiple(() =>
+            {
+                Assert.That(result.Text, Is.EqualTo(css + "Hello Lovelace }}"));
+                Assert.That(result.HasErrors, Is.False);
+                Assert.That(warnings.Select(x => (x.Severity, x.ErrorCode)), Is.All.EqualTo((TemplateSyntaxErrorSeverity.Warning, TemplateErrorCode.UnexpectedClosingBraces)));
+                Assert.That(warnings, Has.Count.EqualTo(2));
+            });
+        }
+
+        [Test]
         public void CulturePerSettings()
         {
             const string template = "{{document.Date}:f(d)}|{{document.Amount}:f(N2)}|{{document.Amount}}";
