@@ -46,6 +46,16 @@ namespace DocxTemplater.Text.Test
             public string Shout { get; set; } = "quiet";
         }
 
+        public sealed class Lead : Model.TemplateModelWithDisplayNames
+        {
+            public string Title { get; set; } = "Offer";
+        }
+
+        public sealed class Contact : Model.TemplateModelWithDisplayNames
+        {
+            public Lead Lead { get; set; }
+        }
+
         public sealed record Case(string Name, string Template, string Expected)
         {
             public Func<object> Model { get; init; } = () => new Person();
@@ -97,6 +107,9 @@ namespace DocxTemplater.Text.Test
             // unquoted text is split at the commas like any formatter argument; the parts are joined with ", "
             new("default text with unquoted commas", "{{ds.Nothing}:default(a,b)}|{{ds.Nothing}:default(Smith ,  Jones)}", "a, b|Smith , Jones"),
             new("dictionary model", "{{ds.name}}:{{#ds.Tags}}{{.}}{{:s:}},{{/ds.Tags}}", "Bob:x,y") { Model = () => new Dictionary<string, object> { ["Name"] = "Bob", ["Tags"] = new[] { "x", "y" } } },
+            new("path through a null object", "[{{ds.Lead.Title}}]|[{{ds.Lead.Title}:default('none')}]", "[]|[none]") { Model = () => new Contact() },
+            new("path through a null dictionary value", "[{{ds.Lead.Title}}]", "[]") { Model = () => new Dictionary<string, object> { ["Lead"] = null } },
+            new("path through a null property", "[{{ds.Address.City}}]", "[]") { Model = () => new Person { Address = null } },
             new("skip binding errors", "A{{ds.Missing}}B{{#ds.Missing}}x{{/}}C{?{ds.Missing > 1}}yes{{:}}no{{/}}D{{@i:ds.Missing}}x{{/}}E", "ABCnoDE") { ErrorHandling = BindingErrorHandling.SkipBindingAndRemoveContent },
             new("highlight binding errors", "Hello {{ds.Missing}} and {{ds.Name}}", $"Property 'Missing' not found in 'ds.Missing' of type '{typeof(Person)}'\nHello {{{{ds.Missing}}}} and Ada") { ErrorHandling = BindingErrorHandling.HighlightErrorsInDocument },
             new("highlight lists each error once", "{{#ds.Items}}{{.Missing}}{{/ds.Items}}", $"Property 'Missing' not found in 'Missing' of type '{typeof(Item)}'\n{{{{.Missing}}}}{{{{.Missing}}}}{{{{.Missing}}}}") { ErrorHandling = BindingErrorHandling.HighlightErrorsInDocument },
