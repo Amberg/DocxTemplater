@@ -55,7 +55,7 @@ namespace DocxTemplater.Blocks
                     {
                         caseMatch = m_context.ScriptCompiler.CompileScript($"{m_switchVariable} == {childBlock.MatchExpression}")();
                     }
-                    catch (OpenXmlTemplateException e)
+                    catch (Exception e)
                     {
                         if (m_context.ProcessSettings.BindingErrorHandling == BindingErrorHandling.ThrowException)
                         {

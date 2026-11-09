@@ -38,6 +38,7 @@ namespace DocxTemplater.Text.Test
             public DateTime Date { get; set; } = new(2026, 10, 20);
             public decimal Price { get; set; } = 1234.5m;
             public int Count { get; set; } = 3;
+            public int Zero { get; set; }
             public string Kind { get; set; } = "B";
             public List<Item> Items { get; set; } = [new Item { Name = "a", Price = 1 }, new Item { Name = "b", Price = 2 }, new Item { Name = "c", Price = 3 }];
             public List<Order> Orders { get; set; } = [new Order { Id = 7, Lines = [new Item { Name = "x" }, new Item { Name = "y" }] }, new Order { Id = 8, Lines = [new Item { Name = "z" }] }];
@@ -120,6 +121,10 @@ namespace DocxTemplater.Text.Test
             new("throw error in condition on a null value", "{?{ds.Nothing.Length > 4}}long{{/}}", null) { ExpectedError = TemplateErrorCode.ErrorInCondition },
             new("skip error in switch on a null value", "A{{#s: ds.Nothing.Length}}{{#c: 4}}four{{#d}}none{{/}}{{/}}B", "AnoneB") { ErrorHandling = BindingErrorHandling.SkipBindingAndRemoveContent },
             new("throw error in switch on a null value", "{{#s: ds.Nothing.Length}}{{#c: 4}}four{{/}}{{/}}", null) { ExpectedError = TemplateErrorCode.ErrorInSwitchCase },
+            new("skip exception of an expression", "A{?{10 / ds.Zero > 1}}yes{{:}}no{{/}}B{?{ds.Name[10] == 'x'}}yes{{:}}no{{/}}C{{#s: ds.Name.Substring(10)}}{{#c: 'x'}}x{{#d}}none{{/}}{{/}}D", "AnoBnoCnoneD") { ErrorHandling = BindingErrorHandling.SkipBindingAndRemoveContent },
+            new("highlight exception in condition", "A{?{10 / ds.Zero > 1}}yes{{:}}no{{/}}B", "Attempted to divide by zero. in condition '10 / ds.Zero > 1'\nAnoB") { ErrorHandling = BindingErrorHandling.HighlightErrorsInDocument },
+            new("throw exception in condition", "{?{10 / ds.Zero > 1}}yes{{/}}", null) { ExpectedError = TemplateErrorCode.ErrorInCondition },
+            new("throw exception in switch", "{{#s: ds.Name.Substring(10)}}{{#c: 'x'}}x{{/}}{{/}}", null) { ExpectedError = TemplateErrorCode.ErrorInSwitchCase },
             new("throw binding error", "Hello {{ds.Missing}}", null) { ExpectedError = TemplateErrorCode.PlaceholderNotReplaced },
             new("throw not enumerable", "{{#ds.Count}}x{{/}}", null) { ExpectedError = TemplateErrorCode.NotEnumerable },
             new("throw range count", "{{@i:ds.Name}}x{{/}}", null) { ExpectedError = TemplateErrorCode.RangeCountNotNumeric },
