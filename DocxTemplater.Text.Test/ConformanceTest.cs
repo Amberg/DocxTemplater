@@ -44,6 +44,8 @@ namespace DocxTemplater.Text.Test
 
             [Model.ModelProperty(DefaultFormatter = "toupper")]
             public string Shout { get; set; } = "quiet";
+
+            public IDictionary<string, object> Custom { get; set; } = new Dictionary<string, object> { ["Loud"] = new ValueWithMetadata("quiet", new ValueMetadata("toupper")) };
         }
 
         public sealed class Lead : Model.TemplateModelWithDisplayNames
@@ -110,6 +112,7 @@ namespace DocxTemplater.Text.Test
             new("path through a null object", "[{{ds.Lead.Title}}]|[{{ds.Lead.Title}:default('none')}]", "[]|[none]") { Model = () => new Contact() },
             new("path through a null dictionary value", "[{{ds.Lead.Title}}]", "[]") { Model = () => new Dictionary<string, object> { ["Lead"] = null } },
             new("path through a null property", "[{{ds.Address.City}}]", "[]") { Model = () => new Person { Address = null } },
+            new("dictionary value in a property keeps its default formatter", "{{ds.Custom.Loud}}", "QUIET"),
             new("skip binding errors", "A{{ds.Missing}}B{{#ds.Missing}}x{{/}}C{?{ds.Missing > 1}}yes{{:}}no{{/}}D{{@i:ds.Missing}}x{{/}}E", "ABCnoDE") { ErrorHandling = BindingErrorHandling.SkipBindingAndRemoveContent },
             new("highlight binding errors", "Hello {{ds.Missing}} and {{ds.Name}}", $"Property 'Missing' not found in 'ds.Missing' of type '{typeof(Person)}'\nHello {{{{ds.Missing}}}} and Ada") { ErrorHandling = BindingErrorHandling.HighlightErrorsInDocument },
             new("highlight lists each error once", "{{#ds.Items}}{{.Missing}}{{/ds.Items}}", $"Property 'Missing' not found in 'Missing' of type '{typeof(Item)}'\n{{{{.Missing}}}}{{{{.Missing}}}}{{{{.Missing}}}}") { ErrorHandling = BindingErrorHandling.HighlightErrorsInDocument },

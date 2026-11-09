@@ -103,6 +103,7 @@ namespace DocxTemplater
                     // a path through null is null - like A?.B?.C in C#, whatever kind of model returned the null
                     return new ValueWithMetadata(null, new ValueMetadata());
                 }
+                lastProperty = null;
                 lastValueMetadata = null;
                 var propertyName = parts[i];
                 if (model is ITemplateModel templateModel)
