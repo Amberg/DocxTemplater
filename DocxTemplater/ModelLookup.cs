@@ -94,7 +94,7 @@ namespace DocxTemplater
                 throw OpenXmlTemplateException.Create(m_settings, TemplateErrorCode.ModelNotFound, variableName);
             }
 
-            PropertyInfo lastProperty = null;
+            MemberInfo lastMember = null;
             ValueMetadata? lastValueMetadata = null;
             for (int i = partIndex; i < parts.Length; i++)
             {
@@ -103,7 +103,7 @@ namespace DocxTemplater
                     // a path through null is null - like A?.B?.C in C#, whatever kind of model returned the null
                     return new ValueWithMetadata(null, new ValueMetadata());
                 }
-                lastProperty = null;
+                lastMember = null;
                 lastValueMetadata = null;
                 var propertyName = parts[i];
                 if (model is ITemplateModel templateModel)
@@ -154,11 +154,11 @@ namespace DocxTemplater
                 }
                 else
                 {
-                    var property = model.GetType().GetProperty(propertyName, BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.GetProperty | BindingFlags.Instance);
-                    lastProperty = property;
-                    if (property != null)
+                    var member = GetPropertyOrField(model.GetType(), propertyName);
+                    lastMember = member;
+                    if (member != null)
                     {
-                        model = property.GetValue(model);
+                        model = GetMemberValue(member, model);
                     }
                     else if (model is ICollection)
                     {
@@ -171,12 +171,35 @@ namespace DocxTemplater
                 }
             }
 
-            if (lastProperty != null)
+            if (lastMember != null)
             {
-                var metadata = lastProperty.GetCustomAttribute<ModelPropertyAttribute>();
+                var metadata = lastMember.GetCustomAttribute<ModelPropertyAttribute>();
                 return new ValueWithMetadata(model, new ValueMetadata(metadata?.DefaultFormatter));
             }
             return new ValueWithMetadata(model, lastValueMetadata ?? new ValueMetadata());
+        }
+
+        /// <summary>
+        /// Resolves a public instance property or - if there is none with that name - a public instance field.
+        /// Fields are supported so that types without properties can be bound, e.g. <see cref="ValueTuple{T1, T2}"/>
+        /// whose <c>Item1</c>, <c>Item2</c>, ... are fields.
+        /// </summary>
+        /// <returns>The <see cref="PropertyInfo"/> or <see cref="FieldInfo"/>, <c>null</c> if the type has neither.</returns>
+        internal static MemberInfo GetPropertyOrField(Type type, string name)
+        {
+            const BindingFlags flags = BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance;
+            return (MemberInfo)type.GetProperty(name, flags | BindingFlags.GetProperty) ?? type.GetField(name, flags | BindingFlags.GetField);
+        }
+
+        /// <param name="member">A member returned by <see cref="GetPropertyOrField"/>.</param>
+        internal static object GetMemberValue(MemberInfo member, object target)
+        {
+            return member switch
+            {
+                PropertyInfo property => property.GetValue(target),
+                FieldInfo field => field.GetValue(target),
+                _ => throw new ArgumentException($"'{member.Name}' is neither a property nor a field.", nameof(member))
+            };
         }
 
         /// <param name="modelRootPath"><c>null</c> if the property was looked up in the parent scope (<c>..Name</c>).</param>
