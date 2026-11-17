@@ -425,7 +425,7 @@ namespace DocxTemplater
             sb ??= new StringBuilder();
             sb.AppendLine($"{new string(' ', indent)}parent ({element.Parent?.GetType()?.Name}){element.GetType().Name}({element.GetType().Namespace})");
             var attributes = element.GetAttributes();
-            if (attributes.Any())
+            if (attributes.Count > 0)
             {
                 sb.AppendLine($"{new string(' ', indent + 2)}Attributes:");
                 foreach (var attribute in attributes)
