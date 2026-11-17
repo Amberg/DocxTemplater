@@ -845,7 +845,8 @@ namespace DocxTemplater.Test
             yield return new TestCaseData(":F(n)", new CultureInfo("en-us"), 50000.45).Returns("50,000.450");
             yield return new TestCaseData(":F(c)", new CultureInfo("en-us"), 50000.45).Returns("$50,000.45");
             yield return new TestCaseData(":F(n)", new CultureInfo("de"), 50000.45).Returns("50.000,450");
-            yield return new TestCaseData(":F(c)", new CultureInfo("de-ch"), 50000.45).Returns("CHF 50’000.45");
+            // the de-CH group separator depends on the ICU version (’ vs ') - compare against the platform's own formatting
+            yield return new TestCaseData(":F(c)", new CultureInfo("de-ch"), 50000.45).Returns(50000.45.ToString("c", new CultureInfo("de-ch")));
         }
 
         [Test]
