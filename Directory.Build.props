@@ -4,7 +4,9 @@
 	</PropertyGroup>
 
 	<PropertyGroup>
-		<TargetFrameworks>netstandard2.0;net8.0;net9.0;net10.0</TargetFrameworks>
+		<TargetFrameworks>netstandard2.0;net8.0;net9.0;net10.0;net11.0</TargetFrameworks>
+		<!-- Polyfill asks for every .NET Framework target up to net48 because we ship netstandard2.0; netstandard2.0 covers those consumers -->
+		<NoWarn>$(NoWarn);PolyfillTargetsForNuget</NoWarn>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -24,11 +26,11 @@
 		<PolyUseEmbeddedAttribute>true</PolyUseEmbeddedAttribute>
 	</PropertyGroup>
 	<ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
-		<PackageReference Include="PolySharp" Version="1.16.0">
+		<PackageReference Include="PolySharp" Version="1.17.1">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="Polyfill" Version="11.4.2">
+		<PackageReference Include="Polyfill" Version="11.4.5">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
@@ -119,7 +121,7 @@
 		<ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
 	</PropertyGroup>
 	<ItemGroup>
-		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.401" PrivateAssets="All" />
+		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.404" PrivateAssets="All" />
 	</ItemGroup>
 
 </Project>
