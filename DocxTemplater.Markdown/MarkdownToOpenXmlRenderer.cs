@@ -254,7 +254,7 @@ namespace DocxTemplater.Markdown
                 m_renderer.ObjectWriteBefore += (_, markdownObject) =>
                 {
                     m_indent++;
-                    m_buffer.Append(new string(' ', m_indent * 2));
+                    m_buffer.Append(' ', m_indent * 2);
                     m_buffer.Append(markdownObject.GetType().Name);
                     if (markdownObject is LiteralInline)
                     {

@@ -45,7 +45,7 @@ namespace DocxTemplater.Schema
         public override string ToString()
         {
             var sb = new StringBuilder();
-            sb.Append(new string('.', LeadingDotCount));
+            sb.Append('.', LeadingDotCount);
             sb.Append(Root);
             foreach (var s in Segments)
             {
